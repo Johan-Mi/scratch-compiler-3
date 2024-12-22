@@ -45,6 +45,7 @@ enum Value {
     Op(OpId),
     Num(f64),
     String(String),
+    Bool(bool),
     /// Reference for `Op::Load` and `Op::Store`.
     VariableRef(VariableId),
 }
