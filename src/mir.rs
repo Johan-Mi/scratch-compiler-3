@@ -2,9 +2,13 @@ use slotmap::SlotMap;
 
 #[derive(Debug)]
 struct Program {
-    functions: Vec<Function>,
+    functions: SlotMap<FunctionId, Function>,
     basic_blocks: SlotMap<BasicBlockId, BasicBlock>,
     ops: SlotMap<OpId, Op>,
+}
+
+slotmap::new_key_type! {
+    struct FunctionId;
 }
 
 #[derive(Debug)]
@@ -48,6 +52,8 @@ enum Op {
         r#else: BasicBlockId,
     },
     Return(Value),
+
+    Call(FunctionId),
 
     Add(Value, Value),
 }
