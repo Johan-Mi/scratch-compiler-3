@@ -47,6 +47,7 @@ enum Op {
         then: BasicBlockId,
         r#else: BasicBlockId,
     },
+    Return(Value),
 
     Add(Value, Value),
 }
