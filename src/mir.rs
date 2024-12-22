@@ -35,10 +35,21 @@ enum Op {
         value: Value,
     },
 
+    Construct(Vec<Value>),
+    Extract {
+        r#struct: Value,
+        index: usize,
+    },
+
     /// Reference for `Op::Load` and `Op::Store`.
     Index {
         list: ListId,
         index: Value,
+    },
+    /// Reference for `Op::Load` and `Op::Store`.
+    Project {
+        struct_ref: Value,
+        index: usize,
     },
 
     Repeat {
