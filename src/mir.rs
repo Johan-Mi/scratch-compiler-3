@@ -37,6 +37,17 @@ enum Op {
         index: Value,
     },
 
+    Repeat {
+        times: Value,
+        body: BasicBlockId,
+    },
+    Forever(BasicBlockId),
+    If {
+        condition: Value,
+        then: BasicBlockId,
+        r#else: BasicBlockId,
+    },
+
     Add(Value, Value),
 }
 
