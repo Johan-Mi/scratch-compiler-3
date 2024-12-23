@@ -64,13 +64,19 @@ enum Op {
     },
     Return(Vec<Value>),
 
-    Call(FunctionId),
+    Call {
+        function: FunctionId,
+        arguments: Vec<Value>,
+    },
 
     Add(Value, Value),
 }
 
 #[derive(Debug)]
 enum Value {
+    FunctionParameter {
+        index: usize,
+    },
     Op(OpId),
     Call {
         op: OpId,
