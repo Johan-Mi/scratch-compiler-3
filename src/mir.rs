@@ -62,7 +62,7 @@ enum Op {
         then: BasicBlockId,
         r#else: BasicBlockId,
     },
-    Return(Value),
+    Return(Vec<Value>),
 
     Call(FunctionId),
 
@@ -72,6 +72,10 @@ enum Op {
 #[derive(Debug)]
 enum Value {
     Op(OpId),
+    Call {
+        op: OpId,
+        index: usize,
+    },
     Num(f64),
     String(String),
     Bool(bool),
