@@ -13,14 +13,12 @@ fn split_sinks(program: &mut Program, constructs: &SecondaryMap<OpId, Vec<Value>
 
     for (id, op) in &mut program.ops {
         match op {
-            Op::Store([target, value]) => {
-                if let Value::Op(source_op) = *value {
-                    if let Some(fields) = constructs.get(source_op) {
-                        assert!(kills.insert(id, ()).is_none());
-                        assert!(store_projections
-                            .insert(id, (target.clone(), fields.clone()))
-                            .is_none());
-                    }
+            Op::Store([target, Value::Op(source)]) => {
+                if let Some(fields) = constructs.get(*source) {
+                    assert!(kills.insert(id, ()).is_none());
+                    assert!(store_projections
+                        .insert(id, (target.clone(), fields.clone()))
+                        .is_none());
                 }
             }
             Op::Extract { r#struct, index } => {
