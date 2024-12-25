@@ -2,42 +2,15 @@ use super::{BasicBlock, BasicBlockId, Op, OpId, Program, Value};
 use slotmap::{SecondaryMap, SlotMap};
 
 pub fn perform(program: &mut Program) {
-    let mut load_projections = SecondaryMap::<OpId, (Value, usize)>::new();
-    let mut constructs = SecondaryMap::<OpId, Vec<Value>>::new();
+    let constructs = split_sources(program);
+    split_sinks(program, &constructs);
+}
+
+fn split_sinks(program: &mut Program, constructs: &SecondaryMap<OpId, Vec<Value>>) {
     let mut kills = SecondaryMap::<OpId, ()>::new();
     let mut renames = SecondaryMap::<OpId, Value>::new();
-
-    for (id, op) in &mut program.ops {
-        match op {
-            Op::Load { r#type, source } if r#type.is_struct() => {
-                assert!(load_projections
-                    .insert(id, (source.clone(), program.struct_types[*r#type].len()))
-                    .is_none());
-            }
-            Op::Construct(fields) => {
-                assert!(constructs.insert(id, std::mem::take(fields)).is_none());
-            }
-            Op::Index { r#type, .. } if r#type.is_struct() => todo!(),
-            Op::Project { .. } => todo!(),
-            _ => {}
-        }
-    }
-
-    for (before, (source, field_count)) in load_projections {
-        let (fields, new_ops) = (0..field_count)
-            .map(|index| {
-                let field = program.ops.insert(Op::Project {
-                    struct_ref: source.clone(),
-                    index,
-                });
-                (Value::Op(field), field)
-            })
-            .unzip();
-        assert!(constructs.insert(before, fields).is_none());
-        insert_before(&mut program.basic_blocks, new_ops, before);
-    }
-
     let mut store_projections = SecondaryMap::<OpId, (Value, Vec<Value>)>::new();
+
     for (id, op) in &mut program.ops {
         match op {
             Op::Store([target, value]) => {
@@ -114,6 +87,43 @@ pub fn perform(program: &mut Program) {
     program
         .ops
         .retain(|id, _| !(constructs.contains_key(id) || kills.contains_key(id)));
+}
+
+fn split_sources(program: &mut Program) -> SecondaryMap<OpId, Vec<Value>> {
+    let mut constructs = SecondaryMap::<OpId, Vec<Value>>::new();
+    let mut load_projections = SecondaryMap::<OpId, (Value, usize)>::new();
+
+    for (id, op) in &mut program.ops {
+        match op {
+            Op::Load { r#type, source } if r#type.is_struct() => {
+                assert!(load_projections
+                    .insert(id, (source.clone(), program.struct_types[*r#type].len()))
+                    .is_none());
+            }
+            Op::Construct(fields) => {
+                assert!(constructs.insert(id, std::mem::take(fields)).is_none());
+            }
+            Op::Index { r#type, .. } if r#type.is_struct() => todo!(),
+            Op::Project { .. } => todo!(),
+            _ => {}
+        }
+    }
+
+    for (before, (source, field_count)) in load_projections {
+        let (fields, new_ops) = (0..field_count)
+            .map(|index| {
+                let field = program.ops.insert(Op::Project {
+                    struct_ref: source.clone(),
+                    index,
+                });
+                (Value::Op(field), field)
+            })
+            .unzip();
+        assert!(constructs.insert(before, fields).is_none());
+        insert_before(&mut program.basic_blocks, new_ops, before);
+    }
+
+    constructs
 }
 
 fn insert_before(
