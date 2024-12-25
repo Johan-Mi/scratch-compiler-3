@@ -127,7 +127,7 @@ impl Op {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 enum Value {
     FunctionParameter {
         index: usize,
@@ -138,7 +138,7 @@ enum Value {
         index: usize,
     },
     Num(f64),
-    String(String),
+    String(&'static str),
     Bool(bool),
     /// Reference for `Op::Load` and `Op::Store`.
     VariableRef(VariableId),

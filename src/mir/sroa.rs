@@ -17,7 +17,7 @@ fn split_sinks(program: &mut Program, constructs: &SecondaryMap<OpId, Vec<Value>
                 if let Some(fields) = constructs.get(*source) {
                     assert!(kills.insert(id, ()).is_none());
                     assert!(store_projections
-                        .insert(id, (target.clone(), fields.clone()))
+                        .insert(id, (*target, fields.clone()))
                         .is_none());
                 }
             }
@@ -27,7 +27,7 @@ fn split_sinks(program: &mut Program, constructs: &SecondaryMap<OpId, Vec<Value>
                     Value::Op(source_op) => {
                         if let Some(fields) = constructs.get(*source_op) {
                             assert!(kills.insert(id, ()).is_none());
-                            assert!(renames.insert(id, fields[*index].clone()).is_none());
+                            assert!(renames.insert(id, fields[*index]).is_none());
                         }
                     }
                     Value::Call { .. } => todo!(),
@@ -45,7 +45,7 @@ fn split_sinks(program: &mut Program, constructs: &SecondaryMap<OpId, Vec<Value>
                                 return fields.clone();
                             }
                         }
-                        Vec::from([value.clone()])
+                        Vec::from([*value])
                     })
                     .collect();
             }
@@ -60,12 +60,12 @@ fn split_sinks(program: &mut Program, constructs: &SecondaryMap<OpId, Vec<Value>
             .enumerate()
             .flat_map(|(index, field)| {
                 let target_field = program.ops.insert(Op::Project {
-                    struct_ref: target.clone(),
+                    struct_ref: target,
                     index,
                 });
                 let store = program
                     .ops
-                    .insert(Op::Store([Value::Op(target_field), field.clone()]));
+                    .insert(Op::Store([Value::Op(target_field), *field]));
                 [target_field, store]
             })
             .collect();
@@ -75,8 +75,8 @@ fn split_sinks(program: &mut Program, constructs: &SecondaryMap<OpId, Vec<Value>
     for op in program.ops.values_mut() {
         for arg in op.args_mut() {
             if let Value::Op(arg_op) = *arg {
-                if let Some(replacement) = renames.get(arg_op) {
-                    *arg = replacement.clone();
+                if let Some(&replacement) = renames.get(arg_op) {
+                    *arg = replacement;
                 }
             }
         }
@@ -95,7 +95,7 @@ fn split_sources(program: &mut Program) -> SecondaryMap<OpId, Vec<Value>> {
         match op {
             Op::Load { r#type, source } if r#type.is_struct() => {
                 assert!(load_projections
-                    .insert(id, (source.clone(), program.struct_types[*r#type].len()))
+                    .insert(id, (*source, program.struct_types[*r#type].len()))
                     .is_none());
             }
             Op::Construct(fields) => {
@@ -111,7 +111,7 @@ fn split_sources(program: &mut Program) -> SecondaryMap<OpId, Vec<Value>> {
         let (fields, new_ops) = (0..field_count)
             .map(|index| {
                 let field = program.ops.insert(Op::Project {
-                    struct_ref: source.clone(),
+                    struct_ref: source,
                     index,
                 });
                 (Value::Op(field), field)
