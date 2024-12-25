@@ -1,8 +1,11 @@
-use slotmap::SlotMap;
+mod sroa;
+
+use slotmap::{Key as _, SlotMap};
 
 #[derive(Debug)]
 struct Program {
     functions: SlotMap<FunctionId, Function>,
+    struct_types: SlotMap<TypeId, Vec<TypeId>>,
     basic_blocks: SlotMap<BasicBlockId, BasicBlock>,
     ops: SlotMap<OpId, Op>,
 }
@@ -14,6 +17,16 @@ slotmap::new_key_type! {
 #[derive(Debug)]
 struct Function {
     body: BasicBlockId,
+}
+
+slotmap::new_key_type! {
+    struct TypeId;
+}
+
+impl TypeId {
+    fn is_struct(self) -> bool {
+        !self.is_null()
+    }
 }
 
 slotmap::new_key_type! {
@@ -29,11 +42,12 @@ slotmap::new_key_type! {
 
 #[derive(Debug)]
 enum Op {
-    Load(Value),
-    Store {
-        target: Value,
-        value: Value,
+    Load {
+        r#type: TypeId,
+        source: Value,
     },
+    /// target, value
+    Store([Value; 2]),
 
     Construct(Vec<Value>),
     Extract {
@@ -43,6 +57,7 @@ enum Op {
 
     /// Reference for `Op::Load` and `Op::Store`.
     Index {
+        r#type: TypeId,
         list: ListId,
         index: Value,
     },
@@ -69,10 +84,50 @@ enum Op {
         arguments: Vec<Value>,
     },
 
-    Add(Value, Value),
+    Add([Value; 2]),
+}
+impl Op {
+    fn args_mut(&mut self) -> &mut [Value] {
+        match self {
+            Self::Forever(_) => &mut [],
+            Self::Load {
+                r#type: _,
+                source: arg,
+            }
+            | Self::Extract {
+                r#struct: arg,
+                index: _,
+            }
+            | Self::Index {
+                r#type: _,
+                list: _,
+                index: arg,
+            }
+            | Self::Project {
+                struct_ref: arg,
+                index: _,
+            }
+            | Self::Repeat {
+                times: arg,
+                body: _,
+            }
+            | Self::If {
+                condition: arg,
+                then: _,
+                r#else: _,
+            } => std::slice::from_mut(arg),
+            Self::Store(args) | Self::Add(args) => args,
+            Self::Construct(args)
+            | Self::Return(args)
+            | Self::Call {
+                function: _,
+                arguments: args,
+            } => args,
+        }
+    }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum Value {
     FunctionParameter {
         index: usize,
@@ -89,7 +144,7 @@ enum Value {
     VariableRef(VariableId),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 struct VariableId(&'static str);
 
 #[derive(Debug)]
