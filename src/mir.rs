@@ -1,10 +1,11 @@
 mod sroa;
 
-use slotmap::{Key as _, SlotMap};
+use slotmap::{Key as _, SecondaryMap, SlotMap};
 
 #[derive(Debug)]
 struct Program {
     functions: SlotMap<FunctionId, Function>,
+    parameters: SlotMap<ParameterId, TypeId>,
     struct_types: SlotMap<TypeId, Vec<TypeId>>,
     basic_blocks: SlotMap<BasicBlockId, BasicBlock>,
     ops: SlotMap<OpId, Op>,
@@ -16,7 +17,12 @@ slotmap::new_key_type! {
 
 #[derive(Debug)]
 struct Function {
+    parameters: SecondaryMap<ParameterId, ()>,
     body: BasicBlockId,
+}
+
+slotmap::new_key_type! {
+    struct ParameterId;
 }
 
 slotmap::new_key_type! {
@@ -129,9 +135,7 @@ impl Op {
 
 #[derive(Debug, Clone, Copy)]
 enum Value {
-    FunctionParameter {
-        index: usize,
-    },
+    FunctionParameter(ParameterId),
     Op(OpId),
     Call {
         op: OpId,
