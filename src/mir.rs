@@ -87,15 +87,15 @@ enum Op {
 
     Call {
         function: FunctionId,
-        arguments: Vec<Value>,
+        arguments: SecondaryMap<ParameterId, Value>,
     },
 
     Add([Value; 2]),
 }
 impl Op {
-    fn args_mut(&mut self) -> &mut [Value] {
+    fn args_mut(&mut self) -> impl Iterator<Item = &mut Value> {
         match self {
-            Self::Forever(_) => &mut [],
+            Self::Forever(_) => Either::Left(std::slice::IterMut::default()),
             Self::Load {
                 r#type: _,
                 source: arg,
@@ -121,14 +121,13 @@ impl Op {
                 condition: arg,
                 then: _,
                 r#else: _,
-            } => std::slice::from_mut(arg),
-            Self::Store(args) | Self::Add(args) => args,
-            Self::Construct(args)
-            | Self::Return(args)
-            | Self::Call {
+            } => Either::Left(std::slice::from_mut(arg).iter_mut()),
+            Self::Store(args) | Self::Add(args) => Either::Left(args.iter_mut()),
+            Self::Construct(args) | Self::Return(args) => Either::Left(args.iter_mut()),
+            Self::Call {
                 function: _,
-                arguments: args,
-            } => args,
+                arguments,
+            } => Either::Right(arguments.values_mut()),
         }
     }
 }
@@ -153,3 +152,19 @@ struct VariableId(&'static str);
 
 #[derive(Debug)]
 struct ListId(&'static str);
+
+enum Either<L, R> {
+    Left(L),
+    Right(R),
+}
+
+impl<I, L: Iterator<Item = I>, R: Iterator<Item = I>> Iterator for Either<L, R> {
+    type Item = I;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self {
+            Self::Left(it) => it.next(),
+            Self::Right(it) => it.next(),
+        }
+    }
+}
