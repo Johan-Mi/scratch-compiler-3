@@ -9,16 +9,14 @@ pub fn perform(program: &mut Program) {
 fn split_sinks(program: &mut Program, constructs: &SecondaryMap<OpId, Vec<Value>>) {
     let mut kills = SecondaryMap::<OpId, ()>::new();
     let mut renames = SecondaryMap::<OpId, Value>::new();
-    let mut store_projections = SecondaryMap::<OpId, (Value, Vec<Value>)>::new();
+    let mut store_projections = Vec::<(OpId, Value, Vec<Value>)>::new();
 
     for (id, op) in &mut program.ops {
         match op {
             Op::Store([target, Value::Op(source)]) => {
                 if let Some(fields) = constructs.get(*source) {
                     assert!(kills.insert(id, ()).is_none());
-                    assert!(store_projections
-                        .insert(id, (*target, fields.clone()))
-                        .is_none());
+                    store_projections.push((id, *target, fields.clone()));
                 }
             }
             Op::Extract { r#struct, index } => {
@@ -54,7 +52,7 @@ fn split_sinks(program: &mut Program, constructs: &SecondaryMap<OpId, Vec<Value>
         }
     }
 
-    for (before, (target, fields)) in store_projections {
+    for (before, target, fields) in store_projections {
         let new_ops = fields
             .iter()
             .enumerate()
@@ -89,14 +87,12 @@ fn split_sinks(program: &mut Program, constructs: &SecondaryMap<OpId, Vec<Value>
 
 fn split_sources(program: &mut Program) -> SecondaryMap<OpId, Vec<Value>> {
     let mut constructs = SecondaryMap::<OpId, Vec<Value>>::new();
-    let mut load_projections = SecondaryMap::<OpId, (Value, usize)>::new();
+    let mut load_projections = Vec::<(OpId, Value, usize)>::new();
 
     for (id, op) in &mut program.ops {
         match op {
             Op::Load { r#type, source } if r#type.is_struct() => {
-                assert!(load_projections
-                    .insert(id, (*source, program.struct_types[*r#type].len()))
-                    .is_none());
+                load_projections.push((id, *source, program.struct_types[*r#type].len()));
             }
             Op::Construct(fields) => {
                 assert!(constructs.insert(id, std::mem::take(fields)).is_none());
@@ -107,7 +103,7 @@ fn split_sources(program: &mut Program) -> SecondaryMap<OpId, Vec<Value>> {
         }
     }
 
-    for (before, (source, field_count)) in load_projections {
+    for (before, source, field_count) in load_projections {
         let (fields, new_ops) = (0..field_count)
             .map(|index| {
                 let field = program.ops.insert(Op::Project {
