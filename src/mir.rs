@@ -1,3 +1,4 @@
+mod dce;
 mod sroa;
 
 use slotmap::{Key as _, SecondaryMap, SlotMap};
