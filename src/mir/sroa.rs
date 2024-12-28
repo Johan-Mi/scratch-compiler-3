@@ -1,12 +1,50 @@
-use super::{BasicBlock, BasicBlockId, Op, OpId, Program, Value};
+use super::{BasicBlock, BasicBlockId, Either, Op, OpId, ParameterId, Program, Value};
 use slotmap::{SecondaryMap, SlotMap};
 
 pub fn perform(program: &mut Program) {
+    let split_function_parameters = split_function_parameters(program);
     let constructs = split_sources(program);
-    split_sinks(program, &constructs);
+    split_sinks(program, &constructs, &split_function_parameters);
 }
 
-fn split_sinks(program: &mut Program, constructs: &SecondaryMap<OpId, Vec<Value>>) {
+fn split_function_parameters(program: &mut Program) -> SecondaryMap<ParameterId, Vec<ParameterId>> {
+    let splits: SecondaryMap<ParameterId, Vec<ParameterId>> = program
+        .parameters
+        .iter()
+        .filter_map(|(param, &r#type)| Some((param, program.struct_types.get(r#type)?)))
+        .collect::<Vec<_>>()
+        .into_iter()
+        .map(|(param, field_types)| {
+            let fields = field_types
+                .iter()
+                .map(|&field_type| program.parameters.insert(field_type))
+                .collect();
+            (param, fields)
+        })
+        .collect();
+
+    for function in program.functions.values_mut() {
+        function.parameters = function
+            .parameters
+            .keys()
+            .flat_map(|it| {
+                splits.get(it).map_or_else(
+                    || Either::Left(std::iter::once(it)),
+                    |fields| Either::Right(fields.iter().copied()),
+                )
+            })
+            .map(|it| (it, ()))
+            .collect();
+    }
+
+    splits
+}
+
+fn split_sinks(
+    program: &mut Program,
+    constructs: &SecondaryMap<OpId, Vec<Value>>,
+    split_function_parameters: &SecondaryMap<ParameterId, Vec<ParameterId>>,
+) {
     let mut kills = SecondaryMap::<OpId, ()>::new();
     let mut renames = SecondaryMap::<OpId, Value>::new();
     let mut store_projections = Vec::<(OpId, Value, Vec<Value>)>::new();
@@ -19,9 +57,26 @@ fn split_sinks(program: &mut Program, constructs: &SecondaryMap<OpId, Vec<Value>
                     store_projections.push((id, *target, fields.clone()));
                 }
             }
+            Op::Store([target, Value::FunctionParameter(source)]) => {
+                if let Some(fields) = split_function_parameters.get(*source) {
+                    assert!(kills.insert(id, ()).is_none());
+                    let fields = fields
+                        .iter()
+                        .copied()
+                        .map(Value::FunctionParameter)
+                        .collect();
+                    store_projections.push((id, *target, fields));
+                }
+            }
             Op::Extract { r#struct, index } => {
                 match r#struct {
-                    Value::FunctionParameter { .. } => todo!(),
+                    Value::FunctionParameter(source) => {
+                        let fields = &split_function_parameters[*source];
+                        assert!(kills.insert(id, ()).is_none());
+                        assert!(renames
+                            .insert(id, Value::FunctionParameter(fields[*index]))
+                            .is_none());
+                    }
                     Value::Op(source_op) => {
                         if let Some(fields) = constructs.get(*source_op) {
                             assert!(kills.insert(id, ()).is_none());
@@ -38,10 +93,20 @@ fn split_sinks(program: &mut Program, constructs: &SecondaryMap<OpId, Vec<Value>
                 *values = values
                     .iter()
                     .flat_map(|value| {
-                        if let Value::Op(source_op) = value {
-                            if let Some(fields) = constructs.get(*source_op) {
-                                return fields.clone();
+                        match value {
+                            Value::FunctionParameter(source) => {
+                                return split_function_parameters[*source]
+                                    .iter()
+                                    .copied()
+                                    .map(Value::FunctionParameter)
+                                    .collect();
                             }
+                            Value::Op(source_op) => {
+                                if let Some(fields) = constructs.get(*source_op) {
+                                    return fields.clone();
+                                }
+                            }
+                            _ => {}
                         }
                         Vec::from([*value])
                     })
