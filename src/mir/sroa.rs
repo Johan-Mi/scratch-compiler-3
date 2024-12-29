@@ -145,9 +145,7 @@ fn split_sinks(
         }
     }
 
-    program
-        .ops
-        .retain(|id, _| !(constructs.contains_key(id) || kills.contains_key(id)));
+    program.ops.retain(|id, _| !kills.contains_key(id));
 }
 
 fn split_sources(program: &mut Program) -> SecondaryMap<OpId, Vec<Value>> {
@@ -181,6 +179,8 @@ fn split_sources(program: &mut Program) -> SecondaryMap<OpId, Vec<Value>> {
         assert!(constructs.insert(before, fields).is_none());
         insert_before(&mut program.basic_blocks, new_ops, before);
     }
+
+    program.ops.retain(|id, _| !constructs.contains_key(id));
 
     constructs
 }
