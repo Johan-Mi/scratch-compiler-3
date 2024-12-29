@@ -72,14 +72,12 @@ fn split_sinks(
                 match r#struct {
                     Value::FunctionParameter(source) => {
                         let fields = &split_function_parameters[*source];
-                        assert!(kills.insert(id, ()).is_none());
                         assert!(renames
                             .insert(id, Value::FunctionParameter(fields[*index]))
                             .is_none());
                     }
                     Value::Op(source_op) => {
                         if let Some(fields) = constructs.get(*source_op) {
-                            assert!(kills.insert(id, ()).is_none());
                             assert!(renames.insert(id, fields[*index]).is_none());
                         }
                     }
@@ -145,7 +143,9 @@ fn split_sinks(
         }
     }
 
-    program.ops.retain(|id, _| !kills.contains_key(id));
+    program
+        .ops
+        .retain(|id, _| !(kills.contains_key(id) || renames.contains_key(id)));
 }
 
 fn split_sources(program: &mut Program) -> SecondaryMap<OpId, Vec<Value>> {
