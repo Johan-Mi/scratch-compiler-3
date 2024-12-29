@@ -45,27 +45,26 @@ fn split_sinks(
     constructs: &SecondaryMap<OpId, Vec<Value>>,
     split_function_parameters: &SecondaryMap<ParameterId, Vec<ParameterId>>,
 ) {
-    let mut kills = SecondaryMap::<OpId, ()>::new();
     let mut renames = SecondaryMap::<OpId, Value>::new();
-    let mut store_projections = Vec::<(OpId, Value, Vec<Value>)>::new();
+    let mut store_projections = SecondaryMap::<OpId, (Value, Vec<Value>)>::new();
 
     for (id, op) in &mut program.ops {
         match op {
             Op::Store([target, Value::Op(source)]) => {
                 if let Some(fields) = constructs.get(*source) {
-                    assert!(kills.insert(id, ()).is_none());
-                    store_projections.push((id, *target, fields.clone()));
+                    assert!(store_projections
+                        .insert(id, (*target, fields.clone()))
+                        .is_none());
                 }
             }
             Op::Store([target, Value::FunctionParameter(source)]) => {
                 if let Some(fields) = split_function_parameters.get(*source) {
-                    assert!(kills.insert(id, ()).is_none());
                     let fields = fields
                         .iter()
                         .copied()
                         .map(Value::FunctionParameter)
                         .collect();
-                    store_projections.push((id, *target, fields));
+                    assert!(store_projections.insert(id, (*target, fields)).is_none());
                 }
             }
             Op::Extract { r#struct, index } => {
@@ -115,13 +114,13 @@ fn split_sinks(
         }
     }
 
-    for (before, target, fields) in store_projections {
+    for (before, (target, fields)) in &store_projections {
         let new_ops = fields
             .iter()
             .enumerate()
             .flat_map(|(index, field)| {
                 let target_field = program.ops.insert(Op::Project {
-                    struct_ref: target,
+                    struct_ref: *target,
                     index,
                 });
                 let store = program
@@ -145,7 +144,7 @@ fn split_sinks(
 
     program
         .ops
-        .retain(|id, _| !(kills.contains_key(id) || renames.contains_key(id)));
+        .retain(|id, _| !(store_projections.contains_key(id) || renames.contains_key(id)));
 }
 
 fn split_sources(program: &mut Program) -> SecondaryMap<OpId, Vec<Value>> {
