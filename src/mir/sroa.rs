@@ -166,17 +166,23 @@ fn split_sources(program: &mut Program) -> SecondaryMap<OpId, Vec<Value>> {
     }
 
     for (before, source, r#type) in load_projections {
-        let (fields, new_ops) = program.struct_types[r#type]
+        let mut fields = Vec::new();
+        let new_ops = program.struct_types[r#type]
             .iter()
             .enumerate()
-            .map(|(index, _)| {
-                let field = program.ops.insert(Op::Project {
+            .flat_map(|(index, &r#type)| {
+                let field_ref = program.ops.insert(Op::Project {
                     struct_ref: source,
                     index,
                 });
-                (Value::Op(field), field)
+                let field = program.ops.insert(Op::Load {
+                    r#type,
+                    source: Value::Op(field_ref),
+                });
+                fields.push(Value::Op(field));
+                [field_ref, field]
             })
-            .unzip();
+            .collect();
         assert!(constructs.insert(before, fields).is_none());
         insert_before(&mut program.basic_blocks, new_ops, before);
     }
