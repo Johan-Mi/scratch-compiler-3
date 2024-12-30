@@ -1,4 +1,4 @@
-use super::{BasicBlock, BasicBlockId, Either, Op, OpId, ParameterId, Program, Value};
+use super::{BasicBlock, BasicBlockId, Either, Op, OpId, ParameterId, Program, TypeId, Value};
 use slotmap::{SecondaryMap, SlotMap};
 
 pub fn perform(program: &mut Program) {
@@ -149,12 +149,12 @@ fn split_sinks(
 
 fn split_sources(program: &mut Program) -> SecondaryMap<OpId, Vec<Value>> {
     let mut constructs = SecondaryMap::<OpId, Vec<Value>>::new();
-    let mut load_projections = Vec::<(OpId, Value, usize)>::new();
+    let mut load_projections = Vec::<(OpId, Value, TypeId)>::new();
 
     for (id, op) in &mut program.ops {
         match op {
             Op::Load { r#type, source } if r#type.is_struct() => {
-                load_projections.push((id, *source, program.struct_types[*r#type].len()));
+                load_projections.push((id, *source, *r#type));
             }
             Op::Construct(fields) => {
                 assert!(constructs.insert(id, std::mem::take(fields)).is_none());
@@ -165,9 +165,11 @@ fn split_sources(program: &mut Program) -> SecondaryMap<OpId, Vec<Value>> {
         }
     }
 
-    for (before, source, field_count) in load_projections {
-        let (fields, new_ops) = (0..field_count)
-            .map(|index| {
+    for (before, source, r#type) in load_projections {
+        let (fields, new_ops) = program.struct_types[r#type]
+            .iter()
+            .enumerate()
+            .map(|(index, _)| {
                 let field = program.ops.insert(Op::Project {
                     struct_ref: source,
                     index,
