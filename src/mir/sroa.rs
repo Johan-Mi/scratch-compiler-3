@@ -1,10 +1,18 @@
-use super::{BasicBlock, BasicBlockId, Either, Op, OpId, ParameterId, Program, TypeId, Value};
+use super::{
+    BasicBlock, BasicBlockId, Either, Op, OpId, ParameterId, Program, TypeId, Value, VariableId,
+};
 use slotmap::{SecondaryMap, SlotMap};
 
 pub fn perform(program: &mut Program) {
     let split_function_parameters = split_function_parameters(program);
+    let split_variables = split_variables(program);
     let constructs = split_sources(program);
-    split_sinks(program, &constructs, &split_function_parameters);
+    split_sinks(
+        program,
+        &constructs,
+        &split_function_parameters,
+        &split_variables,
+    );
 }
 
 fn split_function_parameters(program: &mut Program) -> SecondaryMap<ParameterId, Vec<ParameterId>> {
@@ -40,10 +48,28 @@ fn split_function_parameters(program: &mut Program) -> SecondaryMap<ParameterId,
     splits
 }
 
+fn split_variables(program: &mut Program) -> SecondaryMap<VariableId, Vec<VariableId>> {
+    program
+        .variables
+        .iter()
+        .filter_map(|(variable, &r#type)| Some((variable, program.struct_types.get(r#type)?)))
+        .collect::<Vec<_>>()
+        .into_iter()
+        .map(|(variable, field_types)| {
+            let fields = field_types
+                .iter()
+                .map(|&field_type| program.variables.insert(field_type))
+                .collect();
+            (variable, fields)
+        })
+        .collect()
+}
+
 fn split_sinks(
     program: &mut Program,
     constructs: &SecondaryMap<OpId, Vec<Value>>,
     split_function_parameters: &SecondaryMap<ParameterId, Vec<ParameterId>>,
+    split_variables: &SecondaryMap<VariableId, Vec<VariableId>>,
 ) {
     let mut renames = SecondaryMap::<OpId, Value>::new();
     let mut store_projections = SecondaryMap::<OpId, (Value, Vec<Value>)>::new();
@@ -85,6 +111,18 @@ fn split_sinks(
                         unreachable!()
                     }
                 };
+            }
+            Op::Project {
+                struct_ref: Value::Op(_),
+                index,
+            } => todo!(),
+            Op::Project {
+                struct_ref: Value::VariableRef(source),
+                index,
+            } => {
+                assert!(renames
+                    .insert(id, Value::VariableRef(split_variables[*source][*index]))
+                    .is_none());
             }
             Op::Return(values) => {
                 *values = values
@@ -160,7 +198,6 @@ fn split_sources(program: &mut Program) -> SecondaryMap<OpId, Vec<Value>> {
                 assert!(constructs.insert(id, std::mem::take(fields)).is_none());
             }
             Op::Index { r#type, .. } if r#type.is_struct() => todo!(),
-            Op::Project { .. } => todo!(),
             _ => {}
         }
     }
