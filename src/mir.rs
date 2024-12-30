@@ -10,6 +10,8 @@ struct Program {
     struct_types: SlotMap<TypeId, Vec<TypeId>>,
     basic_blocks: SlotMap<BasicBlockId, BasicBlock>,
     ops: SlotMap<OpId, Op>,
+    variables: SlotMap<VariableId, TypeId>,
+    lists: SlotMap<ListId, TypeId>,
 }
 
 slotmap::new_key_type! {
@@ -31,6 +33,10 @@ slotmap::new_key_type! {
 }
 
 impl TypeId {
+    fn scalar() -> Self {
+        Self::null()
+    }
+
     fn is_struct(self) -> bool {
         !self.is_null()
     }
@@ -148,11 +154,11 @@ enum Value {
     VariableRef(VariableId),
 }
 
-#[derive(Debug, Clone, Copy)]
-struct VariableId(&'static str);
+slotmap::new_key_type! {
+    struct VariableId;
 
-#[derive(Debug)]
-struct ListId(&'static str);
+    struct ListId;
+}
 
 enum Either<L, R> {
     Left(L),
