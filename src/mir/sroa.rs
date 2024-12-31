@@ -216,7 +216,7 @@ fn split_sources(program: &mut Program) -> SecondaryMap<OpId, Vec<Value>> {
             Op::Construct(fields) => {
                 assert!(constructs.insert(id, std::mem::take(fields)).is_none());
             }
-            Op::Index { r#type, .. } if r#type.is_struct() => todo!(),
+            Op::Index { list, .. } if program.lists[*list].is_struct() => todo!(),
             _ => {}
         }
     }

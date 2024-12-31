@@ -70,7 +70,6 @@ enum Op {
 
     /// Reference for `Op::Load` and `Op::Store`.
     Index {
-        r#type: TypeId,
         list: ListId,
         index: Value,
     },
@@ -112,7 +111,6 @@ impl Op {
                 index: _,
             }
             | Self::Index {
-                r#type: _,
                 list: _,
                 index: arg,
             }
