@@ -1,11 +1,13 @@
 use super::{
-    BasicBlock, BasicBlockId, Either, Op, OpId, ParameterId, Program, TypeId, Value, VariableId,
+    BasicBlock, BasicBlockId, Either, ListId, Op, OpId, ParameterId, Program, TypeId, Value,
+    VariableId,
 };
 use slotmap::{SecondaryMap, SlotMap};
 
 pub fn perform(program: &mut Program) {
     let split_function_parameters = split_function_parameters(program);
     let split_variables = split_variables(program);
+    let split_lists = split_lists(program);
     let constructs = split_sources(program);
     split_sinks(
         program,
@@ -61,6 +63,23 @@ fn split_variables(program: &mut Program) -> SecondaryMap<VariableId, Vec<Variab
                 .map(|&field_type| program.variables.insert(field_type))
                 .collect();
             (variable, fields)
+        })
+        .collect()
+}
+
+fn split_lists(program: &mut Program) -> SecondaryMap<ListId, Vec<ListId>> {
+    program
+        .lists
+        .iter()
+        .filter_map(|(list, &r#type)| Some((list, program.struct_types.get(r#type)?)))
+        .collect::<Vec<_>>()
+        .into_iter()
+        .map(|(list, field_types)| {
+            let fields = field_types
+                .iter()
+                .map(|&field_type| program.lists.insert(field_type))
+                .collect();
+            (list, fields)
         })
         .collect()
 }
