@@ -98,6 +98,7 @@ enum Op {
 
     Add([Value; 2]),
 }
+
 impl Op {
     fn args_mut(&mut self) -> impl Iterator<Item = &mut Value> {
         match self {
