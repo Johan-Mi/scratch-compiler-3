@@ -57,25 +57,17 @@ slotmap::new_key_type! {
 enum Op {
     Load {
         r#type: TypeId,
-        source: Value,
+        source: Ref,
     },
     /// target, value
-    Store([Value; 2]),
+    Store {
+        target: Ref,
+        value: Value,
+    },
 
     Construct(Vec<Value>),
     Extract {
         r#struct: Value,
-        index: usize,
-    },
-
-    /// Reference for `Op::Load` and `Op::Store`.
-    Index {
-        list: ListId,
-        index: Value,
-    },
-    /// Reference for `Op::Load` and `Op::Store`.
-    Project {
-        struct_ref: Value,
         index: usize,
     },
 
@@ -102,21 +94,25 @@ enum Op {
 impl Op {
     fn args_mut(&mut self) -> impl Iterator<Item = &mut Value> {
         match self {
-            Self::Forever(_) => Either::Left(std::slice::IterMut::default()),
-            Self::Load {
+            Self::Store {
+                target:
+                    Ref {
+                        base: RefBase::List { index, .. },
+                        ..
+                    },
+                value,
+            } => Either::Right(Either::Right([index, value].into_iter())),
+            Self::Store { value: arg, .. }
+            | Self::Load {
                 r#type: _,
-                source: arg,
+                source:
+                    Ref {
+                        base: RefBase::List { index: arg, .. },
+                        ..
+                    },
             }
             | Self::Extract {
                 r#struct: arg,
-                index: _,
-            }
-            | Self::Index {
-                list: _,
-                index: arg,
-            }
-            | Self::Project {
-                struct_ref: arg,
                 index: _,
             }
             | Self::Repeat {
@@ -128,13 +124,23 @@ impl Op {
                 then: _,
                 r#else: _,
             } => Either::Left(std::slice::from_mut(arg).iter_mut()),
-            Self::Store(args) | Self::Add(args) => Either::Left(args.iter_mut()),
+            Self::Load { .. } | Self::Forever(_) => Either::Left(std::slice::IterMut::default()),
+            Self::Add(args) => Either::Left(args.iter_mut()),
             Self::Construct(args) | Self::Return(args) => Either::Left(args.iter_mut()),
             Self::Call {
                 function: _,
                 arguments,
-            } => Either::Right(arguments.values_mut()),
+            } => Either::Right(Either::Left(arguments.values_mut())),
         }
+    }
+
+    fn refs_mut(&mut self) -> impl Iterator<Item = &mut Ref> {
+        match self {
+            Self::Load { source, .. } => Some(source),
+            Self::Store { target, .. } => Some(target),
+            _ => None,
+        }
+        .into_iter()
     }
 }
 
@@ -151,6 +157,19 @@ enum Value {
     Bool(bool),
     /// Reference for `Op::Load` and `Op::Store`.
     VariableRef(VariableId),
+}
+
+#[derive(Debug, Clone)]
+struct Ref {
+    base: RefBase,
+    /// Stored in reverse order.
+    projections: Vec<usize>,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum RefBase {
+    Variable(VariableId),
+    List { list: ListId, index: Value },
 }
 
 slotmap::new_key_type! {
