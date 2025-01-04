@@ -183,7 +183,7 @@ fn split_sinks(
             .enumerate()
             .map(|(index, &field)| {
                 let mut target_field = target.clone();
-                target_field.projections.push(index);
+                target_field.projections.insert(0, index);
                 program.ops.insert(Op::Store {
                     target: target_field,
                     value: field,
@@ -230,7 +230,7 @@ fn split_sources(program: &mut Program) -> SecondaryMap<OpId, Vec<Value>> {
             .enumerate()
             .map(|(index, &r#type)| {
                 let mut field_ref = source.clone();
-                field_ref.projections.push(index);
+                field_ref.projections.insert(0, index);
                 let field = program.ops.insert(Op::Load {
                     r#type,
                     source: field_ref,
