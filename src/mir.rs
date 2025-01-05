@@ -59,7 +59,6 @@ enum Op {
         r#type: TypeId,
         source: Ref,
     },
-    /// target, value
     Store {
         target: Ref,
         value: Value,
