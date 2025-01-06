@@ -284,7 +284,7 @@ fn insert_before(
 ) {
     for basic_block in basic_blocks.values_mut() {
         if let Some(index) = basic_block.0.iter().position(|&it| it == before) {
-            basic_block.0.splice(index..index, new_ops);
+            _ = basic_block.0.splice(index..index, new_ops);
             return;
         }
     }
