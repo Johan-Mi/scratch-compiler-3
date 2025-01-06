@@ -1,13 +1,13 @@
 use super::{
-    BasicBlock, BasicBlockId, Either, ListId, Op, OpId, ParameterId, Program, Ref, RefBase,
-    ReturnId, TypeId, Value, VariableId,
+    BasicBlock, BasicBlockId, Either, Op, OpId, ParameterId, Program, Ref, RefBase, ReturnId,
+    TypeId, Value,
 };
 use slotmap::{SecondaryMap, SlotMap};
 
 pub fn perform(program: &mut Program) {
     let split_function_parameters = split_function_parameters(program);
     let constructs = split_sources(program);
-    let split_returns = split_returns(program);
+    let split_returns = split_things(&program.struct_types, &mut program.returns);
     split_sinks(
         program,
         &constructs,
@@ -18,20 +18,7 @@ pub fn perform(program: &mut Program) {
 }
 
 fn split_function_parameters(program: &mut Program) -> SecondaryMap<ParameterId, Vec<ParameterId>> {
-    let splits: SecondaryMap<ParameterId, Vec<ParameterId>> = program
-        .parameters
-        .iter()
-        .filter_map(|(param, &r#type)| Some((param, program.struct_types.get(r#type)?)))
-        .collect::<Vec<_>>()
-        .into_iter()
-        .map(|(param, field_types)| {
-            let fields = field_types
-                .iter()
-                .map(|&field_type| program.parameters.insert(field_type))
-                .collect();
-            (param, fields)
-        })
-        .collect();
+    let splits = split_things(&program.struct_types, &mut program.parameters);
 
     for function in program.functions.values_mut() {
         function.parameters = function
@@ -50,26 +37,9 @@ fn split_function_parameters(program: &mut Program) -> SecondaryMap<ParameterId,
     splits
 }
 
-fn split_returns(program: &mut Program) -> SecondaryMap<ReturnId, Vec<ReturnId>> {
-    program
-        .returns
-        .iter()
-        .filter_map(|(r#return, &r#type)| Some((r#return, program.struct_types.get(r#type)?)))
-        .collect::<Vec<_>>()
-        .into_iter()
-        .map(|(r#return, field_types)| {
-            let fields = field_types
-                .iter()
-                .map(|&field_type| program.returns.insert(field_type))
-                .collect();
-            (r#return, fields)
-        })
-        .collect()
-}
-
 fn split_projections(program: &mut Program) {
-    let split_variables = split_variables(program);
-    let split_lists = split_lists(program);
+    let split_variables = split_things(&program.struct_types, &mut program.variables);
+    let split_lists = split_things(&program.struct_types, &mut program.lists);
 
     for (index, r#ref) in program
         .ops
@@ -84,36 +54,21 @@ fn split_projections(program: &mut Program) {
     }
 }
 
-fn split_variables(program: &mut Program) -> SecondaryMap<VariableId, Vec<VariableId>> {
-    program
-        .variables
+fn split_things<T: slotmap::Key>(
+    struct_types: &SlotMap<TypeId, Vec<TypeId>>,
+    things: &mut SlotMap<T, TypeId>,
+) -> SecondaryMap<T, Vec<T>> {
+    things
         .iter()
-        .filter_map(|(variable, &r#type)| Some((variable, program.struct_types.get(r#type)?)))
+        .filter_map(|(it, &r#type)| Some((it, struct_types.get(r#type)?)))
         .collect::<Vec<_>>()
         .into_iter()
-        .map(|(variable, field_types)| {
+        .map(|(it, field_types)| {
             let fields = field_types
                 .iter()
-                .map(|&field_type| program.variables.insert(field_type))
+                .map(|&field_type| things.insert(field_type))
                 .collect();
-            (variable, fields)
-        })
-        .collect()
-}
-
-fn split_lists(program: &mut Program) -> SecondaryMap<ListId, Vec<ListId>> {
-    program
-        .lists
-        .iter()
-        .filter_map(|(list, &r#type)| Some((list, program.struct_types.get(r#type)?)))
-        .collect::<Vec<_>>()
-        .into_iter()
-        .map(|(list, field_types)| {
-            let fields = field_types
-                .iter()
-                .map(|&field_type| program.lists.insert(field_type))
-                .collect();
-            (list, fields)
+            (it, fields)
         })
         .collect()
 }
