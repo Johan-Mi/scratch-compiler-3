@@ -7,6 +7,7 @@ use slotmap::{Key as _, SecondaryMap, SlotMap};
 struct Program {
     functions: SlotMap<FunctionId, Function>,
     parameters: SlotMap<ParameterId, TypeId>,
+    returns: SlotMap<ReturnId, TypeId>,
     struct_types: SlotMap<TypeId, Vec<TypeId>>,
     basic_blocks: SlotMap<BasicBlockId, BasicBlock>,
     ops: SlotMap<OpId, Op>,
@@ -26,6 +27,8 @@ struct Function {
 
 slotmap::new_key_type! {
     struct ParameterId;
+
+    struct ReturnId;
 }
 
 slotmap::new_key_type! {
@@ -80,7 +83,7 @@ enum Op {
         then: BasicBlockId,
         r#else: BasicBlockId,
     },
-    Return(Vec<Value>),
+    Return(SecondaryMap<ReturnId, Value>),
 
     Call {
         function: FunctionId,
@@ -92,6 +95,8 @@ enum Op {
 
 impl Op {
     fn args_mut(&mut self) -> impl Iterator<Item = &mut Value> {
+        use Either::{Left, Right};
+
         match self {
             Self::Store {
                 target:
@@ -100,7 +105,7 @@ impl Op {
                         ..
                     },
                 value,
-            } => Either::Right(Either::Right([index, value].into_iter())),
+            } => Right(Right([index, value].into_iter())),
             Self::Store { value: arg, .. }
             | Self::Load {
                 r#type: _,
@@ -122,14 +127,15 @@ impl Op {
                 condition: arg,
                 then: _,
                 r#else: _,
-            } => Either::Left(std::slice::from_mut(arg).iter_mut()),
-            Self::Load { .. } | Self::Forever(_) => Either::Left(std::slice::IterMut::default()),
-            Self::Add(args) => Either::Left(args.iter_mut()),
-            Self::Construct(args) | Self::Return(args) => Either::Left(args.iter_mut()),
+            } => Left(Left(std::slice::from_mut(arg).iter_mut())),
+            Self::Load { .. } | Self::Forever(_) => Left(Left(std::slice::IterMut::default())),
+            Self::Add(args) => Left(Left(args.iter_mut())),
+            Self::Construct(args) => Left(Left(args.iter_mut())),
+            Self::Return(args) => Left(Right(args.values_mut())),
             Self::Call {
                 function: _,
                 arguments,
-            } => Either::Right(Either::Left(arguments.values_mut())),
+            } => Right(Left(arguments.values_mut())),
         }
     }
 
@@ -149,7 +155,7 @@ enum Value {
     Op(OpId),
     Returned {
         call: OpId,
-        index: usize,
+        id: ReturnId,
     },
     Num(f64),
     String(&'static str),
