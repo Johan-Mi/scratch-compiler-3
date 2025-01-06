@@ -177,28 +177,29 @@ fn split_sinks(
                 *values = values
                     .iter()
                     .flat_map(|(id, value)| {
+                        use Either::{Left, Right};
+
                         match value {
                             Value::FunctionParameter(source) => {
                                 if let Some(fields) = split_function_parameters.get(*source) {
-                                    return split_returns[id]
-                                        .iter()
-                                        .copied()
-                                        .zip(fields.iter().copied().map(Value::FunctionParameter))
-                                        .collect();
+                                    return Left(Left(split_returns[id].iter().copied().zip(
+                                        fields.iter().copied().map(Value::FunctionParameter),
+                                    )));
                                 }
                             }
                             Value::Op(source_op) => {
                                 if let Some(fields) = constructs.get(*source_op) {
-                                    return split_returns[id]
-                                        .iter()
-                                        .copied()
-                                        .zip(fields.iter().copied())
-                                        .collect();
+                                    return Left(Right(
+                                        split_returns[id]
+                                            .iter()
+                                            .copied()
+                                            .zip(fields.iter().copied()),
+                                    ));
                                 }
                             }
                             _ => {}
                         }
-                        Vec::from([(id, *value)])
+                        Right(std::iter::once((id, *value)))
                     })
                     .collect();
             }
