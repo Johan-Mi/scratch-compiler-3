@@ -147,8 +147,8 @@ impl Op {
 enum Value {
     FunctionParameter(ParameterId),
     Op(OpId),
-    Call {
-        op: OpId,
+    Returned {
+        call: OpId,
         index: usize,
     },
     Num(f64),

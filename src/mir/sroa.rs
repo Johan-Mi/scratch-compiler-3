@@ -143,7 +143,7 @@ fn split_sinks(
                             assert!(renames.insert(id, fields[*index]).is_none());
                         }
                     }
-                    Value::Call { .. } => todo!(),
+                    Value::Returned { .. } => todo!(),
                     Value::Num(_) | Value::String(_) | Value::Bool(_) | Value::VariableRef(_) => {
                         unreachable!()
                     }
