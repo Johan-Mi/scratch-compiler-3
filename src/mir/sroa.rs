@@ -179,16 +179,13 @@ fn split_sinks(
                     .flat_map(|(id, value)| {
                         match value {
                             Value::FunctionParameter(source) => {
-                                return split_returns[id]
-                                    .iter()
-                                    .copied()
-                                    .zip(
-                                        split_function_parameters[*source]
-                                            .iter()
-                                            .copied()
-                                            .map(Value::FunctionParameter),
-                                    )
-                                    .collect();
+                                if let Some(fields) = split_function_parameters.get(*source) {
+                                    return split_returns[id]
+                                        .iter()
+                                        .copied()
+                                        .zip(fields.iter().copied().map(Value::FunctionParameter))
+                                        .collect();
+                                }
                             }
                             Value::Op(source_op) => {
                                 if let Some(fields) = constructs.get(*source_op) {
