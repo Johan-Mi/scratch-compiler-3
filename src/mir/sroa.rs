@@ -109,6 +109,27 @@ fn split_sinks(
                         .is_none());
                 }
             }
+            Op::Store {
+                target,
+                value:
+                    Value::Returned {
+                        call,
+                        id: return_id,
+                    },
+            } => {
+                if let Some(fields) = split_returns.get(*return_id) {
+                    let fields = fields
+                        .iter()
+                        .map(|&it| Value::Returned {
+                            call: *call,
+                            id: it,
+                        })
+                        .collect();
+                    assert!(store_projections
+                        .insert(id, (target.clone(), fields))
+                        .is_none());
+                }
+            }
             Op::Extract { r#struct, index } => {
                 match r#struct {
                     Value::FunctionParameter(source) => {
@@ -122,7 +143,18 @@ fn split_sinks(
                             assert!(renames.insert(id, fields[*index]).is_none());
                         }
                     }
-                    Value::Returned { .. } => todo!(),
+                    Value::Returned {
+                        call,
+                        id: return_id,
+                    } => {
+                        if let Some(fields) = split_returns.get(*return_id) {
+                            let field = Value::Returned {
+                                call: *call,
+                                id: fields[*index],
+                            };
+                            assert!(renames.insert(id, field).is_none());
+                        }
+                    }
                     Value::Num(_) | Value::String(_) | Value::Bool(_) | Value::VariableRef(_) => {
                         unreachable!()
                     }
@@ -152,9 +184,22 @@ fn split_sinks(
                                     ));
                                 }
                             }
+                            Value::Returned {
+                                call,
+                                id: return_id,
+                            } => {
+                                if let Some(fields) = split_returns.get(*return_id) {
+                                    return Right(Left(split_returns[id].iter().copied().zip(
+                                        fields.iter().map(|&it| Value::Returned {
+                                            call: *call,
+                                            id: it,
+                                        }),
+                                    )));
+                                }
+                            }
                             _ => {}
                         }
-                        Right(std::iter::once((id, *value)))
+                        Right(Right(std::iter::once((id, *value))))
                     })
                     .collect();
             }
