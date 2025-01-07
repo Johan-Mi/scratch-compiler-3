@@ -84,47 +84,32 @@ fn split_sinks(
 
     for (id, op) in &mut program.ops {
         match op {
-            Op::Store {
-                target,
-                value: Value::Op(source),
-            } => {
-                if let Some(fields) = constructs.get(*source) {
-                    assert!(store_projections
-                        .insert(id, (target.clone(), fields.clone()))
-                        .is_none());
-                }
-            }
-            Op::Store {
-                target,
-                value: Value::FunctionParameter(source),
-            } => {
-                if let Some(fields) = split_function_parameters.get(*source) {
-                    let fields = fields
-                        .iter()
-                        .copied()
-                        .map(Value::FunctionParameter)
-                        .collect();
-                    assert!(store_projections
-                        .insert(id, (target.clone(), fields))
-                        .is_none());
-                }
-            }
-            Op::Store {
-                target,
-                value:
+            Op::Store { target, value } => {
+                if let Some(fields) = match value {
+                    Value::Op(source) => constructs.get(*source).cloned(),
+                    Value::FunctionParameter(source) => {
+                        split_function_parameters.get(*source).map(|fields| {
+                            fields
+                                .iter()
+                                .copied()
+                                .map(Value::FunctionParameter)
+                                .collect()
+                        })
+                    }
                     Value::Returned {
                         call,
                         id: return_id,
-                    },
-            } => {
-                if let Some(fields) = split_returns.get(*return_id) {
-                    let fields = fields
-                        .iter()
-                        .map(|&it| Value::Returned {
-                            call: *call,
-                            id: it,
-                        })
-                        .collect();
+                    } => split_returns.get(*return_id).map(|fields| {
+                        fields
+                            .iter()
+                            .map(|&it| Value::Returned {
+                                call: *call,
+                                id: it,
+                            })
+                            .collect()
+                    }),
+                    _ => None,
+                } {
                     assert!(store_projections
                         .insert(id, (target.clone(), fields))
                         .is_none());
