@@ -119,21 +119,17 @@ fn split_sinks(
                             .is_none());
                     }
                     Value::Op(source_op) => {
-                        if let Some(fields) = constructs.get(*source_op) {
-                            assert!(renames.insert(id, fields[*index]).is_none());
-                        }
+                        assert!(renames.insert(id, constructs[*source_op][*index]).is_none());
                     }
                     Value::Returned {
                         call,
                         id: return_id,
                     } => {
-                        if let Some(fields) = split_returns.get(*return_id) {
-                            let field = Value::Returned {
-                                call: *call,
-                                id: fields[*index],
-                            };
-                            assert!(renames.insert(id, field).is_none());
-                        }
+                        let field = Value::Returned {
+                            call: *call,
+                            id: split_returns[*return_id][*index],
+                        };
+                        assert!(renames.insert(id, field).is_none());
                     }
                     Value::Num(_) | Value::String(_) | Value::Bool(_) | Value::VariableRef(_) => {
                         unreachable!()
