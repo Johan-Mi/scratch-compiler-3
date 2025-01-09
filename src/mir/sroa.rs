@@ -5,19 +5,14 @@ use super::{
 use slotmap::{SecondaryMap, SlotMap};
 
 pub fn perform(program: &mut Program) {
-    let split_function_parameters = split_function_parameters(program);
+    let split_parameters = split_parameters(program);
     let constructs = split_sources(program);
     let split_returns = split_things(&program.struct_types, &mut program.returns);
-    split_sinks(
-        program,
-        &constructs,
-        &split_function_parameters,
-        &split_returns,
-    );
+    split_sinks(program, &constructs, &split_parameters, &split_returns);
     split_projections(program);
 }
 
-fn split_function_parameters(program: &mut Program) -> SecondaryMap<ParameterId, Vec<ParameterId>> {
+fn split_parameters(program: &mut Program) -> SecondaryMap<ParameterId, Vec<ParameterId>> {
     let splits = split_things(&program.struct_types, &mut program.parameters);
 
     for function in program.functions.values_mut() {
@@ -76,7 +71,7 @@ fn split_things<T: slotmap::Key>(
 fn split_sinks(
     program: &mut Program,
     constructs: &SecondaryMap<OpId, Vec<Value>>,
-    split_function_parameters: &SecondaryMap<ParameterId, Vec<ParameterId>>,
+    split_parameters: &SecondaryMap<ParameterId, Vec<ParameterId>>,
     split_returns: &SecondaryMap<ReturnId, Vec<ReturnId>>,
 ) {
     let mut renames = SecondaryMap::<OpId, Value>::new();
@@ -88,7 +83,7 @@ fn split_sinks(
                 if let Some(fields) = match value {
                     Value::Op(source) => constructs.get(*source).cloned(),
                     Value::FunctionParameter(source) => {
-                        split_function_parameters.get(*source).map(|fields| {
+                        split_parameters.get(*source).map(|fields| {
                             fields
                                 .iter()
                                 .copied()
@@ -118,7 +113,7 @@ fn split_sinks(
             Op::Extract { r#struct, index } => {
                 match r#struct {
                     Value::FunctionParameter(source) => {
-                        let fields = &split_function_parameters[*source];
+                        let fields = &split_parameters[*source];
                         assert!(renames
                             .insert(id, Value::FunctionParameter(fields[*index]))
                             .is_none());
@@ -148,14 +143,14 @@ fn split_sinks(
             Op::Return(values) => split_other_things(
                 values,
                 split_returns,
-                split_function_parameters,
+                split_parameters,
                 split_returns,
                 constructs,
             ),
             Op::Call { arguments, .. } => split_other_things(
                 arguments,
-                split_function_parameters,
-                split_function_parameters,
+                split_parameters,
+                split_parameters,
                 split_returns,
                 constructs,
             ),
@@ -197,7 +192,7 @@ fn split_sinks(
 fn split_other_things<T: slotmap::Key>(
     values: &mut SecondaryMap<T, Value>,
     ids: &SecondaryMap<T, Vec<T>>,
-    split_function_parameters: &SecondaryMap<ParameterId, Vec<ParameterId>>,
+    split_parameters: &SecondaryMap<ParameterId, Vec<ParameterId>>,
     split_returns: &SecondaryMap<ReturnId, Vec<ReturnId>>,
     constructs: &SecondaryMap<OpId, Vec<Value>>,
 ) {
@@ -208,7 +203,7 @@ fn split_other_things<T: slotmap::Key>(
 
             match value {
                 Value::FunctionParameter(source) => {
-                    if let Some(fields) = split_function_parameters.get(*source) {
+                    if let Some(fields) = split_parameters.get(*source) {
                         return Left(Left(
                             ids[id]
                                 .iter()
