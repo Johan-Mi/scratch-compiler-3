@@ -174,12 +174,10 @@ fn split_sinks(
         insert_before(&mut program.basic_blocks, new_ops, before);
     }
 
-    for op in program.ops.values_mut() {
-        for arg in op.args_mut() {
-            if let Value::Op(arg_op) = *arg {
-                if let Some(&replacement) = renames.get(arg_op) {
-                    *arg = replacement;
-                }
+    for arg in program.ops.values_mut().flat_map(Op::args_mut) {
+        if let Value::Op(arg_op) = *arg {
+            if let Some(&replacement) = renames.get(arg_op) {
+                *arg = replacement;
             }
         }
     }
