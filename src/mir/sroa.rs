@@ -123,9 +123,7 @@ fn split_sinks(
                         call: *call,
                         id: split_returns[*return_id][*index],
                     },
-                    Value::Num(_) | Value::String(_) | Value::Bool(_) | Value::VariableRef(_) => {
-                        unreachable!()
-                    }
+                    Value::Num(_) | Value::String(_) | Value::Bool(_) => unreachable!(),
                 };
                 assert!(renames.insert(id, field).is_none());
             }

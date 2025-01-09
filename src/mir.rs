@@ -153,15 +153,10 @@ impl Op {
 enum Value {
     FunctionParameter(ParameterId),
     Op(OpId),
-    Returned {
-        call: OpId,
-        id: ReturnId,
-    },
+    Returned { call: OpId, id: ReturnId },
     Num(f64),
     String(&'static str),
     Bool(bool),
-    /// Reference for `Op::Load` and `Op::Store`.
-    VariableRef(VariableId),
 }
 
 #[derive(Debug, Clone)]
