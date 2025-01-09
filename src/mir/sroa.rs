@@ -188,7 +188,53 @@ fn split_sinks(
                     })
                     .collect();
             }
-            Op::Call { .. } => todo!(),
+            Op::Call { arguments, .. } => {
+                *arguments = arguments
+                    .iter()
+                    .flat_map(|(id, value)| {
+                        use Either::{Left, Right};
+
+                        match value {
+                            Value::FunctionParameter(source) => {
+                                if let Some(fields) = split_function_parameters.get(*source) {
+                                    return Left(Left(
+                                        split_function_parameters[id].iter().copied().zip(
+                                            fields.iter().copied().map(Value::FunctionParameter),
+                                        ),
+                                    ));
+                                }
+                            }
+                            Value::Op(source_op) => {
+                                if let Some(fields) = constructs.get(*source_op) {
+                                    return Left(Right(
+                                        split_function_parameters[id]
+                                            .iter()
+                                            .copied()
+                                            .zip(fields.iter().copied()),
+                                    ));
+                                }
+                            }
+                            Value::Returned {
+                                call,
+                                id: return_id,
+                            } => {
+                                if let Some(fields) = split_returns.get(*return_id) {
+                                    return Right(Left(
+                                        split_function_parameters[id].iter().copied().zip(
+                                            fields.iter().map(|&it| Value::Returned {
+                                                call: *call,
+                                                id: it,
+                                            }),
+                                        ),
+                                    ));
+                                }
+                            }
+                            _ => {}
+                        }
+                        Right(Right(std::iter::once((id, *value))))
+                    })
+                    .collect();
+            }
             _ => {}
         }
     }
