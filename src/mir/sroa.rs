@@ -111,30 +111,23 @@ fn split_sinks(
                 }
             }
             Op::Extract { r#struct, index } => {
-                match r#struct {
+                let field = match r#struct {
                     Value::FunctionParameter(source) => {
-                        let fields = &split_parameters[*source];
-                        assert!(renames
-                            .insert(id, Value::FunctionParameter(fields[*index]))
-                            .is_none());
+                        Value::FunctionParameter(split_parameters[*source][*index])
                     }
-                    Value::Op(source_op) => {
-                        assert!(renames.insert(id, constructs[*source_op][*index]).is_none());
-                    }
+                    Value::Op(source_op) => constructs[*source_op][*index],
                     Value::Returned {
                         call,
                         id: return_id,
-                    } => {
-                        let field = Value::Returned {
-                            call: *call,
-                            id: split_returns[*return_id][*index],
-                        };
-                        assert!(renames.insert(id, field).is_none());
-                    }
+                    } => Value::Returned {
+                        call: *call,
+                        id: split_returns[*return_id][*index],
+                    },
                     Value::Num(_) | Value::String(_) | Value::Bool(_) | Value::VariableRef(_) => {
                         unreachable!()
                     }
                 };
+                assert!(renames.insert(id, field).is_none());
             }
             Op::Return(values) => split_other_things(
                 values,
