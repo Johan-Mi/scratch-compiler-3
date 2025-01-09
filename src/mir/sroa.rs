@@ -158,8 +158,8 @@ fn split_sinks(
         }
     }
 
-    for (before, (target, fields)) in &store_projections {
-        let new_ops = fields
+    for (old, (target, fields)) in &store_projections {
+        let new = fields
             .iter()
             .enumerate()
             .map(|(index, &field)| {
@@ -171,7 +171,7 @@ fn split_sinks(
                 })
             })
             .collect();
-        insert_before(&mut program.basic_blocks, new_ops, before);
+        splice(&mut program.basic_blocks, old, new);
     }
 
     for arg in program.ops.values_mut().flat_map(Op::args_mut) {
@@ -182,9 +182,7 @@ fn split_sinks(
         }
     }
 
-    program
-        .ops
-        .retain(|id, _| !(store_projections.contains_key(id) || renames.contains_key(id)));
+    program.ops.retain(|id, _| !renames.contains_key(id));
 }
 
 fn split_other_things<T: slotmap::Key>(
@@ -251,8 +249,8 @@ fn split_sources(program: &mut Program) -> SecondaryMap<OpId, Vec<Value>> {
         }
     }
 
-    for (before, source, r#type) in load_projections {
-        let (fields, new_ops) = program.struct_types[r#type]
+    for (old, source, r#type) in load_projections {
+        let (fields, new) = program.struct_types[r#type]
             .iter()
             .enumerate()
             .map(|(index, &r#type)| {
@@ -265,8 +263,8 @@ fn split_sources(program: &mut Program) -> SecondaryMap<OpId, Vec<Value>> {
                 (Value::Op(field), field)
             })
             .unzip();
-        assert!(constructs.insert(before, fields).is_none());
-        insert_before(&mut program.basic_blocks, new_ops, before);
+        assert!(constructs.insert(old, fields).is_none());
+        splice(&mut program.basic_blocks, old, new);
     }
 
     program.ops.retain(|id, _| !constructs.contains_key(id));
@@ -274,14 +272,10 @@ fn split_sources(program: &mut Program) -> SecondaryMap<OpId, Vec<Value>> {
     constructs
 }
 
-fn insert_before(
-    basic_blocks: &mut SlotMap<BasicBlockId, BasicBlock>,
-    new_ops: Vec<OpId>,
-    before: OpId,
-) {
+fn splice(basic_blocks: &mut SlotMap<BasicBlockId, BasicBlock>, old: OpId, new: Vec<OpId>) {
     for basic_block in basic_blocks.values_mut() {
-        if let Some(index) = basic_block.0.iter().position(|&it| it == before) {
-            _ = basic_block.0.splice(index..index, new_ops);
+        if let Some(index) = basic_block.0.iter().position(|&it| it == old) {
+            _ = basic_block.0.splice(index..=index, new);
             return;
         }
     }
