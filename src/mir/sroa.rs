@@ -1,15 +1,23 @@
 use super::{
-    BasicBlock, BasicBlockId, Either, Op, OpId, ParameterId, Program, Ref, RefBase, ReturnId,
-    TypeId, Value,
+    BasicBlock, BasicBlockId, Either, ListId, Op, OpId, ParameterId, Program, Ref, ReturnId,
+    TypeId, Value, VariableId,
 };
 use slotmap::{SecondaryMap, SlotMap};
 
 pub fn perform(program: &mut Program) {
     let split_parameters = split_parameters(program);
-    let constructs = split_sources(program);
+    let split_variables = split_things(&program.struct_types, &mut program.variables);
+    let split_lists = split_things(&program.struct_types, &mut program.lists);
+    let constructs = split_sources(program, &split_variables, &split_lists);
     let split_returns = split_things(&program.struct_types, &mut program.returns);
-    split_sinks(program, &constructs, &split_parameters, &split_returns);
-    split_projections(program);
+    split_sinks(
+        program,
+        &constructs,
+        &split_parameters,
+        &split_returns,
+        &split_variables,
+        &split_lists,
+    );
 }
 
 fn split_parameters(program: &mut Program) -> SecondaryMap<ParameterId, Vec<ParameterId>> {
@@ -30,23 +38,6 @@ fn split_parameters(program: &mut Program) -> SecondaryMap<ParameterId, Vec<Para
     }
 
     splits
-}
-
-fn split_projections(program: &mut Program) {
-    let split_variables = split_things(&program.struct_types, &mut program.variables);
-    let split_lists = split_things(&program.struct_types, &mut program.lists);
-
-    for (index, r#ref) in program
-        .ops
-        .values_mut()
-        .flat_map(Op::refs_mut)
-        .filter_map(|it| Some((it.projections.pop()?, it)))
-    {
-        match &mut r#ref.base {
-            RefBase::Variable(variable) => *variable = split_variables[*variable][index],
-            RefBase::List { list, .. } => *list = split_lists[*list][index],
-        }
-    }
 }
 
 fn split_things<T: slotmap::Key>(
@@ -73,6 +64,8 @@ fn split_sinks(
     constructs: &SecondaryMap<OpId, Vec<Value>>,
     split_parameters: &SecondaryMap<ParameterId, Vec<ParameterId>>,
     split_returns: &SecondaryMap<ReturnId, Vec<ReturnId>>,
+    split_variables: &SecondaryMap<VariableId, Vec<VariableId>>,
+    split_lists: &SecondaryMap<ListId, Vec<ListId>>,
 ) {
     let mut renames = SecondaryMap::<OpId, Value>::new();
     let mut store_projections = SecondaryMap::<OpId, (Ref, Vec<Value>)>::new();
@@ -105,9 +98,7 @@ fn split_sinks(
                     }),
                     _ => None,
                 } {
-                    assert!(store_projections
-                        .insert(id, (target.clone(), fields))
-                        .is_none());
+                    assert!(store_projections.insert(id, (*target, fields)).is_none());
                 }
             }
             Op::Extract { r#struct, index } => {
@@ -149,11 +140,15 @@ fn split_sinks(
         let new = fields
             .iter()
             .enumerate()
-            .map(|(index, &field)| {
-                let mut target_field = target.clone();
-                target_field.projections.insert(0, index);
+            .map(|(i, &field)| {
                 program.ops.insert(Op::Store {
-                    target: target_field,
+                    target: match *target {
+                        Ref::Variable(variable) => Ref::Variable(split_variables[variable][i]),
+                        Ref::List { list, index } => Ref::List {
+                            list: split_lists[list][i],
+                            index,
+                        },
+                    },
                     value: field,
                 })
             })
@@ -220,14 +215,18 @@ fn split_other_things<T: slotmap::Key>(
         .collect();
 }
 
-fn split_sources(program: &mut Program) -> SecondaryMap<OpId, Vec<Value>> {
+fn split_sources(
+    program: &mut Program,
+    split_variables: &SecondaryMap<VariableId, Vec<VariableId>>,
+    split_lists: &SecondaryMap<ListId, Vec<ListId>>,
+) -> SecondaryMap<OpId, Vec<Value>> {
     let mut constructs = SecondaryMap::<OpId, Vec<Value>>::new();
     let mut load_projections = Vec::<(OpId, Ref, TypeId)>::new();
 
     for (id, op) in &mut program.ops {
         match op {
             Op::Load { r#type, source } if r#type.is_struct() => {
-                load_projections.push((id, source.clone(), *r#type));
+                load_projections.push((id, *source, *r#type));
             }
             Op::Construct(fields) => {
                 assert!(constructs.insert(id, std::mem::take(fields)).is_none());
@@ -240,12 +239,16 @@ fn split_sources(program: &mut Program) -> SecondaryMap<OpId, Vec<Value>> {
         let (fields, new) = program.struct_types[r#type]
             .iter()
             .enumerate()
-            .map(|(index, &r#type)| {
-                let mut field_ref = source.clone();
-                field_ref.projections.insert(0, index);
+            .map(|(i, &r#type)| {
                 let field = program.ops.insert(Op::Load {
                     r#type,
-                    source: field_ref,
+                    source: match source {
+                        Ref::Variable(variable) => Ref::Variable(split_variables[variable][i]),
+                        Ref::List { list, index } => Ref::List {
+                            list: split_lists[list][i],
+                            index,
+                        },
+                    },
                 });
                 (Value::Op(field), field)
             })

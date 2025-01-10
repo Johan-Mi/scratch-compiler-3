@@ -99,21 +99,13 @@ impl Op {
 
         match self {
             Self::Store {
-                target:
-                    Ref {
-                        base: RefBase::List { index, .. },
-                        ..
-                    },
+                target: Ref::List { index, .. },
                 value,
             } => Right(Right([index, value].into_iter())),
             Self::Store { value: arg, .. }
             | Self::Load {
                 r#type: _,
-                source:
-                    Ref {
-                        base: RefBase::List { index: arg, .. },
-                        ..
-                    },
+                source: Ref::List { index: arg, .. },
             }
             | Self::Extract {
                 r#struct: arg,
@@ -159,15 +151,8 @@ enum Value {
     Bool(bool),
 }
 
-#[derive(Debug, Clone)]
-struct Ref {
-    base: RefBase,
-    /// Stored in reverse order.
-    projections: Vec<usize>,
-}
-
 #[derive(Debug, Clone, Copy)]
-enum RefBase {
+enum Ref {
     Variable(VariableId),
     List { list: ListId, index: Value },
 }
