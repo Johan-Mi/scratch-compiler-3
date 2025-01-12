@@ -137,22 +137,18 @@ fn split_sinks(
     }
 
     for (old, (target, fields)) in &store_projections {
-        let new = fields
-            .iter()
-            .enumerate()
-            .map(|(i, &field)| {
-                program.ops.insert(Op::Store {
-                    target: match *target {
-                        Ref::Variable(variable) => Ref::Variable(split_variables[variable][i]),
-                        Ref::List { list, index } => Ref::List {
-                            list: split_lists[list][i],
-                            index,
-                        },
+        let new = fields.iter().enumerate().map(|(i, &field)| {
+            program.ops.insert(Op::Store {
+                target: match *target {
+                    Ref::Variable(variable) => Ref::Variable(split_variables[variable][i]),
+                    Ref::List { list, index } => Ref::List {
+                        list: split_lists[list][i],
+                        index,
                     },
-                    value: field,
-                })
+                },
+                value: field,
             })
-            .collect();
+        });
         splice(&mut program.basic_blocks, old, new);
     }
 
@@ -236,25 +232,26 @@ fn split_sources(
     }
 
     for (old, source, r#type) in load_projections {
-        let (fields, new) = program.struct_types[r#type]
+        let fields: Vec<Value> = program.struct_types[r#type]
             .iter()
             .enumerate()
             .map(|(i, &r#type)| {
-                let field = program.ops.insert(Op::Load {
-                    r#type,
-                    source: match source {
-                        Ref::Variable(variable) => Ref::Variable(split_variables[variable][i]),
-                        Ref::List { list, index } => Ref::List {
-                            list: split_lists[list][i],
-                            index,
-                        },
+                let source = match source {
+                    Ref::Variable(variable) => Ref::Variable(split_variables[variable][i]),
+                    Ref::List { list, index } => Ref::List {
+                        list: split_lists[list][i],
+                        index,
                     },
-                });
-                (Value::Op(field), field)
+                };
+                Value::Op(program.ops.insert(Op::Load { r#type, source }))
             })
-            .unzip();
-        assert!(constructs.insert(old, fields).is_none());
+            .collect();
+        let new = fields.iter().map(|&it| match it {
+            Value::Op(op) => op,
+            _ => unreachable!(),
+        });
         splice(&mut program.basic_blocks, old, new);
+        assert!(constructs.insert(old, fields).is_none());
     }
 
     program.ops.retain(|id, _| !constructs.contains_key(id));
@@ -262,7 +259,11 @@ fn split_sources(
     constructs
 }
 
-fn splice(basic_blocks: &mut SlotMap<BasicBlockId, BasicBlock>, old: OpId, new: Vec<OpId>) {
+fn splice(
+    basic_blocks: &mut SlotMap<BasicBlockId, BasicBlock>,
+    old: OpId,
+    new: impl Iterator<Item = OpId>,
+) {
     for basic_block in basic_blocks.values_mut() {
         if let Some(index) = basic_block.0.iter().position(|&it| it == old) {
             _ = basic_block.0.splice(index..=index, new);
