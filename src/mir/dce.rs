@@ -1,5 +1,5 @@
-use super::{Op, ParameterId, Program, ReturnId, Value};
-use slotmap::SecondaryMap;
+use super::{Op, Program, Value};
+use std::collections::HashSet;
 
 pub fn perform(program: &mut Program) {
     parameters(program);
@@ -7,49 +7,49 @@ pub fn perform(program: &mut Program) {
 }
 
 fn parameters(program: &mut Program) {
-    let used_parameters: SecondaryMap<ParameterId, ()> = program
+    let used_parameters: HashSet<_> = program
         .ops
-        .values_mut()
+        .iter_mut()
         .flat_map(Op::args_mut)
         .filter_map(|&mut it| {
             if let Value::FunctionParameter(parameter) = it {
-                Some((parameter, ()))
+                Some(parameter)
             } else {
                 None
             }
         })
         .collect();
 
-    for function in program.functions.values_mut() {
+    for function in &mut program.functions {
         function
             .parameters
-            .retain(|it, ()| used_parameters.contains_key(it));
+            .retain(|it| used_parameters.contains(it));
     }
 
-    for op in program.ops.values_mut() {
+    for op in &mut program.ops {
         if let Op::Call { arguments, .. } = op {
-            arguments.retain(|it, _| used_parameters.contains_key(it));
+            arguments.retain(|it, _| used_parameters.contains(it));
         }
     }
 }
 
 fn returns(program: &mut Program) {
-    let used_returns: SecondaryMap<ReturnId, ()> = program
+    let used_returns: HashSet<_> = program
         .ops
-        .values_mut()
+        .iter_mut()
         .flat_map(Op::args_mut)
         .filter_map(|&mut it| {
             if let Value::Returned { id, .. } = it {
-                Some((id, ()))
+                Some(id)
             } else {
                 None
             }
         })
         .collect();
 
-    for op in program.ops.values_mut() {
+    for op in &mut program.ops {
         if let Op::Return(values) = op {
-            values.retain(|it, _| used_returns.contains_key(it));
+            values.retain(|it, _| used_returns.contains(it));
         }
     }
 }

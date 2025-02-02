@@ -1,65 +1,68 @@
 mod dce;
 mod sroa;
 
-use slotmap::{Key as _, SecondaryMap, SlotMap};
+use beach_map::{BeachMap, Id};
+use std::collections::{HashMap, HashSet};
 
-#[derive(Debug)]
 struct Program {
-    functions: SlotMap<FunctionId, Function>,
-    parameters: SlotMap<ParameterId, TypeId>,
-    returns: SlotMap<ReturnId, TypeId>,
-    struct_types: SlotMap<TypeId, Vec<TypeId>>,
-    basic_blocks: SlotMap<BasicBlockId, BasicBlock>,
-    ops: SlotMap<OpId, Op>,
-    variables: SlotMap<VariableId, TypeId>,
-    lists: SlotMap<ListId, TypeId>,
+    functions: BeachMap<Function>,
+    parameters: BeachMap<Parameter>,
+    returns: BeachMap<Return>,
+    struct_types: BeachMap<Type>,
+    basic_blocks: BeachMap<BasicBlock>,
+    ops: BeachMap<Op>,
+    variables: BeachMap<Variable>,
+    lists: BeachMap<List>,
 }
 
-slotmap::new_key_type! {
-    struct FunctionId;
-}
-
-#[derive(Debug)]
 struct Function {
-    parameters: SecondaryMap<ParameterId, ()>,
-    body: BasicBlockId,
+    parameters: HashSet<Id<Parameter>>,
+    body: Id<BasicBlock>,
 }
 
-slotmap::new_key_type! {
-    struct ParameterId;
-
-    struct ReturnId;
+#[derive(Clone, Copy)]
+struct Parameter {
+    r#type: Id<Type>,
 }
 
-slotmap::new_key_type! {
-    struct TypeId;
-}
-
-impl TypeId {
-    fn scalar() -> Self {
-        Self::null()
-    }
-
-    fn is_struct(self) -> bool {
-        !self.is_null()
+impl From<Parameter> for Id<Type> {
+    fn from(value: Parameter) -> Self {
+        value.r#type
     }
 }
 
-slotmap::new_key_type! {
-    struct BasicBlockId;
+impl From<Id<Type>> for Parameter {
+    fn from(value: Id<Type>) -> Self {
+        Self { r#type: value }
+    }
 }
 
-#[derive(Debug)]
-struct BasicBlock(Vec<OpId>);
-
-slotmap::new_key_type! {
-    struct OpId;
+#[derive(Clone, Copy)]
+struct Return {
+    r#type: Id<Type>,
 }
 
-#[derive(Debug)]
+impl From<Return> for Id<Type> {
+    fn from(value: Return) -> Self {
+        value.r#type
+    }
+}
+
+impl From<Id<Type>> for Return {
+    fn from(value: Id<Type>) -> Self {
+        Self { r#type: value }
+    }
+}
+
+struct Type {
+    fields: Vec<Id<Type>>,
+}
+
+struct BasicBlock(Vec<Id<Op>>);
+
 enum Op {
     Load {
-        r#type: TypeId,
+        r#type: Id<Type>,
         source: Ref,
     },
     Store {
@@ -75,19 +78,19 @@ enum Op {
 
     Repeat {
         times: Value,
-        body: BasicBlockId,
+        body: Id<BasicBlock>,
     },
-    Forever(BasicBlockId),
+    Forever(Id<BasicBlock>),
     If {
         condition: Value,
-        then: BasicBlockId,
-        r#else: BasicBlockId,
+        then: Id<BasicBlock>,
+        r#else: Id<BasicBlock>,
     },
-    Return(SecondaryMap<ReturnId, Value>),
+    Return(HashMap<Id<Return>, Value>),
 
     Call {
-        function: FunctionId,
-        arguments: SecondaryMap<ParameterId, Value>,
+        function: Id<Function>,
+        arguments: HashMap<Id<Parameter>, Value>,
     },
 
     Add([Value; 2]),
@@ -141,26 +144,54 @@ impl Op {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 enum Value {
-    FunctionParameter(ParameterId),
-    Op(OpId),
-    Returned { call: OpId, id: ReturnId },
+    FunctionParameter(Id<Parameter>),
+    Op(Id<Op>),
+    Returned { call: Id<Op>, id: Id<Return> },
     Num(f64),
     String(&'static str),
     Bool(bool),
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 enum Ref {
-    Variable(VariableId),
-    List { list: ListId, index: Value },
+    Variable(Id<Variable>),
+    List { list: Id<List>, index: Value },
 }
 
-slotmap::new_key_type! {
-    struct VariableId;
+#[derive(Clone, Copy)]
+struct Variable {
+    r#type: Id<Type>,
+}
 
-    struct ListId;
+impl From<Variable> for Id<Type> {
+    fn from(value: Variable) -> Self {
+        value.r#type
+    }
+}
+
+impl From<Id<Type>> for Variable {
+    fn from(value: Id<Type>) -> Self {
+        Self { r#type: value }
+    }
+}
+
+#[derive(Clone, Copy)]
+struct List {
+    r#type: Id<Type>,
+}
+
+impl From<List> for Id<Type> {
+    fn from(value: List) -> Self {
+        value.r#type
+    }
+}
+
+impl From<Id<Type>> for List {
+    fn from(value: Id<Type>) -> Self {
+        Self { r#type: value }
+    }
 }
 
 enum Either<L, R> {
