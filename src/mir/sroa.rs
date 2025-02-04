@@ -219,7 +219,7 @@ fn split_sources(
 
     for (id, op) in program.ops.iter_mut_with_id() {
         match op {
-            Op::Load { r#type, source } if *r#type == Id::invalid() => {
+            Op::Load { r#type, source } if *r#type != Id::invalid() => {
                 load_projections.push((id, *source, *r#type));
             }
             Op::Construct(fields) => {
