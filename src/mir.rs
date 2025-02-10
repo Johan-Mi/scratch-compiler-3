@@ -6,7 +6,6 @@ use std::collections::HashMap;
 
 struct Program {
     parameters: BeachMap<Parameter>,
-    parameter_owners: HashMap<Id<Parameter>, Id<BasicBlock>>,
     returns: BeachMap<Return>,
     struct_types: BeachMap<Type>,
     basic_blocks: BeachMap<BasicBlock>,
@@ -15,20 +14,25 @@ struct Program {
     lists: BeachMap<List>,
 }
 
+trait HasType {
+    fn r#type(self) -> Id<Type>;
+
+    fn with_type(self, r#type: Id<Type>) -> Self;
+}
+
 #[derive(Clone, Copy)]
 struct Parameter {
+    owner: Id<BasicBlock>,
     r#type: Id<Type>,
 }
 
-impl From<Parameter> for Id<Type> {
-    fn from(value: Parameter) -> Self {
-        value.r#type
+impl HasType for Parameter {
+    fn r#type(self) -> Id<Type> {
+        self.r#type
     }
-}
 
-impl From<Id<Type>> for Parameter {
-    fn from(value: Id<Type>) -> Self {
-        Self { r#type: value }
+    fn with_type(self, r#type: Id<Type>) -> Self {
+        Self { r#type, ..self }
     }
 }
 
@@ -37,15 +41,13 @@ struct Return {
     r#type: Id<Type>,
 }
 
-impl From<Return> for Id<Type> {
-    fn from(value: Return) -> Self {
-        value.r#type
+impl HasType for Return {
+    fn r#type(self) -> Id<Type> {
+        self.r#type
     }
-}
 
-impl From<Id<Type>> for Return {
-    fn from(value: Id<Type>) -> Self {
-        Self { r#type: value }
+    fn with_type(self, r#type: Id<Type>) -> Self {
+        Self { r#type }
     }
 }
 
@@ -160,15 +162,13 @@ struct Variable {
     r#type: Id<Type>,
 }
 
-impl From<Variable> for Id<Type> {
-    fn from(value: Variable) -> Self {
-        value.r#type
+impl HasType for Variable {
+    fn r#type(self) -> Id<Type> {
+        self.r#type
     }
-}
 
-impl From<Id<Type>> for Variable {
-    fn from(value: Id<Type>) -> Self {
-        Self { r#type: value }
+    fn with_type(self, r#type: Id<Type>) -> Self {
+        Self { r#type }
     }
 }
 
@@ -177,15 +177,13 @@ struct List {
     r#type: Id<Type>,
 }
 
-impl From<List> for Id<Type> {
-    fn from(value: List) -> Self {
-        value.r#type
+impl HasType for List {
+    fn r#type(self) -> Id<Type> {
+        self.r#type
     }
-}
 
-impl From<Id<Type>> for List {
-    fn from(value: Id<Type>) -> Self {
-        Self { r#type: value }
+    fn with_type(self, r#type: Id<Type>) -> Self {
+        Self { r#type }
     }
 }
 

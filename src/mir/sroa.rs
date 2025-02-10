@@ -1,9 +1,14 @@
-use super::{BasicBlock, Either, List, Op, Parameter, Program, Ref, Return, Type, Value, Variable};
+use super::{
+    BasicBlock, Either, HasType, List, Op, Parameter, Program, Ref, Return, Type, Value, Variable,
+};
 use beach_map::{BeachMap, Id};
 use std::{collections::HashMap, hash::Hash};
 
 pub fn perform(program: &mut Program) {
-    let split_parameters = split_parameters(program);
+    let split_parameters = split_things(&program.struct_types, &mut program.parameters);
+    program
+        .parameters
+        .retain(|it, _| !split_parameters.contains_key(&it));
     let split_variables = split_things(&program.struct_types, &mut program.variables);
     let split_lists = split_things(&program.struct_types, &mut program.lists);
     let constructs = split_sources(program, &split_variables, &split_lists);
@@ -18,40 +23,20 @@ pub fn perform(program: &mut Program) {
     );
 }
 
-fn split_parameters(program: &mut Program) -> HashMap<Id<Parameter>, Vec<Id<Parameter>>> {
-    let splits = split_things(&program.struct_types, &mut program.parameters);
-
-    program.parameter_owners = program
-        .parameter_owners
-        .iter()
-        .flat_map(|(parameter, &owner)| {
-            splits
-                .get(parameter)
-                .map_or_else(
-                    || Either::Left(std::iter::once(*parameter)),
-                    |fields| Either::Right(fields.iter().copied()),
-                )
-                .map(move |it| (it, owner))
-        })
-        .collect();
-
-    splits
-}
-
-fn split_things<T: Copy + From<Id<Type>> + Into<Id<Type>>>(
+fn split_things<T: Copy + HasType>(
     struct_types: &BeachMap<Type>,
     things: &mut BeachMap<T>,
 ) -> HashMap<Id<T>, Vec<Id<T>>> {
     things
         .iter_with_id()
-        .filter_map(|(it, thing)| Some((it, struct_types.get((*thing).into())?)))
+        .filter_map(|(it, &thing)| Some((it, (thing, struct_types.get(thing.r#type())?))))
         .collect::<Vec<_>>()
         .into_iter()
-        .map(|(it, field_types)| {
+        .map(|(it, (thing, field_types))| {
             let fields = field_types
                 .fields
                 .iter()
-                .map(|&field_type| things.insert(field_type.into()))
+                .map(|&field_type| things.insert(thing.with_type(field_type)))
                 .collect();
             (it, fields)
         })
