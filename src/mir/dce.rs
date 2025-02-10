@@ -20,11 +20,9 @@ fn parameters(program: &mut Program) {
         })
         .collect();
 
-    for function in &mut program.functions {
-        function
-            .parameters
-            .retain(|it| used_parameters.contains(it));
-    }
+    program
+        .parameter_owners
+        .retain(|it, _| used_parameters.contains(it));
 
     for op in &mut program.ops {
         if let Op::Call { arguments, .. } = op {

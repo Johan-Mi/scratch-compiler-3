@@ -21,18 +21,19 @@ pub fn perform(program: &mut Program) {
 fn split_parameters(program: &mut Program) -> HashMap<Id<Parameter>, Vec<Id<Parameter>>> {
     let splits = split_things(&program.struct_types, &mut program.parameters);
 
-    for function in &mut program.functions {
-        function.parameters = function
-            .parameters
-            .iter()
-            .flat_map(|it| {
-                splits.get(it).map_or_else(
-                    || Either::Left(std::iter::once(*it)),
+    program.parameter_owners = program
+        .parameter_owners
+        .iter()
+        .flat_map(|(parameter, &owner)| {
+            splits
+                .get(parameter)
+                .map_or_else(
+                    || Either::Left(std::iter::once(*parameter)),
                     |fields| Either::Right(fields.iter().copied()),
                 )
-            })
-            .collect();
-    }
+                .map(move |it| (it, owner))
+        })
+        .collect();
 
     splits
 }

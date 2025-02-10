@@ -2,11 +2,12 @@ mod dce;
 mod sroa;
 
 use beach_map::{BeachMap, Id};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 struct Program {
     functions: BeachMap<Function>,
     parameters: BeachMap<Parameter>,
+    parameter_owners: HashMap<Id<Parameter>, Id<Function>>,
     returns: BeachMap<Return>,
     struct_types: BeachMap<Type>,
     basic_blocks: BeachMap<BasicBlock>,
@@ -16,7 +17,6 @@ struct Program {
 }
 
 struct Function {
-    parameters: HashSet<Id<Parameter>>,
     body: Id<BasicBlock>,
 }
 
