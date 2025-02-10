@@ -5,19 +5,14 @@ use beach_map::{BeachMap, Id};
 use std::collections::HashMap;
 
 struct Program {
-    functions: BeachMap<Function>,
     parameters: BeachMap<Parameter>,
-    parameter_owners: HashMap<Id<Parameter>, Id<Function>>,
+    parameter_owners: HashMap<Id<Parameter>, Id<BasicBlock>>,
     returns: BeachMap<Return>,
     struct_types: BeachMap<Type>,
     basic_blocks: BeachMap<BasicBlock>,
     ops: BeachMap<Op>,
     variables: BeachMap<Variable>,
     lists: BeachMap<List>,
-}
-
-struct Function {
-    body: Id<BasicBlock>,
 }
 
 #[derive(Clone, Copy)]
@@ -89,7 +84,7 @@ enum Op {
     Return(HashMap<Id<Return>, Value>),
 
     Call {
-        function: Id<Function>,
+        function: Id<BasicBlock>,
         arguments: HashMap<Id<Parameter>, Value>,
     },
 
