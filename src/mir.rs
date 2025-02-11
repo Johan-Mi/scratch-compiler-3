@@ -14,41 +14,15 @@ struct Program {
     lists: BeachMap<List>,
 }
 
-trait HasType {
-    fn r#type(self) -> Id<Type>;
-
-    fn with_type(self, r#type: Id<Type>) -> Self;
-}
-
 #[derive(Clone, Copy)]
 struct Parameter {
     owner: Id<BasicBlock>,
     r#type: Id<Type>,
 }
 
-impl HasType for Parameter {
-    fn r#type(self) -> Id<Type> {
-        self.r#type
-    }
-
-    fn with_type(self, r#type: Id<Type>) -> Self {
-        Self { r#type, ..self }
-    }
-}
-
 #[derive(Clone, Copy)]
 struct Return {
     r#type: Id<Type>,
-}
-
-impl HasType for Return {
-    fn r#type(self) -> Id<Type> {
-        self.r#type
-    }
-
-    fn with_type(self, r#type: Id<Type>) -> Self {
-        Self { r#type }
-    }
 }
 
 struct Type {
@@ -162,7 +136,28 @@ struct Variable {
     r#type: Id<Type>,
 }
 
-impl HasType for Variable {
+#[derive(Clone, Copy)]
+struct List {
+    r#type: Id<Type>,
+}
+
+trait HasType {
+    fn r#type(self) -> Id<Type>;
+
+    fn with_type(self, r#type: Id<Type>) -> Self;
+}
+
+impl HasType for Parameter {
+    fn r#type(self) -> Id<Type> {
+        self.r#type
+    }
+
+    fn with_type(self, r#type: Id<Type>) -> Self {
+        Self { r#type, ..self }
+    }
+}
+
+impl HasType for Return {
     fn r#type(self) -> Id<Type> {
         self.r#type
     }
@@ -172,9 +167,14 @@ impl HasType for Variable {
     }
 }
 
-#[derive(Clone, Copy)]
-struct List {
-    r#type: Id<Type>,
+impl HasType for Variable {
+    fn r#type(self) -> Id<Type> {
+        self.r#type
+    }
+
+    fn with_type(self, r#type: Id<Type>) -> Self {
+        Self { r#type }
+    }
 }
 
 impl HasType for List {
