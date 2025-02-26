@@ -79,15 +79,6 @@ impl Op {
             } => Right(Left(arguments.values_mut())),
         }
     }
-
-    fn refs_mut(&mut self) -> impl Iterator<Item = &mut Ref> {
-        match self {
-            Self::Load { source, .. } => Some(source),
-            Self::Store { target, .. } => Some(target),
-            _ => None,
-        }
-        .into_iter()
-    }
 }
 
 #[derive(Clone, Copy)]
