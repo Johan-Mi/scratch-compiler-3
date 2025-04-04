@@ -9,9 +9,9 @@ pub fn perform(program: &mut Program) {
 fn parameters(program: &mut Program) {
     let used_parameters: HashSet<_> = program
         .ops
-        .iter_mut()
-        .flat_map(Op::args_mut)
-        .filter_map(|&mut it| {
+        .iter()
+        .flat_map(Op::args)
+        .filter_map(|&it| {
             if let Value::FunctionParameter(parameter) = it {
                 Some(parameter)
             } else {
@@ -34,9 +34,9 @@ fn parameters(program: &mut Program) {
 fn returns(program: &mut Program) {
     let used_returns: HashSet<_> = program
         .ops
-        .iter_mut()
-        .flat_map(Op::args_mut)
-        .filter_map(|&mut it| {
+        .iter()
+        .flat_map(Op::args)
+        .filter_map(|&it| {
             if let Value::Returned { id, .. } = it {
                 Some(id)
             } else {

@@ -1,4 +1,5 @@
 mod dce;
+mod linearity;
 
 use beach_map::{BeachMap, Id};
 use std::collections::HashMap;
@@ -7,6 +8,7 @@ struct Program {
     parameters: BeachMap<Parameter>,
     basic_blocks: BeachMap<BasicBlock>,
     ops: BeachMap<Op>,
+    variables: BeachMap<Variable>,
 }
 
 #[derive(Clone, Copy)]
@@ -49,6 +51,37 @@ enum Op {
 }
 
 impl Op {
+    fn args(&self) -> impl Iterator<Item = &Value> {
+        use Either::{Left, Right};
+
+        match self {
+            Self::Store {
+                target: Ref::List { index, .. },
+                value,
+            } => Right(Right([index, value].into_iter())),
+            Self::Store { value: arg, .. }
+            | Self::Load {
+                source: Ref::List { index: arg, .. },
+            }
+            | Self::Repeat {
+                times: arg,
+                body: _,
+            }
+            | Self::If {
+                condition: arg,
+                then: _,
+                r#else: _,
+            } => Left(Left(std::slice::from_ref(arg).iter())),
+            Self::Load { .. } | Self::Forever(_) => Left(Left(std::slice::Iter::default())),
+            Self::Add(args) => Left(Left(args.iter())),
+            Self::Return(args) => Left(Right(args.values())),
+            Self::Call {
+                function: _,
+                arguments,
+            } => Right(Left(arguments.values())),
+        }
+    }
+
     fn args_mut(&mut self) -> impl Iterator<Item = &mut Value> {
         use Either::{Left, Right};
 
@@ -93,12 +126,11 @@ enum Value {
 
 #[derive(Clone, Copy)]
 enum Ref {
-    Variable(Variable),
+    Variable(Id<Variable>),
     List { list: List, index: Value },
 }
 
-#[derive(Clone, Copy)]
-struct Variable(u16);
+struct Variable;
 
 #[derive(Clone, Copy)]
 struct List(u16);
