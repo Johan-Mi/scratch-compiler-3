@@ -22,12 +22,12 @@ pub fn spill(program: &mut Program) {
     uses.sort_unstable_by_key(|it| it.0);
 
     let mut variable = None;
-    let mut prev_def = None;
+    let mut prev_def = Id::invalid();
     for (def, user) in uses {
-        if Some(def) != prev_def {
+        if def != prev_def {
             variable = None;
-            prev_def = Some(def);
         }
+        prev_def = def;
         let variable = *variable.get_or_insert_with(|| {
             let basic_block = &mut program.basic_blocks[defs[&def]];
             let index = basic_block.0.iter().position(|&it| it == def).unwrap();
