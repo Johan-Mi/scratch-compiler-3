@@ -45,12 +45,11 @@ pub fn spill(program: &mut Program) {
             source: Ref::Variable(variable),
         });
         let user = &mut program.ops[user];
-        for arg in user.args_mut() {
-            if matches!(*arg, Value::Op(op) if op == def) {
-                *arg = Value::Op(load);
-                break;
-            }
-        }
+        let arg = user
+            .args_mut()
+            .find(|&&mut it| matches!(it, Value::Op(op) if op == def))
+            .unwrap();
+        *arg = Value::Op(load);
         basic_block.0.insert(index, load);
     }
 }
