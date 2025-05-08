@@ -7,8 +7,10 @@
 )]
 #![warn(clippy::nursery, clippy::pedantic)]
 
+mod codegen;
 mod mir;
 
 fn main() {
-    println!("Hello, world!");
+    let program = todo!();
+    codegen::compile(&program);
 }

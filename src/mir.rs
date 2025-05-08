@@ -4,7 +4,7 @@ mod linearity;
 use beach_map::{BeachMap, Id};
 use std::collections::HashMap;
 
-struct Program {
+pub struct Program {
     parameters: BeachMap<Parameter>,
     basic_blocks: BeachMap<BasicBlock>,
     ops: BeachMap<Op>,
