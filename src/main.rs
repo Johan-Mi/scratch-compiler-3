@@ -9,6 +9,7 @@
 
 mod ast;
 mod codegen;
+mod diagnostics;
 mod hir;
 mod mir;
 mod parser;
