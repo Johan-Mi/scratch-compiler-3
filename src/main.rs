@@ -7,10 +7,17 @@
 )]
 #![warn(clippy::nursery, clippy::pedantic)]
 
+mod ast;
 mod codegen;
+mod hir;
 mod mir;
+mod parser;
 
 fn main() {
-    let program = todo!();
-    codegen::compile(&program);
+    let source_code = "";
+    let cst = parser::parse(source_code);
+    let ast = ast::Ast::cast(&cst);
+    let hir = hir::lower(&ast);
+    let mir = mir::lower(&hir);
+    codegen::compile(&mir);
 }

@@ -1,5 +1,8 @@
 mod dce;
 mod linearity;
+mod lowering;
+
+pub use lowering::lower;
 
 use beach_map::{BeachMap, Id};
 use std::collections::HashMap;
