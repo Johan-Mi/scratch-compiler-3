@@ -1,9 +1,9 @@
-use crate::parser::Cst;
+use crate::parser::SyntaxNode;
 
 pub struct Ast;
 
 impl Ast {
-    pub fn cast(cst: &Cst) -> Self {
+    pub fn cast(syntax: &SyntaxNode) -> Self {
         todo!()
     }
 }
