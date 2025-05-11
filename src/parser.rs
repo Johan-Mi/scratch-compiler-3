@@ -705,7 +705,11 @@ impl Parser<'_> {
             return;
         }
         self.builder.start_node_at(checkpoint, FN.into());
-        let _: Option<Span> = self.expect(IDENTIFIER);
+        if self.at(IDENTIFIER) || self.peek().is_binary_operator() {
+            self.bump();
+        } else {
+            self.error();
+        }
         let _: bool = self.eat(STRING);
         if self.at(LBRACKET) {
             self.parse_generics();
