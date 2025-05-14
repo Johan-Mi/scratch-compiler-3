@@ -291,11 +291,9 @@ impl Parser<'_> {
     }
 
     fn eat(&mut self, kind: SyntaxKind) -> bool {
-        if self.at(kind) {
+        self.at(kind) && {
             self.bump();
             true
-        } else {
-            false
         }
     }
 
