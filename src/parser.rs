@@ -30,7 +30,7 @@ pub fn parse_string_literal(token: &SyntaxToken) -> Result<String, ()> {
         match c {
             '"' => return Ok(res),
             '\\' => match chars.next() {
-                Some(c @ ('"' | '\\')) => res.push(c),
+                Some('"' | '\\') => res.push(c),
                 Some('n') => res.push('\n'),
                 Some(_) => todo!("invalid escape sequence"),
                 None => todo!("unfinished escape sequence"),
