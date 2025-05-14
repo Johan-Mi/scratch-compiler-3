@@ -24,7 +24,7 @@ pub fn parse(file: &codemap::File, diagnostics: &mut Diagnostics) -> SyntaxNode 
 }
 
 pub fn parse_string_literal(token: &SyntaxToken) -> Result<String, ()> {
-    let mut res = String::new();
+    let mut res = String::with_capacity(token.text().len() - 1);
     let mut chars = token.text().chars().skip(1);
     while let Some(c) = chars.next() {
         match c {
