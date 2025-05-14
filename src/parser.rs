@@ -26,21 +26,20 @@ pub fn parse(file: &codemap::File, diagnostics: &mut Diagnostics) -> SyntaxNode 
 pub fn parse_string_literal(token: &SyntaxToken) -> Result<String, ()> {
     let mut res = String::new();
     let mut chars = token.text().chars().skip(1);
-    loop {
-        match chars.next() {
-            Some('"') => return Ok(res),
-            Some('\\') => match chars.next() {
+    while let Some(c) = chars.next() {
+        match c {
+            '"' => return Ok(res),
+            '\\' => match chars.next() {
                 Some(c @ ('"' | '\\')) => res.push(c),
                 Some('n') => res.push('\n'),
                 Some(_) => todo!("invalid escape sequence"),
                 None => todo!("unfinished escape sequence"),
             },
-            Some(c) => res.push(c),
-            // Unterminated string literal. This is already checked for in
-            // `syntax_errors`.
-            None => return Err(()),
+            _ => res.push(c),
         }
     }
+    // Unterminated string literal. TODO: emit diagnostic
+    Err(())
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Logos)]
