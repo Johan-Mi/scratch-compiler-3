@@ -682,11 +682,7 @@ impl Parser<'_> {
         }
         self.start_node(BLOCK);
         self.bump();
-        while !self.at(EOF) && !self.eat(RBRACE) {
-            if self.at(KW_SPRITE) {
-                break;
-            }
-
+        while !matches!(self.peek(), EOF | KW_SPRITE) && !self.eat(RBRACE) {
             self.parse_statement();
         }
         self.builder.finish_node();
