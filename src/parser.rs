@@ -1,4 +1,4 @@
-use crate::diagnostics::{primary, secondary, Diagnostics};
+use crate::diagnostics::{Diagnostics, primary, secondary};
 use codemap::Span;
 use logos::Logos as _;
 use logos_derive::Logos;
@@ -55,7 +55,6 @@ pub enum SyntaxKind {
     TRIVIA,
 
     DOCUMENT,
-    IMPORT,
     STRUCT,
     FIELD_DEFINITION,
     SPRITE,
@@ -131,8 +130,6 @@ pub enum SyntaxKind {
     #[token(".")]
     DOT,
 
-    #[token("import")]
-    KW_IMPORT,
     #[token("struct")]
     KW_STRUCT,
     #[token("sprite")]
@@ -309,7 +306,6 @@ impl Parser<'_> {
 
     fn parse_anything(&mut self) {
         match self.peek() {
-            KW_IMPORT => self.parse_import(),
             KW_STRUCT => self.parse_struct(),
             KW_SPRITE => self.parse_sprite(),
             KW_INLINE | KW_FN => self.parse_function(),
@@ -359,13 +355,6 @@ impl Parser<'_> {
             self.error();
             None
         }
-    }
-
-    fn parse_import(&mut self) {
-        self.start_node(IMPORT);
-        self.bump(); // KW_IMPORT
-        let _: Option<Span> = self.expect(STRING);
-        self.builder.finish_node();
     }
 
     fn parse_struct(&mut self) {
@@ -777,7 +766,6 @@ impl Parser<'_> {
 
     fn parse_top_level_item(&mut self) {
         match self.peek() {
-            KW_IMPORT => self.parse_import(),
             KW_STRUCT => self.parse_struct(),
             KW_SPRITE => self.parse_sprite(),
             KW_INLINE | KW_FN => self.parse_function(),
