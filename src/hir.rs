@@ -1,7 +1,7 @@
-use crate::ast::Ast;
+use crate::ast;
 
 pub struct Program;
 
-pub fn lower(ast: &Ast) -> Program {
+pub fn lower(document: &ast::Document) -> Program {
     todo!()
 }

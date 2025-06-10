@@ -23,7 +23,7 @@ fn main() {
     let source_file = code_map.add_file(String::new(), String::new());
     let mut diagnostics = diagnostics::Diagnostics::default();
     let cst = parser::parse(&source_file, &mut diagnostics);
-    let ast = ast::Ast::cast(&cst);
+    let ast: ast::Document = rowan::ast::AstNode::cast(cst).unwrap();
     let hir = hir::lower(&ast);
     let mir = mir::lower(&hir);
     codegen::compile(&mir);
