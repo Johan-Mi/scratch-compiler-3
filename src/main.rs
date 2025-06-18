@@ -18,13 +18,39 @@ mod mir;
 )]
 mod parser;
 
-fn main() {
+use codemap::CodeMap;
+use diagnostics::Diagnostics;
+use std::process::ExitCode;
+
+fn main() -> ExitCode {
     let mut code_map = codemap::CodeMap::new();
-    let source_file = code_map.add_file(String::new(), String::new());
-    let mut diagnostics = diagnostics::Diagnostics::default();
-    let cst = parser::parse(&source_file, &mut diagnostics);
-    let ast: ast::Document = rowan::ast::AstNode::cast(cst).unwrap();
-    let hir = hir::lower(&ast);
-    let mir = mir::lower(&hir);
-    codegen::compile(&mir);
+    let mut diagnostics = Diagnostics::default();
+    let res = real_main(&mut code_map, &mut diagnostics);
+    diagnostics.show(&code_map);
+    match res {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(()) => ExitCode::FAILURE,
+    }
+}
+
+fn real_main(code_map: &mut CodeMap, diagnostics: &mut Diagnostics) -> Result<(), ()> {
+    let args = std::env::args().skip(1);
+    if args.len() == 0 {
+        diagnostics.error("no source files provided", []);
+        return Err(());
+    }
+    for source_path in args {
+        let source_code = std::fs::read_to_string(&source_path).map_err(|err| {
+            diagnostics.error("failed to read source code", []);
+            diagnostics.note(err.to_string(), []);
+        })?;
+        let source_file = code_map.add_file(source_path, source_code);
+        let cst = parser::parse(&source_file, diagnostics);
+        let ast: ast::Document = rowan::ast::AstNode::cast(cst).unwrap();
+        let hir = hir::lower(&ast);
+        let mir = mir::lower(&hir);
+        codegen::compile(&mir);
+    }
+
+    Ok(())
 }
