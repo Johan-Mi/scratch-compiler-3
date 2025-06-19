@@ -39,6 +39,8 @@ fn real_main(code_map: &mut CodeMap, diagnostics: &mut Diagnostics) -> Result<()
         diagnostics.error("no source files provided", []);
         return Err(());
     }
+
+    let mut hir = hir::Program;
     for source_path in args {
         let source_code = std::fs::read_to_string(&source_path).map_err(|err| {
             diagnostics.error("failed to read source code", []);
@@ -47,10 +49,11 @@ fn real_main(code_map: &mut CodeMap, diagnostics: &mut Diagnostics) -> Result<()
         let source_file = code_map.add_file(source_path, source_code);
         let cst = parser::parse(&source_file, diagnostics);
         let ast: ast::Document = rowan::ast::AstNode::cast(cst).unwrap();
-        let hir = hir::lower(&ast);
-        let mir = mir::lower(&hir);
-        codegen::compile(&mir);
+        hir.merge(hir::lower(&ast));
     }
+
+    let mir = mir::lower(&hir);
+    codegen::compile(&mir);
 
     Ok(())
 }
