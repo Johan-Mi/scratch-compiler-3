@@ -278,8 +278,7 @@ impl Parser<'_> {
     }
 
     fn bump(&mut self) {
-        while let [token, rest @ ..] = self.tokens {
-            self.tokens = rest;
+        while let Some(token) = self.tokens.split_off_first() {
             self.builder.token(token.kind.into(), token.text);
             if token.kind != TRIVIA {
                 break;
