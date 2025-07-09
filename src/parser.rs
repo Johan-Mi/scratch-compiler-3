@@ -160,8 +160,6 @@ pub enum SyntaxKind {
     KW_UNTIL,
     #[token("for")]
     KW_FOR,
-    #[token("comptime")]
-    KW_COMPTIME,
     #[token("as")]
     KW_AS,
     #[token("return")]
@@ -514,7 +512,6 @@ impl Parser<'_> {
             self.start_node(EXTERNAL_PARAMETER_NAME);
             self.bump();
             self.builder.finish_node();
-            let _: bool = self.eat(KW_COMPTIME);
             if !self.at(COLON) {
                 let _: Option<Span> = self.expect(IDENTIFIER);
             }
