@@ -40,7 +40,7 @@ fn real_main(code_map: &mut CodeMap, diagnostics: &mut Diagnostics) -> Result<()
         return Err(());
     }
 
-    let mut hir = hir::Program;
+    let mut hir = hir::Program::default();
     for source_path in args {
         let source_code = std::fs::read_to_string(&source_path).map_err(|err| {
             diagnostics.error("failed to read source code", []);

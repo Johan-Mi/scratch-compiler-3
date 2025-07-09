@@ -2,10 +2,16 @@ mod lowering;
 
 pub use lowering::lower;
 
-pub struct Program;
+use crate::ast;
+
+#[derive(Default)]
+pub struct Program {
+    sprites: Vec<ast::Sprite>,
+}
 
 impl Program {
     pub fn merge(&mut self, other: Program) {
-        todo!()
+        let Self { sprites } = other;
+        self.sprites.extend(sprites);
     }
 }
