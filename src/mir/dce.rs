@@ -11,12 +11,9 @@ fn parameters(program: &mut Program) {
         .ops
         .iter()
         .flat_map(Op::args)
-        .filter_map(|&it| {
-            if let Value::FunctionParameter(parameter) = it {
-                Some(parameter)
-            } else {
-                None
-            }
+        .filter_map(|&it| match it {
+            Value::FunctionParameter(parameter) => Some(parameter),
+            _ => None,
         })
         .collect();
 
@@ -36,12 +33,9 @@ fn returns(program: &mut Program) {
         .ops
         .iter()
         .flat_map(Op::args)
-        .filter_map(|&it| {
-            if let Value::Returned { id, .. } = it {
-                Some(id)
-            } else {
-                None
-            }
+        .filter_map(|&it| match it {
+            Value::Returned { id, .. } => Some(id),
+            _ => None,
         })
         .collect();
 
