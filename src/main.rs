@@ -41,19 +41,22 @@ fn real_main(code_map: &mut CodeMap, diagnostics: &mut Diagnostics) -> Result<()
     }
 
     let mut hir = hir::Program;
-    for source_path in args {
-        let source_code = std::fs::read_to_string(&source_path).map_err(|err| {
-            diagnostics.error("failed to read source code", []);
-            diagnostics.note(err.to_string(), []);
-        })?;
-        let source_file = code_map.add_file(source_path, source_code);
-        let cst = parser::parse(&source_file, diagnostics);
-        let ast: ast::Document = rowan::ast::AstNode::cast(cst).unwrap();
-        hir.merge(hir::lower(&ast));
-    }
+    let asts = args
+        .map(|source_path| {
+            let source_code = std::fs::read_to_string(&source_path).map_err(|err| {
+                diagnostics.error("failed to read source code", []);
+                diagnostics.note(err.to_string(), []);
+            })?;
+            let source_file = code_map.add_file(source_path, source_code);
+            let cst = parser::parse(&source_file, diagnostics);
+            let ast: ast::Document = rowan::ast::AstNode::cast(cst).unwrap();
+            hir.merge(hir::lower(&ast));
+            Ok(ast)
+        })
+        .collect::<Result<Vec<_>, _>>()?;
 
     let mir = mir::lower(&hir);
-    codegen::compile(&mir, "project.sb3").map_err(|err| {
+    codegen::compile(&asts, &mir, "project.sb3").map_err(|err| {
         diagnostics.error("failed to create project file", []);
         diagnostics.note(err.to_string(), []);
     })
