@@ -745,11 +745,10 @@ impl Parser<'_> {
                 KW_COSTUMES => self.parse_costume_list(),
                 KW_LET => self.parse_let(),
                 EOF | KW_SPRITE => {
-                    let mut labels = vec![primary(kw_sprite_span, "")];
-                    if let Some(lbrace_span) = lbrace_span {
-                        labels.push(primary(lbrace_span, "unclosed brace"));
-                    }
-                    labels.push(secondary(self.peek_span(), "expected `}`"));
+                    let labels = std::iter::once(primary(kw_sprite_span, ""))
+                        .chain(lbrace_span.map(|it| primary(it, "unclosed brace")))
+                        .chain(std::iter::once(secondary(self.peek_span(), "expected `}`")))
+                        .collect::<Vec<_>>();
                     self.diagnostics
                         .error("unfinished sprite definition", labels);
                     break;
