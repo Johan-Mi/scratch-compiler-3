@@ -10,7 +10,7 @@ pub fn compile(
     let output_file = File::create(output_path)?;
     for sprite in asts
         .iter()
-        .flat_map(|it| it.sprites())
+        .flat_map(ast::Document::sprites)
         .filter_map(|it| it.name())
     {
         project.add_sprite(sprite.to_string());
