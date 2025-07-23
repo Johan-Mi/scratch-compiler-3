@@ -6,6 +6,6 @@ pub struct Program;
 
 impl Program {
     pub fn merge(&mut self, other: Self) {
-        todo!()
+        let Program = other;
     }
 }
