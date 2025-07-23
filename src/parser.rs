@@ -35,6 +35,7 @@ pub fn parse_string_literal(token: &SyntaxToken) -> Result<String, ()> {
                 Some(_) => todo!("invalid escape sequence"),
                 None => todo!("unfinished escape sequence"),
             },
+            '\n' => break,
             _ => res.push(c),
         }
     }
