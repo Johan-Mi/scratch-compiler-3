@@ -36,6 +36,7 @@ pub fn parse_string_literal(
             '\\' => match chars.next() {
                 Some('"' | '\\') => res.push(c),
                 Some('n') => res.push('\n'),
+                Some('\n') => break,
                 Some(_) => todo!("invalid escape sequence"),
                 None => todo!("unfinished escape sequence"),
             },
