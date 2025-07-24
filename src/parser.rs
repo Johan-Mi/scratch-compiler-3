@@ -34,7 +34,11 @@ pub fn parse_string_literal(token: &Token, diagnostics: &mut Diagnostics) -> Res
                 Some('n') => res.push('\n'),
                 Some('\n') => break,
                 Some(_) => todo!("invalid escape sequence"),
-                None => todo!("unfinished escape sequence"),
+                None => {
+                    let end = token.span.len();
+                    let backslash = token.span.subspan(end - 1, end);
+                    diagnostics.error("unfinished escape sequence", [primary(backslash, "")])
+                }
             },
             '\n' => break,
             _ => res.push(c),
