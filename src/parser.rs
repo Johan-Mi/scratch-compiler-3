@@ -1,4 +1,4 @@
-use crate::diagnostics::{Diagnostics, primary, secondary};
+use crate::diagnostics::{Diagnostics, primary, secondary, span};
 use codemap::Span;
 use logos::Logos as _;
 use logos_derive::Logos;
@@ -23,7 +23,11 @@ pub fn parse(file: &codemap::File, diagnostics: &mut Diagnostics) -> SyntaxNode 
     .parse()
 }
 
-pub fn parse_string_literal(token: &SyntaxToken) -> Result<String, ()> {
+pub fn parse_string_literal(
+    token: &SyntaxToken,
+    file: &codemap::File,
+    diagnostics: &mut Diagnostics,
+) -> Result<String, ()> {
     let mut res = String::with_capacity(token.text().len() - 1);
     let mut chars = token.text().chars().skip(1);
     while let Some(c) = chars.next() {
@@ -39,7 +43,8 @@ pub fn parse_string_literal(token: &SyntaxToken) -> Result<String, ()> {
             _ => res.push(c),
         }
     }
-    // Unterminated string literal. TODO: emit diagnostic
+    let span = span(file, token.text_range());
+    diagnostics.error("unterminated string literal", [primary(span, "")]);
     Err(())
 }
 
