@@ -13,7 +13,7 @@ pub fn compile(
         .flat_map(ast::Document::sprites)
         .filter_map(|it| it.name())
     {
-        project.add_sprite(sprite.to_string());
+        let sprite = project.add_sprite(sprite.to_string());
     }
     project.finish(output_file)
 }
