@@ -23,13 +23,9 @@ pub fn parse(file: &codemap::File, diagnostics: &mut Diagnostics) -> SyntaxNode 
     .parse()
 }
 
-pub fn parse_string_literal(
-    token: &SyntaxToken,
-    file: &codemap::File,
-    diagnostics: &mut Diagnostics,
-) -> Result<String, ()> {
-    let mut res = String::with_capacity(token.text().len() - 1);
-    let mut chars = token.text().chars().skip(1);
+pub fn parse_string_literal(token: &Token, diagnostics: &mut Diagnostics) -> Result<String, ()> {
+    let mut res = String::with_capacity(token.text.len() - 1);
+    let mut chars = token.text.chars().skip(1);
     while let Some(c) = chars.next() {
         match c {
             '"' => return Ok(res),
@@ -44,8 +40,7 @@ pub fn parse_string_literal(
             _ => res.push(c),
         }
     }
-    let span = span(file, token.text_range());
-    diagnostics.error("unterminated string literal", [primary(span, "")]);
+    diagnostics.error("unterminated string literal", [primary(token.span, "")]);
     Err(())
 }
 
