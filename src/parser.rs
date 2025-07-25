@@ -41,7 +41,7 @@ pub fn parse_string_literal(token: &Token, diagnostics: &mut Diagnostics) -> Res
                     let span = token
                         .span
                         .subspan(start.try_into().unwrap(), end.try_into().unwrap());
-                    diagnostics.error("invalid escape sequence", [primary(span, "")])
+                    diagnostics.error("invalid escape sequence", [primary(span, "")]);
                 }
                 None => {
                     let end = token.span.len();
