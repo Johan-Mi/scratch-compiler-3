@@ -55,7 +55,9 @@ fn real_main(code_map: &mut CodeMap, diagnostics: &mut Diagnostics) -> Result<()
         })
         .collect::<Result<Vec<_>, _>>()?;
 
-    let mir = mir::lower(&hir);
+    let mut mir = mir::lower(&hir);
+    mir::dce::perform(&mut mir);
+
     codegen::compile(&asts, &mir, "project.sb3").map_err(|err| {
         diagnostics.error("failed to create project file", []);
         diagnostics.note(err.to_string(), []);

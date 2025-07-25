@@ -1,4 +1,4 @@
-mod dce;
+pub mod dce;
 mod linearity;
 mod lowering;
 
