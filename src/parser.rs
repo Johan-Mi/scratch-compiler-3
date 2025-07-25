@@ -253,10 +253,9 @@ struct Parser<'src> {
 
 impl Parser<'_> {
     fn skip_trivia(&mut self) {
-        while let [token, rest @ ..] = self.tokens {
-            if token.kind != TRIVIA {
-                break;
-            }
+        while let [token, rest @ ..] = self.tokens
+            && token.kind == TRIVIA
+        {
             self.tokens = rest;
             self.builder.token(token.kind.into(), token.text);
         }
@@ -473,11 +472,9 @@ impl Parser<'_> {
             self.builder.finish_node();
         }
 
-        loop {
-            let right = self.peek();
-            if binding_power(right) <= binding_power(left) {
-                break;
-            }
+        while let right = self.peek()
+            && binding_power(left) < binding_power(right)
+        {
             let node_kind = match right {
                 KW_AS => TYPE_ASCRIPTION,
                 DOT => METHOD_CALL,
