@@ -55,6 +55,10 @@ fn real_main(code_map: &mut CodeMap, diagnostics: &mut Diagnostics) -> Result<()
         })
         .collect::<Result<Vec<_>, _>>()?;
 
+    if !diagnostics.successful() {
+        return Err(());
+    }
+
     let mut mir = mir::lower(&hir);
     mir::dce::perform(&mut mir);
 
