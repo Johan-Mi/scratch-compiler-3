@@ -25,7 +25,8 @@ pub fn parse(file: &codemap::File, diagnostics: &mut Diagnostics) -> SyntaxNode 
 
 pub fn parse_string_literal(token: &Token, diagnostics: &mut Diagnostics) -> Result<String, ()> {
     let mut res = String::with_capacity(token.text.len() - 1);
-    let mut chars = token.text.chars().skip(1);
+    let mut chars = token.text.chars();
+    assert_eq!(chars.next(), Some('"'));
     while let Some(c) = chars.next() {
         match c {
             '"' => return Ok(res),
@@ -33,7 +34,15 @@ pub fn parse_string_literal(token: &Token, diagnostics: &mut Diagnostics) -> Res
                 Some('"' | '\\') => res.push(c),
                 Some('n') => res.push('\n'),
                 Some('\n') => break,
-                Some(_) => todo!("invalid escape sequence"),
+                Some(esc) => {
+                    let end = std::ptr::from_ref(chars.as_str()).addr()
+                        - std::ptr::from_ref(token.text).addr();
+                    let start = end - esc.len_utf8() - 1;
+                    let span = token
+                        .span
+                        .subspan(start.try_into().unwrap(), end.try_into().unwrap());
+                    diagnostics.error("invalid escape sequence", [primary(span, "")])
+                }
                 None => {
                     let end = token.span.len();
                     let backslash = token.span.subspan(end - 1, end);
