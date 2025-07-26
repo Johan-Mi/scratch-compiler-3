@@ -24,15 +24,23 @@ pub fn parse(file: &codemap::File, diagnostics: &mut Diagnostics) -> SyntaxNode 
 }
 
 pub fn parse_string_literal(token: &Token, diagnostics: &mut Diagnostics) -> Result<String, ()> {
-    let mut res = String::with_capacity(token.text.len() - 1);
+    let mut res = Ok(String::with_capacity(token.text.len() - 1));
     let mut chars = token.text.chars();
     assert_eq!(chars.next(), Some('"'));
     while let Some(c) = chars.next() {
         match c {
-            '"' => return Ok(res),
+            '"' => return res,
             '\\' => match chars.next() {
-                Some('"' | '\\') => res.push(c),
-                Some('n') => res.push('\n'),
+                Some('"' | '\\') => {
+                    if let Ok(res) = &mut res {
+                        res.push(c);
+                    }
+                }
+                Some('n') => {
+                    if let Ok(res) = &mut res {
+                        res.push('\n');
+                    }
+                }
                 Some(esc) => {
                     let end = std::ptr::from_ref(chars.as_str()).addr()
                         - std::ptr::from_ref(token.text).addr();
@@ -49,7 +57,11 @@ pub fn parse_string_literal(token: &Token, diagnostics: &mut Diagnostics) -> Res
                     return Err(());
                 }
             },
-            _ => res.push(c),
+            _ => {
+                if let Ok(res) = &mut res {
+                    res.push(c);
+                }
+            }
         }
     }
     diagnostics.error("unterminated string literal", [primary(token.span, "")]);
