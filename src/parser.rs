@@ -33,7 +33,6 @@ pub fn parse_string_literal(token: &Token, diagnostics: &mut Diagnostics) -> Res
             '\\' => match chars.next() {
                 Some('"' | '\\') => res.push(c),
                 Some('n') => res.push('\n'),
-                Some('\n') => break,
                 Some(esc) => {
                     let end = std::ptr::from_ref(chars.as_str()).addr()
                         - std::ptr::from_ref(token.text).addr();
@@ -50,7 +49,6 @@ pub fn parse_string_literal(token: &Token, diagnostics: &mut Diagnostics) -> Res
                     return Err(());
                 }
             },
-            '\n' => break,
             _ => res.push(c),
         }
     }
