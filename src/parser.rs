@@ -30,18 +30,22 @@ pub fn parse_string_literal(token: &Token, diagnostics: &mut Diagnostics) -> Res
     while let Some(c) = chars.next() {
         match c {
             '"' => return res,
-            '\\' => match chars.next() {
-                Some('"' | '\\') => {
+            '\\' => match chars.next().ok_or_else(|| {
+                let end = token.span.len();
+                let backslash = token.span.subspan(end - 1, end);
+                diagnostics.error("unfinished escape sequence", [primary(backslash, "")]);
+            })? {
+                '"' | '\\' => {
                     if let Ok(res) = &mut res {
                         res.push(c);
                     }
                 }
-                Some('n') => {
+                'n' => {
                     if let Ok(res) = &mut res {
                         res.push('\n');
                     }
                 }
-                Some(esc) => {
+                esc => {
                     let end = std::ptr::from_ref(chars.as_str()).addr()
                         - std::ptr::from_ref(token.text).addr();
                     let start = end - esc.len_utf8() - 1;
@@ -50,12 +54,6 @@ pub fn parse_string_literal(token: &Token, diagnostics: &mut Diagnostics) -> Res
                         .subspan(start.try_into().unwrap(), end.try_into().unwrap());
                     diagnostics.error("invalid escape sequence", [primary(span, "")]);
                     res = Err(());
-                }
-                None => {
-                    let end = token.span.len();
-                    let backslash = token.span.subspan(end - 1, end);
-                    diagnostics.error("unfinished escape sequence", [primary(backslash, "")]);
-                    return Err(());
                 }
             },
             _ => {
