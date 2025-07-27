@@ -815,7 +815,7 @@ impl Parser<'_> {
     }
 }
 
-const PRECEDENCE_TABLE: &[&[SyntaxKind]] = &[
+const PRECEDENCE: &[&[SyntaxKind]] = &[
     &[EQ],
     &[LT, EQ_EQ, GT],
     &[PLUS, MINUS],
@@ -825,7 +825,5 @@ const PRECEDENCE_TABLE: &[&[SyntaxKind]] = &[
 ];
 
 fn binding_power(kind: SyntaxKind) -> Option<usize> {
-    PRECEDENCE_TABLE
-        .iter()
-        .position(|level| level.contains(&kind))
+    PRECEDENCE.iter().position(|level| level.contains(&kind))
 }
