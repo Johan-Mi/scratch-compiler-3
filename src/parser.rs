@@ -4,7 +4,11 @@ use logos::Logos as _;
 use logos_derive::Logos;
 use rowan::{Checkpoint, GreenNodeBuilder};
 
-pub fn parse(file: &codemap::File, diagnostics: &mut Diagnostics) -> SyntaxNode {
+pub fn parse(
+    file: &codemap::File,
+    builder: &mut GreenNodeBuilder<'static>,
+    diagnostics: &mut Diagnostics,
+) {
     let source_code = file.source();
     let tokens = &SyntaxKind::lexer(source_code)
         .spanned()
@@ -15,12 +19,12 @@ pub fn parse(file: &codemap::File, diagnostics: &mut Diagnostics) -> SyntaxNode 
         })
         .collect::<Vec<_>>();
     Parser {
-        builder: GreenNodeBuilder::new(),
+        builder,
         tokens,
         span: file.span,
         diagnostics,
     }
-    .parse()
+    .parse();
 }
 
 fn parse_string_literal(token: &Token, diagnostics: &mut Diagnostics) -> Result<String, ()> {
@@ -79,6 +83,7 @@ pub enum SyntaxKind {
     #[regex(r"(\p{Whitespace}|#.*)+")]
     TRIVIA,
 
+    PROGRAM,
     DOCUMENT,
     STRUCT,
     FIELD_DEFINITION,
@@ -254,7 +259,7 @@ struct Token<'src> {
 }
 
 struct Parser<'src> {
-    builder: GreenNodeBuilder<'static>,
+    builder: &'src mut GreenNodeBuilder<'static>,
     tokens: &'src [Token<'src>],
     span: Span,
     diagnostics: &'src mut Diagnostics,
@@ -805,13 +810,12 @@ impl Parser<'_> {
         }
     }
 
-    fn parse(mut self) -> SyntaxNode {
+    fn parse(mut self) {
         self.builder.start_node(DOCUMENT.into());
         while !self.at(EOF) {
             self.parse_top_level_item();
         }
         self.builder.finish_node();
-        SyntaxNode::new_root(self.builder.finish())
     }
 }
 

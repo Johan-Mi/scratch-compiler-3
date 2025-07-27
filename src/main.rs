@@ -40,20 +40,19 @@ fn real_main(code_map: &mut CodeMap, diagnostics: &mut Diagnostics) -> Result<()
         return Err(());
     }
 
-    let mut hir = hir::Program;
-    let asts = args
-        .map(|source_path| {
-            let source_code = std::fs::read_to_string(&source_path).map_err(|err| {
-                diagnostics.error("failed to read source code", []);
-                diagnostics.note(err.to_string(), []);
-            })?;
-            let source_file = code_map.add_file(source_path, source_code);
-            let cst = parser::parse(&source_file, diagnostics);
-            let ast: ast::Document = rowan::ast::AstNode::cast(cst).unwrap();
-            hir.merge(hir::lower(&ast));
-            Ok(ast)
-        })
-        .collect::<Result<Vec<_>, _>>()?;
+    let mut builder = rowan::GreenNodeBuilder::new();
+    for source_path in args {
+        let source_code = std::fs::read_to_string(&source_path).map_err(|err| {
+            diagnostics.error("failed to read source code", []);
+            diagnostics.note(err.to_string(), []);
+        })?;
+        let source_file = code_map.add_file(source_path, source_code);
+        parser::parse(&source_file, &mut builder, diagnostics);
+    }
+    let cst = parser::SyntaxNode::new_root(builder.finish());
+
+    let ast: ast::Program = rowan::ast::AstNode::cast(cst).unwrap();
+    let hir = hir::lower(&ast);
 
     if !diagnostics.successful() {
         return Err(());
@@ -62,7 +61,7 @@ fn real_main(code_map: &mut CodeMap, diagnostics: &mut Diagnostics) -> Result<()
     let mut mir = mir::lower(&hir);
     mir::dce::perform(&mut mir);
 
-    codegen::compile(&asts, &mir, "project.sb3").map_err(|err| {
+    codegen::compile(&ast, &mir, "project.sb3").map_err(|err| {
         diagnostics.error("failed to create project file", []);
         diagnostics.note(err.to_string(), []);
     })
