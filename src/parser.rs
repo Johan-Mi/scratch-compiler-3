@@ -367,14 +367,9 @@ impl Parser<'_> {
         self.builder.finish_node();
     }
 
-    fn expect(&mut self, kind: SyntaxKind) -> Option<Span> {
-        if self.at(kind) {
-            let span = self.peek_span();
-            self.bump();
-            Some(span)
-        } else {
+    fn expect(&mut self, kind: SyntaxKind) {
+        if !self.eat(kind) {
             self.error();
-            None
         }
     }
 
@@ -382,7 +377,7 @@ impl Parser<'_> {
         self.start_node(STRUCT);
         self.bump(); // KW_STRUCT
         if !self.at(LBRACE) {
-            let _: Option<Span> = self.expect(IDENTIFIER);
+            self.expect(IDENTIFIER);
         }
         if self.eat(LBRACE) {
             while !self.at(EOF) && !self.eat(RBRACE) {
@@ -399,7 +394,7 @@ impl Parser<'_> {
     fn parse_field_definition(&mut self) {
         self.start_node(FIELD_DEFINITION);
         self.bump(); // IDENTIFIER
-        let _: Option<Span> = self.expect(COLON);
+        self.expect(COLON);
         self.parse_expression();
         let _: bool = self.eat(COMMA);
         self.builder.finish_node();
@@ -447,7 +442,7 @@ impl Parser<'_> {
                 self.start_node(PARENTHESIZED_EXPRESSION);
                 self.bump();
                 self.parse_expression();
-                let _: Option<Span> = self.expect(RPAREN);
+                self.expect(RPAREN);
                 self.builder.finish_node();
             }
             DECIMAL_NUMBER | BINARY_NUMBER | OCTAL_NUMBER | HEXADECIMAL_NUMBER | STRING
@@ -535,9 +530,9 @@ impl Parser<'_> {
             self.bump();
             self.builder.finish_node();
             if !self.at(COLON) {
-                let _: Option<Span> = self.expect(IDENTIFIER);
+                self.expect(IDENTIFIER);
             }
-            let _: Option<Span> = self.expect(COLON);
+            self.expect(COLON);
             if self.at(COMMA) {
                 let span = self.peek_span();
                 self.diagnostics
@@ -561,9 +556,9 @@ impl Parser<'_> {
         self.start_node(LET);
         self.bump(); // KW_LET
         if !self.at(EQ) {
-            let _: Option<Span> = self.expect(IDENTIFIER);
+            self.expect(IDENTIFIER);
         }
-        let _: Option<Span> = self.expect(EQ);
+        self.expect(EQ);
         self.parse_expression();
         self.builder.finish_node();
     }
@@ -648,7 +643,7 @@ impl Parser<'_> {
             self.diagnostics
                 .error("expected identifier after `for`", [label]);
         } else {
-            let _: Option<Span> = self.expect(IDENTIFIER);
+            self.expect(IDENTIFIER);
             if self.at(LBRACE) {
                 let label = primary(self.peek_span(), "");
                 self.diagnostics
@@ -728,7 +723,7 @@ impl Parser<'_> {
         self.start_node(GENERICS);
         self.bump(); // LBRACKET
         while !self.at(EOF) && !self.eat(RBRACKET) {
-            let _: Option<Span> = self.expect(IDENTIFIER);
+            self.expect(IDENTIFIER);
             let _: bool = self.eat(COMMA);
         }
         self.builder.finish_node();
@@ -737,7 +732,7 @@ impl Parser<'_> {
     fn parse_costume_list(&mut self) {
         self.start_node(COSTUME_LIST);
         self.bump(); // KW_COSTUMES
-        let _: Option<Span> = self.expect(LBRACE);
+        self.expect(LBRACE);
         while !self.at(EOF) && !self.eat(RBRACE) {
             if !self.at(STRING) {
                 self.error();
@@ -745,8 +740,8 @@ impl Parser<'_> {
             }
             self.start_node(COSTUME);
             self.bump();
-            let _: Option<Span> = self.expect(COLON);
-            let _: Option<Span> = self.expect(STRING);
+            self.expect(COLON);
+            self.expect(STRING);
             let _: bool = self.eat(COMMA);
             self.builder.finish_node();
         }
@@ -758,9 +753,16 @@ impl Parser<'_> {
         let kw_sprite_span = self.peek_span();
         self.bump(); // KW_SPRITE
         if !self.at(LBRACE) {
-            let _: Option<Span> = self.expect(IDENTIFIER);
+            self.expect(IDENTIFIER);
         }
-        let lbrace_span = self.expect(LBRACE);
+        let lbrace_span = if self.at(LBRACE) {
+            let span = self.peek_span();
+            self.bump();
+            Some(span)
+        } else {
+            self.error();
+            None
+        };
         while !self.eat(RBRACE) {
             match self.peek() {
                 KW_INLINE | KW_FN => self.parse_function(),
