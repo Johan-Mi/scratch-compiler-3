@@ -23,7 +23,7 @@ pub fn parse(file: &codemap::File, diagnostics: &mut Diagnostics) -> SyntaxNode 
     .parse()
 }
 
-pub fn parse_string_literal(token: &Token, diagnostics: &mut Diagnostics) -> Result<String, ()> {
+fn parse_string_literal(token: &Token, diagnostics: &mut Diagnostics) -> Result<String, ()> {
     let mut res = Ok(String::with_capacity(token.text.len() - 1));
     let mut chars = token.text.chars();
     assert_eq!(chars.next(), Some('"'));
