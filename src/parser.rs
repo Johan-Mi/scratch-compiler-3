@@ -1,4 +1,4 @@
-use crate::diagnostics::{Diagnostics, primary, secondary, span};
+use crate::diagnostics::{Diagnostics, primary, secondary};
 use codemap::Span;
 use logos::Logos as _;
 use logos_derive::Logos;
