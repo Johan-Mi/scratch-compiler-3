@@ -18,10 +18,11 @@ pub fn parse(
             span: file.span.subspan(span.start as u64, span.end as u64),
         })
         .collect::<Vec<_>>();
+    let len = file.span.len();
     Parser {
         builder,
         tokens,
-        span: file.span,
+        eof_span: file.span.subspan(len, len),
         diagnostics,
     }
     .parse();
@@ -261,7 +262,7 @@ struct Token<'src> {
 struct Parser<'src> {
     builder: &'src mut GreenNodeBuilder<'static>,
     tokens: &'src [Token<'src>],
-    span: Span,
+    eof_span: Span,
     diagnostics: &'src mut Diagnostics,
 }
 
@@ -287,13 +288,7 @@ impl Parser<'_> {
         self.tokens
             .iter()
             .find(|token| token.kind != TRIVIA)
-            .map_or_else(
-                || {
-                    let len = self.span.len();
-                    self.span.subspan(len, len)
-                },
-                |token| token.span,
-            )
+            .map_or(self.eof_span, |token| token.span)
     }
 
     fn at(&self, kind: SyntaxKind) -> bool {
