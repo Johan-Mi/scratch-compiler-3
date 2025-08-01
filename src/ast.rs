@@ -32,14 +32,6 @@ macro_rules! ast_node {
     };
 }
 
-ast_node!(Program: PROGRAM);
-
-impl Program {
-    pub fn documents(&self) -> impl Iterator<Item = Document> {
-        rowan::ast::support::children(&self.syntax)
-    }
-}
-
 ast_node!(Document: DOCUMENT);
 
 impl Document {
@@ -47,7 +39,7 @@ impl Document {
         rowan::ast::support::children(&self.syntax)
     }
 
-    pub fn sprites(&self) -> impl Iterator<Item = Sprite> + use<> {
+    pub fn sprites(&self) -> impl Iterator<Item = Sprite> {
         rowan::ast::support::children(&self.syntax)
     }
 
