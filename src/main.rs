@@ -59,11 +59,8 @@ fn real_main(code_map: &mut CodeMap, diagnostics: &mut Diagnostics) -> Result<()
     let mut hir = hir::Program;
     let asts: Vec<_> = csts
         .iter()
-        .map(|cst| {
-            let ast: ast::Document = ast::Node::cast(cst.root()).unwrap();
-            hir.merge(hir::lower(&ast));
-            ast
-        })
+        .map(|cst| ast::Node::cast(cst.root()).unwrap())
+        .inspect(|ast| hir.merge(hir::lower(&ast)))
         .collect();
 
     if !diagnostics.successful() {
