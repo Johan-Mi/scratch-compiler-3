@@ -48,14 +48,14 @@ fn real_main(code_map: &mut CodeMap, diagnostics: &mut Diagnostics) -> Result<()
         .collect::<Result<Vec<_>, _>>()?;
 
     let mut hir = hir::Program;
-    let asts = csts
+    let asts: Vec<_> = csts
         .iter()
         .map(|cst| {
             let ast: ast::Document = ast::Node::cast(cst.root()).unwrap();
             hir.merge(hir::lower(&ast));
-            Ok(ast)
+            ast
         })
-        .collect::<Result<Vec<_>, _>>()?;
+        .collect();
 
     if !diagnostics.successful() {
         return Err(());
