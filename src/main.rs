@@ -9,6 +9,8 @@
 
 mod ast;
 mod codegen;
+#[cfg(debug_assertions)]
+mod debug;
 mod diagnostics;
 mod hir;
 mod mir;
@@ -46,6 +48,13 @@ fn real_main(code_map: &mut CodeMap, diagnostics: &mut Diagnostics) -> Result<()
             Ok(parser::parse(&source_file, diagnostics))
         })
         .collect::<Result<Vec<_>, _>>()?;
+
+    #[cfg(debug_assertions)]
+    if std::env::var("DUMP_CST").is_ok() {
+        for cst in &csts {
+            debug::print_cst(cst.root(), 0);
+        }
+    }
 
     let mut hir = hir::Program;
     let asts: Vec<_> = csts
