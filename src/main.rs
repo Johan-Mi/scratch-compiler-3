@@ -1,4 +1,4 @@
-#![deny(unsafe_code)]
+#![forbid(unsafe_code)]
 #![deny(
     clippy::allow_attributes,
     clippy::allow_attributes_without_reason,
@@ -12,10 +12,6 @@ mod codegen;
 mod diagnostics;
 mod hir;
 mod mir;
-#[expect(
-    unsafe_code,
-    reason = "`SyntaxKind` cast uses `transmute`, which is not truly required but is way less boilerplate-y than the safe way to do it"
-)]
 mod parser;
 
 use codemap::CodeMap;
@@ -40,16 +36,22 @@ fn real_main(code_map: &mut CodeMap, diagnostics: &mut Diagnostics) -> Result<()
         return Err(());
     }
 
-    let mut hir = hir::Program;
-    let asts = args
+    let csts = args
         .map(|source_path| {
             let source_code = std::fs::read_to_string(&source_path).map_err(|err| {
                 diagnostics.error("failed to read source code", []);
                 diagnostics.note(err.to_string(), []);
             })?;
             let source_file = code_map.add_file(source_path, source_code);
-            let cst = parser::parse(&source_file, diagnostics);
-            let ast: ast::Document = rowan::ast::AstNode::cast(cst).unwrap();
+            Ok(parser::parse(&source_file, diagnostics))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+
+    let mut hir = hir::Program;
+    let asts = csts
+        .iter()
+        .map(|cst| {
+            let ast: ast::Document = ast::Node::cast(cst.root()).unwrap();
             hir.merge(hir::lower(&ast));
             Ok(ast)
         })
@@ -62,7 +64,7 @@ fn real_main(code_map: &mut CodeMap, diagnostics: &mut Diagnostics) -> Result<()
     let mut mir = mir::lower(&hir);
     mir::dce::perform(&mut mir);
 
-    codegen::compile(&asts, &mir, "project.sb3").map_err(|err| {
+    codegen::compile(code_map, &asts, &mir, "project.sb3").map_err(|err| {
         diagnostics.error("failed to create project file", []);
         diagnostics.note(err.to_string(), []);
     })
