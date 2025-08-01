@@ -2,21 +2,19 @@ use crate::diagnostics::{Diagnostics, primary, secondary};
 use codemap::Span;
 use logos::Logos as _;
 use logos_derive::Logos;
-use rowan::{Checkpoint, GreenNodeBuilder};
 
-pub fn parse(file: &codemap::File, diagnostics: &mut Diagnostics) -> SyntaxNode {
+pub fn parse(file: &codemap::File, diagnostics: &mut Diagnostics) -> cst::Tree<SyntaxKind> {
     let source_code = file.source();
     let tokens = &SyntaxKind::lexer(source_code)
         .spanned()
         .map(|(token, span)| Token {
             kind: token.unwrap_or(ERROR),
-            text: &source_code[span.clone()],
             span: file.span.subspan(span.start as u64, span.end as u64),
         })
         .collect::<Vec<_>>();
     let len = file.span.len();
     Parser {
-        builder: GreenNodeBuilder::new(),
+        builder: cst::Builder::new(tokens),
         tokens,
         eof_span: file.span.subspan(len, len),
         diagnostics,
@@ -24,9 +22,13 @@ pub fn parse(file: &codemap::File, diagnostics: &mut Diagnostics) -> SyntaxNode 
     .parse()
 }
 
-fn parse_string_literal(token: &Token, diagnostics: &mut Diagnostics) -> Result<String, ()> {
-    let mut res = Ok(String::with_capacity(token.text.len() - 1));
-    let mut chars = token.text.chars();
+fn parse_string_literal(
+    token: &Token,
+    text: &str,
+    diagnostics: &mut Diagnostics,
+) -> Result<String, ()> {
+    let mut res = Ok(String::with_capacity(text.len() - 1));
+    let mut chars = text.chars();
     assert_eq!(chars.next(), Some('"'));
     while let Some(c) = chars.next() {
         match c {
@@ -47,8 +49,8 @@ fn parse_string_literal(token: &Token, diagnostics: &mut Diagnostics) -> Result<
                     }
                 }
                 esc => {
-                    let end = std::ptr::from_ref(chars.as_str()).addr()
-                        - std::ptr::from_ref(token.text).addr();
+                    let end =
+                        std::ptr::from_ref(chars.as_str()).addr() - std::ptr::from_ref(text).addr();
                     let start = end - esc.len_utf8() - 1;
                     let span = token
                         .span
@@ -220,43 +222,13 @@ impl SyntaxKind {
     }
 }
 
-impl From<SyntaxKind> for rowan::SyntaxKind {
-    fn from(kind: SyntaxKind) -> Self {
-        Self(kind as u16)
-    }
-}
+pub type SyntaxNode<'src> = cst::Node<'src, SyntaxKind>;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum Lang {}
-
-impl rowan::Language for Lang {
-    type Kind = SyntaxKind;
-
-    fn kind_from_raw(raw: rowan::SyntaxKind) -> Self::Kind {
-        assert!(raw.0 <= ERROR as u16);
-        // SAFETY: `SyntaxKind` is `repr(u16)` and the assertion ensures that
-        // `raw` is within range.
-        unsafe { std::mem::transmute(raw.0) }
-    }
-
-    fn kind_to_raw(kind: Self::Kind) -> rowan::SyntaxKind {
-        kind.into()
-    }
-}
-
-pub type SyntaxNode = rowan::SyntaxNode<Lang>;
-
-pub type SyntaxToken = rowan::SyntaxToken<Lang>;
-
-struct Token<'src> {
-    kind: SyntaxKind,
-    text: &'src str,
-    span: Span,
-}
+type Token = cst::Token<SyntaxKind>;
 
 struct Parser<'src> {
-    builder: GreenNodeBuilder<'static>,
-    tokens: &'src [Token<'src>],
+    builder: cst::Builder<'src, SyntaxKind>,
+    tokens: &'src [Token],
     eof_span: Span,
     diagnostics: &'src mut Diagnostics,
 }
@@ -267,7 +239,7 @@ impl Parser<'_> {
             && token.kind == TRIVIA
         {
             self.tokens = rest;
-            self.builder.token(token.kind.into(), token.text);
+            self.builder.token();
         }
     }
 
@@ -296,7 +268,7 @@ impl Parser<'_> {
 
     fn bump(&mut self) {
         while let Some(token) = self.tokens.split_off_first() {
-            self.builder.token(token.kind.into(), token.text);
+            self.builder.token();
             if token.kind != TRIVIA {
                 break;
             }
@@ -312,12 +284,12 @@ impl Parser<'_> {
 
     fn start_node(&mut self, kind: SyntaxKind) {
         self.skip_trivia();
-        self.builder.start_node(kind.into());
+        self.builder.start_node(kind, self.peek_span());
     }
 
-    fn checkpoint(&mut self) -> Checkpoint {
+    fn checkpoint(&mut self) -> cst::Checkpoint {
         self.skip_trivia();
-        self.builder.checkpoint()
+        self.builder.checkpoint(self.peek_span())
     }
 
     fn parse_anything(&mut self) {
@@ -417,17 +389,15 @@ impl Parser<'_> {
                 let checkpoint = self.checkpoint();
                 self.bump();
                 if self.immediately_at(LPAREN) {
-                    self.builder.start_node_at(checkpoint, FUNCTION_CALL.into());
                     self.parse_arguments();
+                    self.builder.finish_node_at(checkpoint, FUNCTION_CALL);
                 } else if self.immediately_at(COLON) {
-                    self.builder
-                        .start_node_at(checkpoint, NAMED_ARGUMENT.into());
                     self.bump();
                     self.parse_expression();
+                    self.builder.finish_node_at(checkpoint, NAMED_ARGUMENT);
                 } else {
-                    self.builder.start_node_at(checkpoint, VARIABLE.into());
+                    self.builder.finish_node_at(checkpoint, VARIABLE);
                 }
-                self.builder.finish_node();
             }
             LPAREN => {
                 self.start_node(PARENTHESIZED_EXPRESSION);
@@ -463,10 +433,9 @@ impl Parser<'_> {
         let checkpoint = self.checkpoint();
         self.parse_atom();
         while self.at(LBRACKET) {
-            self.builder
-                .start_node_at(checkpoint, GENERIC_TYPE_INSTANTIATION.into());
             self.parse_type_parameters();
-            self.builder.finish_node();
+            self.builder
+                .finish_node_at(checkpoint, GENERIC_TYPE_INSTANTIATION);
         }
 
         while let right = self.peek()
@@ -477,10 +446,9 @@ impl Parser<'_> {
                 DOT => METHOD_CALL,
                 _ => BINARY_EXPRESSION,
             };
-            self.builder.start_node_at(checkpoint, node_kind.into());
             self.bump(); // operator
             self.parse_recursive_expression(right);
-            self.builder.finish_node();
+            self.builder.finish_node_at(checkpoint, node_kind);
         }
     }
 
@@ -698,7 +666,6 @@ impl Parser<'_> {
                 .error("expected `fn` after `inline`", [primary(span, "")]);
             return;
         }
-        self.builder.start_node_at(checkpoint, FN.into());
         if self.at(IDENTIFIER) || self.peek().is_binary_operator() {
             self.bump();
         } else {
@@ -715,7 +682,7 @@ impl Parser<'_> {
             self.parse_expression();
         }
         self.parse_block();
-        self.builder.finish_node();
+        self.builder.finish_node_at(checkpoint, FN);
     }
 
     fn parse_generics(&mut self) {
@@ -800,13 +767,13 @@ impl Parser<'_> {
         }
     }
 
-    fn parse(mut self) -> SyntaxNode {
-        self.builder.start_node(DOCUMENT.into());
+    fn parse(mut self) -> cst::Tree<SyntaxKind> {
+        self.builder.start_node(DOCUMENT, self.eof_span);
         while !self.at(EOF) {
             self.parse_top_level_item();
         }
         self.builder.finish_node();
-        SyntaxNode::new_root(self.builder.finish())
+        self.builder.build()
     }
 }
 
