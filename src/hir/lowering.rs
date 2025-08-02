@@ -1,6 +1,6 @@
 use super::Program;
 use crate::ast;
 
-pub fn lower(document: &ast::Document) -> Program {
-    Program
+impl Program {
+    pub fn lower(&mut self, document: &ast::Document) {}
 }
