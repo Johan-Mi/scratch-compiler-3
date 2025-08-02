@@ -60,7 +60,7 @@ fn real_main(code_map: &mut CodeMap, diagnostics: &mut Diagnostics) -> Result<()
     let asts: Vec<_> = csts
         .iter()
         .map(|cst| ast::Node::cast(cst.root()).unwrap())
-        .inspect(|ast| hir.merge(hir::lower(&ast)))
+        .inspect(|ast| hir.merge(hir::lower(ast)))
         .collect();
 
     if !diagnostics.successful() {
