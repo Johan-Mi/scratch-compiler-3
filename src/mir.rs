@@ -9,22 +9,22 @@ use std::collections::HashMap;
 
 pub struct Program {
     parameters: BeachMap<Parameter>,
-    basic_blocks: BeachMap<BasicBlock>,
-    ops: BeachMap<Op>,
+    pub basic_blocks: BeachMap<BasicBlock>,
+    pub ops: BeachMap<Op>,
     variables: BeachMap<Variable>,
 }
 
 #[derive(Clone, Copy)]
-struct Parameter {
+pub struct Parameter {
     owner: Id<BasicBlock>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
-struct Return(u8);
+pub struct Return(u8);
 
-struct BasicBlock(Vec<Id<Op>>);
+pub struct BasicBlock(pub Vec<Id<Op>>);
 
-enum Op {
+pub enum Op {
     Load {
         source: Ref,
     },
@@ -118,7 +118,7 @@ impl Op {
 }
 
 #[derive(Clone, Copy)]
-enum Value {
+pub enum Value {
     FunctionParameter(Id<Parameter>),
     Op(Id<Op>),
     Returned { call: Id<Op>, id: Return },
@@ -128,15 +128,15 @@ enum Value {
 }
 
 #[derive(Clone, Copy)]
-enum Ref {
+pub enum Ref {
     Variable(Id<Variable>),
     List { list: List, index: Value },
 }
 
-struct Variable;
+pub struct Variable;
 
 #[derive(Clone, Copy)]
-struct List(u16);
+pub struct List(u16);
 
 enum Either<L, R> {
     Left(L),
