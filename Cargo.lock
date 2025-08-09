@@ -64,8 +64,8 @@ checksum = "d0a5c400df2834b80a4c3327b3aad3a4c4cd4de0629063962b03235697506a28"
 
 [[package]]
 name = "cst"
-version = "0.1.0"
-source = "git+https://github.com/Johan-Mi/cst#3665e65585ebf586975dc91f175871cffd46e378"
+version = "1.0.0"
+source = "git+https://github.com/Johan-Mi/cst#116ca5c7b18d88863cd632e86eeda2f82dab1d72"
 dependencies = [
  "codemap",
 ]

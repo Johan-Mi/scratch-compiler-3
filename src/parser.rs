@@ -7,14 +7,16 @@ pub fn parse(file: &codemap::File, diagnostics: &mut Diagnostics) -> cst::Tree<S
     let source_code = file.source();
     let tokens = &SyntaxKind::lexer(source_code)
         .spanned()
-        .map(|(token, span)| Token {
-            kind: token.unwrap_or(ERROR),
-            span: file.span.subspan(span.start as u64, span.end as u64),
+        .map(|(token, span)| {
+            (
+                token.unwrap_or(ERROR),
+                file.span.subspan(span.start as u64, span.end as u64),
+            )
         })
         .collect::<Vec<_>>();
     let len = file.span.len();
     Parser {
-        builder: cst::Builder::new(tokens),
+        builder: cst::Builder::default(),
         tokens,
         eof_span: file.span.subspan(len, len),
         diagnostics,
@@ -23,8 +25,8 @@ pub fn parse(file: &codemap::File, diagnostics: &mut Diagnostics) -> cst::Tree<S
 }
 
 fn parse_string_literal(
-    token: &Token,
     text: &str,
+    span: Span,
     diagnostics: &mut Diagnostics,
 ) -> Result<String, ()> {
     let mut res = Ok(String::with_capacity(text.len() - 1));
@@ -34,8 +36,8 @@ fn parse_string_literal(
         match c {
             '"' => return res,
             '\\' => match chars.next().ok_or_else(|| {
-                let end = token.span.len();
-                let backslash = token.span.subspan(end - 1, end);
+                let end = span.len();
+                let backslash = span.subspan(end - 1, end);
                 diagnostics.error("unfinished escape sequence", [primary(backslash, "")]);
             })? {
                 '"' | '\\' => {
@@ -52,9 +54,7 @@ fn parse_string_literal(
                     let end =
                         std::ptr::from_ref(chars.as_str()).addr() - std::ptr::from_ref(text).addr();
                     let start = end - esc.len_utf8() - 1;
-                    let span = token
-                        .span
-                        .subspan(start.try_into().unwrap(), end.try_into().unwrap());
+                    let span = span.subspan(start.try_into().unwrap(), end.try_into().unwrap());
                     diagnostics.error("invalid escape sequence", [primary(span, "")]);
                     res = Err(());
                 }
@@ -66,7 +66,7 @@ fn parse_string_literal(
             }
         }
     }
-    diagnostics.error("unterminated string literal", [primary(token.span, "")]);
+    diagnostics.error("unterminated string literal", [primary(span, "")]);
     Err(())
 }
 
@@ -224,29 +224,27 @@ impl SyntaxKind {
 
 pub type SyntaxNode<'src> = cst::Node<'src, SyntaxKind>;
 
-type Token = cst::Token<SyntaxKind>;
-
 struct Parser<'src> {
-    builder: cst::Builder<'src, SyntaxKind>,
-    tokens: &'src [Token],
+    builder: cst::Builder<SyntaxKind>,
+    tokens: &'src [(SyntaxKind, Span)],
     eof_span: Span,
     diagnostics: &'src mut Diagnostics,
 }
 
 impl Parser<'_> {
     fn skip_trivia(&mut self) {
-        while let [token, rest @ ..] = self.tokens
-            && token.kind == TRIVIA
+        while let [(kind, span), rest @ ..] = self.tokens
+            && *kind == TRIVIA
         {
             self.tokens = rest;
-            self.builder.token();
+            self.builder.token(*kind, *span);
         }
     }
 
     fn peek(&self) -> SyntaxKind {
         self.tokens
             .iter()
-            .map(|token| token.kind)
+            .map(|&(kind, _)| kind)
             .find(|&it| it != TRIVIA)
             .unwrap_or(EOF)
     }
@@ -254,8 +252,8 @@ impl Parser<'_> {
     fn peek_span(&self) -> Span {
         self.tokens
             .iter()
-            .find(|token| token.kind != TRIVIA)
-            .map_or(self.eof_span, |token| token.span)
+            .find(|&&(kind, _)| kind != TRIVIA)
+            .map_or(self.eof_span, |&(_, span)| span)
     }
 
     fn at(&self, kind: SyntaxKind) -> bool {
@@ -263,13 +261,13 @@ impl Parser<'_> {
     }
 
     fn immediately_at(&self, kind: SyntaxKind) -> bool {
-        self.tokens.first().is_some_and(|token| token.kind == kind)
+        self.tokens.first().is_some_and(|&(k, _)| k == kind)
     }
 
     fn bump(&mut self) {
-        while let Some(token) = self.tokens.split_off_first() {
-            self.builder.token();
-            if token.kind != TRIVIA {
+        while let Some(&(kind, span)) = self.tokens.split_off_first() {
+            self.builder.token(kind, span);
+            if kind != TRIVIA {
                 break;
             }
         }
