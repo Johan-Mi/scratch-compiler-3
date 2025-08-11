@@ -25,7 +25,7 @@ pub fn compile(
             ops: HashMap::new(),
         };
 
-        let functions = []; // TODO
+        let functions = &mir.basic_blocks; // TODO
         for function in functions {
             compiler.function(function, mir);
         }
@@ -39,9 +39,12 @@ struct Compiler<'a> {
 }
 
 impl Compiler<'_> {
-    fn function(&mut self, body: Id<mir::BasicBlock>, mir: &mir::Program) {
+    fn function(&mut self, body: &mir::BasicBlock, mir: &mir::Program) {
         self.target.start_script(block::when_flag_clicked()); // TODO
-        self.basic_block(body, mir);
+        for &op in &body.0 {
+            let res = self.op(&mir.ops[op], mir);
+            self.ops.extend(Some(op).zip(res));
+        }
     }
 
     fn basic_block(&mut self, block: Id<mir::BasicBlock>, mir: &mir::Program) {
