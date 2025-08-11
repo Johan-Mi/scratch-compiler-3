@@ -40,6 +40,7 @@ struct Compiler<'a> {
 
 impl Compiler<'_> {
     fn function(&mut self, body: Id<mir::BasicBlock>, mir: &mir::Program) {
+        self.target.start_script(block::when_flag_clicked()); // TODO
         self.basic_block(body, mir);
     }
 
