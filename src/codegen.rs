@@ -94,8 +94,23 @@ impl Compiler<'_> {
                 let _: sb3::InsertionPoint = self.target.insert_at(after);
                 None
             }
-            mir::Op::Return(_) => todo!(),
-            mir::Op::Call { .. } => todo!(),
+            mir::Op::Return(ref returns) => {
+                for (id, &value) in returns {
+                    let value = self.value(value);
+                    let variable = todo!();
+                    self.target.put(block::set_variable(variable, value));
+                }
+                self.target.put(block::stop_this_script());
+                None
+            }
+            mir::Op::Call {
+                function,
+                ref arguments,
+            } => {
+                let arguments = arguments.values().map(|&it| self.value(it)).collect();
+                self.target.use_custom_block(todo!(), arguments);
+                None
+            }
             mir::Op::Add(args) => {
                 let [lhs, rhs] = args.map(|it| self.value(it));
                 Some(self.target.add(lhs, rhs))

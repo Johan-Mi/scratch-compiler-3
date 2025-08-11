@@ -5,7 +5,7 @@ mod lowering;
 pub use lowering::lower;
 
 use beach_map::{BeachMap, Id};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 pub struct Program {
     parameters: BeachMap<Parameter>,
@@ -47,7 +47,7 @@ pub enum Op {
 
     Call {
         function: Id<BasicBlock>,
-        arguments: HashMap<Id<Parameter>, Value>,
+        arguments: BTreeMap<Id<Parameter>, Value>,
     },
 
     Add([Value; 2]),
