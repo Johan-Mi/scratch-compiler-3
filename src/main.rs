@@ -9,7 +9,7 @@ mod parser;
 
 use codemap::CodeMap;
 use diagnostics::Diagnostics;
-use std::process::ExitCode;
+use std::{collections::HashMap, process::ExitCode};
 
 fn main() -> ExitCode {
     let mut code_map = codemap::CodeMap::new();
@@ -29,6 +29,8 @@ fn real_main(code_map: &mut CodeMap, diagnostics: &mut Diagnostics) -> Result<()
         return Err(());
     }
 
+    let mut string_literals = HashMap::new();
+
     let csts = args
         .map(|source_path| {
             let source_code = std::fs::read_to_string(&source_path).map_err(|err| {
@@ -36,7 +38,11 @@ fn real_main(code_map: &mut CodeMap, diagnostics: &mut Diagnostics) -> Result<()
                 diagnostics.note(err.to_string(), []);
             })?;
             let source_file = code_map.add_file(source_path, source_code);
-            Ok(parser::parse(&source_file, diagnostics))
+            Ok(parser::parse(
+                &source_file,
+                &mut string_literals,
+                diagnostics,
+            ))
         })
         .collect::<Result<Vec<_>, _>>()?;
 

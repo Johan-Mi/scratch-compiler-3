@@ -2,16 +2,23 @@ use crate::diagnostics::{Diagnostics, primary, secondary};
 use codemap::Span;
 use logos::Logos as _;
 use logos_derive::Logos;
+use std::collections::HashMap;
 
-pub fn parse(file: &codemap::File, diagnostics: &mut Diagnostics) -> cst::Tree<SyntaxKind> {
+pub fn parse(
+    file: &codemap::File,
+    string_literals: &mut HashMap<codemap::Pos, String>,
+    diagnostics: &mut Diagnostics,
+) -> cst::Tree<SyntaxKind> {
     let source_code = file.source();
     let tokens = &SyntaxKind::lexer(source_code)
         .spanned()
-        .map(|(token, span)| {
-            (
-                token.unwrap_or(ERROR),
-                file.span.subspan(span.start as u64, span.end as u64),
-            )
+        .map(|(token, range)| {
+            let span = file.span.subspan(range.start as u64, range.end as u64);
+            if token == Ok(STRING) {
+                let literal = parse_string_literal(&source_code[range], span, diagnostics);
+                string_literals.extend(Some(span.low()).zip(literal));
+            }
+            (token.unwrap_or(ERROR), span)
         })
         .collect::<Vec<_>>();
     let len = file.span.len();
@@ -24,29 +31,26 @@ pub fn parse(file: &codemap::File, diagnostics: &mut Diagnostics) -> cst::Tree<S
     .parse()
 }
 
-fn parse_string_literal(
-    text: &str,
-    span: Span,
-    diagnostics: &mut Diagnostics,
-) -> Result<String, ()> {
-    let mut res = Ok(String::with_capacity(text.len() - 1));
+fn parse_string_literal(text: &str, span: Span, diagnostics: &mut Diagnostics) -> Option<String> {
+    let mut res = Some(String::with_capacity(text.len() - 1));
     let mut chars = text.chars();
     assert_eq!(chars.next(), Some('"'));
     while let Some(c) = chars.next() {
         match c {
             '"' => return res,
-            '\\' => match chars.next().ok_or_else(|| {
+            '\\' => match chars.next().or_else(|| {
                 let end = span.len();
                 let backslash = span.subspan(end - 1, end);
                 diagnostics.error("unfinished escape sequence", [primary(backslash, "")]);
+                None
             })? {
                 '"' | '\\' => {
-                    if let Ok(res) = &mut res {
+                    if let Some(res) = &mut res {
                         res.push(c);
                     }
                 }
                 'n' => {
-                    if let Ok(res) = &mut res {
+                    if let Some(res) = &mut res {
                         res.push('\n');
                     }
                 }
@@ -56,18 +60,18 @@ fn parse_string_literal(
                     let start = end - esc.len_utf8() - 1;
                     let span = span.subspan(start.try_into().unwrap(), end.try_into().unwrap());
                     diagnostics.error("invalid escape sequence", [primary(span, "")]);
-                    res = Err(());
+                    res = None;
                 }
             },
             _ => {
-                if let Ok(res) = &mut res {
+                if let Some(res) = &mut res {
                     res.push(c);
                 }
             }
         }
     }
     diagnostics.error("unterminated string literal", [primary(span, "")]);
-    Err(())
+    None
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Logos)]
