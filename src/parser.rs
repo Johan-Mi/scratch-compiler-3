@@ -87,7 +87,7 @@ pub enum K {
     Sprite,
     CostumeList,
     Costume,
-    Fn,
+    Function,
     Generics,
     FunctionParameters,
     Parameter,
@@ -106,7 +106,7 @@ pub enum K {
     Until,
     For,
     ParenthesizedExpression,
-    BinaryExpression,
+    BinaryOperation,
     Literal,
     Lvalue,
     GenericTypeInstantiation,
@@ -452,7 +452,7 @@ impl Parser<'_> {
             let node_kind = match right {
                 K::KwAs => K::TypeAscription,
                 K::Dot => K::MethodCall,
-                _ => K::BinaryExpression,
+                _ => K::BinaryOperation,
             };
             self.bump(); // operator
             self.parse_recursive_expression(right);
@@ -690,7 +690,7 @@ impl Parser<'_> {
             self.parse_expression();
         }
         self.parse_block();
-        self.builder.finish_node_at(checkpoint, K::Fn);
+        self.builder.finish_node_at(checkpoint, K::Function);
     }
 
     fn parse_generics(&mut self) {

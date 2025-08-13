@@ -52,14 +52,14 @@ impl<'src> Struct<'src> {
         token(self.syntax, K::Identifier)
     }
 
-    pub fn fields(self) -> impl Iterator<Item = Field<'src>> {
+    pub fn fields(self) -> impl Iterator<Item = FieldDefinition<'src>> {
         children(self.syntax)
     }
 }
 
-node!(Field: K::FieldDefinition);
+node!(FieldDefinition: K::FieldDefinition);
 
-impl<'src> Field<'src> {
+impl<'src> FieldDefinition<'src> {
     pub fn name(self) -> SyntaxNode<'src> {
         token(self.syntax, K::Identifier).unwrap()
     }
@@ -115,7 +115,7 @@ impl<'src> Costume<'src> {
     }
 }
 
-node!(Function: K::Fn);
+node!(Function: K::Function);
 
 impl<'src> Function<'src> {
     pub fn kw_inline(self) -> Option<SyntaxNode<'src>> {
@@ -367,7 +367,7 @@ impl<'src> Node<'src> for Expression<'src> {
             K::ParenthesizedExpression => Node::cast(node).map(Self::Parenthesized),
             K::Variable => Node::cast(node).map(Self::Variable),
             K::FunctionCall => Node::cast(node).map(Self::FunctionCall),
-            K::BinaryExpression => Node::cast(node).map(Self::BinaryOperation),
+            K::BinaryOperation => Node::cast(node).map(Self::BinaryOperation),
             K::NamedArgument => Node::cast(node).map(Self::NamedArgument),
             K::Literal => Node::cast(node).map(Self::Literal),
             K::Lvalue => Node::cast(node).map(Self::Lvalue),
@@ -432,7 +432,7 @@ impl<'src> Arguments<'src> {
     }
 }
 
-node!(BinaryOperation: K::BinaryExpression);
+node!(BinaryOperation: K::BinaryOperation);
 
 impl<'src> BinaryOperation<'src> {
     pub fn operator(self) -> SyntaxNode<'src> {
