@@ -7,7 +7,7 @@ pub trait Node<'src>: Sized {
 }
 
 macro_rules! node {
-    ($Name:ident: $kind:expr) => {
+    ($Name:ident) => {
         #[derive(Clone, Copy)]
         pub struct $Name<'src> {
             syntax: SyntaxNode<'src>,
@@ -15,7 +15,7 @@ macro_rules! node {
 
         impl<'src> Node<'src> for $Name<'src> {
             fn cast(syntax: SyntaxNode<'src>) -> Option<Self> {
-                (syntax.kind() == $kind).then_some(Self { syntax })
+                (syntax.kind() == K::$Name).then_some(Self { syntax })
             }
 
             fn syntax(self) -> SyntaxNode<'src> {
@@ -25,7 +25,7 @@ macro_rules! node {
     };
 }
 
-node!(Document: K::Document);
+node!(Document);
 
 impl<'src> Document<'src> {
     pub fn structs(self) -> impl Iterator<Item = Struct<'src>> {
@@ -45,7 +45,7 @@ impl<'src> Document<'src> {
     }
 }
 
-node!(Struct: K::Struct);
+node!(Struct);
 
 impl<'src> Struct<'src> {
     pub fn name(self) -> Option<SyntaxNode<'src>> {
@@ -57,7 +57,7 @@ impl<'src> Struct<'src> {
     }
 }
 
-node!(FieldDefinition: K::FieldDefinition);
+node!(FieldDefinition);
 
 impl<'src> FieldDefinition<'src> {
     pub fn name(self) -> SyntaxNode<'src> {
@@ -69,7 +69,7 @@ impl<'src> FieldDefinition<'src> {
     }
 }
 
-node!(Sprite: K::Sprite);
+node!(Sprite);
 
 impl<'src> Sprite<'src> {
     pub fn name(self) -> Option<SyntaxNode<'src>> {
@@ -89,7 +89,7 @@ impl<'src> Sprite<'src> {
     }
 }
 
-node!(CostumeList: K::CostumeList);
+node!(CostumeList);
 
 impl<'src> CostumeList<'src> {
     pub fn iter(self) -> impl Iterator<Item = Costume<'src>> {
@@ -97,7 +97,7 @@ impl<'src> CostumeList<'src> {
     }
 }
 
-node!(Costume: K::Costume);
+node!(Costume);
 
 impl<'src> Costume<'src> {
     pub fn name(self) -> Option<SyntaxNode<'src>> {
@@ -115,7 +115,7 @@ impl<'src> Costume<'src> {
     }
 }
 
-node!(Function: K::Function);
+node!(Function);
 
 impl<'src> Function<'src> {
     pub fn kw_inline(self) -> Option<SyntaxNode<'src>> {
@@ -147,7 +147,7 @@ impl<'src> Function<'src> {
     }
 }
 
-node!(Generics: K::Generics);
+node!(Generics);
 
 impl<'src> Generics<'src> {
     pub fn iter(self) -> impl Iterator<Item = SyntaxNode<'src>> {
@@ -157,7 +157,7 @@ impl<'src> Generics<'src> {
     }
 }
 
-node!(FunctionParameters: K::FunctionParameters);
+node!(FunctionParameters);
 
 impl<'src> FunctionParameters<'src> {
     pub fn parameters(self) -> impl Iterator<Item = Parameter<'src>> {
@@ -165,7 +165,7 @@ impl<'src> FunctionParameters<'src> {
     }
 }
 
-node!(Parameter: K::Parameter);
+node!(Parameter);
 
 impl<'src> Parameter<'src> {
     pub fn external_name(self) -> Option<ExternalParameterName<'src>> {
@@ -181,7 +181,7 @@ impl<'src> Parameter<'src> {
     }
 }
 
-node!(ExternalParameterName: K::ExternalParameterName);
+node!(ExternalParameterName);
 
 impl<'src> ExternalParameterName<'src> {
     pub fn identifier(self) -> SyntaxNode<'src> {
@@ -189,7 +189,7 @@ impl<'src> ExternalParameterName<'src> {
     }
 }
 
-node!(Block: K::Block);
+node!(Block);
 
 impl<'src> Block<'src> {
     pub fn statements(self) -> impl Iterator<Item = Statement<'src>> {
@@ -239,7 +239,7 @@ impl<'src> Node<'src> for Statement<'src> {
     }
 }
 
-node!(Let: K::Let);
+node!(Let);
 
 impl<'src> Let<'src> {
     pub fn variable(self) -> Option<SyntaxNode<'src>> {
@@ -251,7 +251,7 @@ impl<'src> Let<'src> {
     }
 }
 
-node!(If: K::If);
+node!(If);
 
 impl<'src> If<'src> {
     pub fn condition(self) -> Option<Expression<'src>> {
@@ -267,7 +267,7 @@ impl<'src> If<'src> {
     }
 }
 
-node!(ElseClause: K::ElseClause);
+node!(ElseClause);
 
 impl<'src> ElseClause<'src> {
     pub fn block(self) -> Option<Block<'src>> {
@@ -279,7 +279,7 @@ impl<'src> ElseClause<'src> {
     }
 }
 
-node!(Repeat: K::Repeat);
+node!(Repeat);
 
 impl<'src> Repeat<'src> {
     pub fn times(self) -> Option<Expression<'src>> {
@@ -291,7 +291,7 @@ impl<'src> Repeat<'src> {
     }
 }
 
-node!(Forever: K::Forever);
+node!(Forever);
 
 impl<'src> Forever<'src> {
     pub fn body(self) -> Option<Block<'src>> {
@@ -299,7 +299,7 @@ impl<'src> Forever<'src> {
     }
 }
 
-node!(While: K::While);
+node!(While);
 
 impl<'src> While<'src> {
     pub fn condition(self) -> Option<Expression<'src>> {
@@ -311,7 +311,7 @@ impl<'src> While<'src> {
     }
 }
 
-node!(Until: K::Until);
+node!(Until);
 
 impl<'src> Until<'src> {
     pub fn condition(self) -> Option<Expression<'src>> {
@@ -323,7 +323,7 @@ impl<'src> Until<'src> {
     }
 }
 
-node!(For: K::For);
+node!(For);
 
 impl<'src> For<'src> {
     pub fn variable(self) -> Option<SyntaxNode<'src>> {
@@ -339,7 +339,7 @@ impl<'src> For<'src> {
     }
 }
 
-node!(Return: K::Return);
+node!(Return);
 
 impl<'src> Return<'src> {
     pub fn expression(self) -> Option<Expression<'src>> {
@@ -396,7 +396,7 @@ impl<'src> Node<'src> for Expression<'src> {
     }
 }
 
-node!(ParenthesizedExpression: K::ParenthesizedExpression);
+node!(ParenthesizedExpression);
 
 impl<'src> ParenthesizedExpression<'src> {
     pub fn inner(self) -> Option<Expression<'src>> {
@@ -404,7 +404,7 @@ impl<'src> ParenthesizedExpression<'src> {
     }
 }
 
-node!(Variable: K::Variable);
+node!(Variable);
 
 impl<'src> Variable<'src> {
     pub fn identifier(self) -> SyntaxNode<'src> {
@@ -412,7 +412,7 @@ impl<'src> Variable<'src> {
     }
 }
 
-node!(FunctionCall: K::FunctionCall);
+node!(FunctionCall);
 
 impl<'src> FunctionCall<'src> {
     pub fn name(self) -> SyntaxNode<'src> {
@@ -424,7 +424,7 @@ impl<'src> FunctionCall<'src> {
     }
 }
 
-node!(Arguments: K::Arguments);
+node!(Arguments);
 
 impl<'src> Arguments<'src> {
     pub fn iter(self) -> impl Iterator<Item = Expression<'src>> {
@@ -432,7 +432,7 @@ impl<'src> Arguments<'src> {
     }
 }
 
-node!(BinaryOperation: K::BinaryOperation);
+node!(BinaryOperation);
 
 impl<'src> BinaryOperation<'src> {
     pub fn operator(self) -> SyntaxNode<'src> {
@@ -459,7 +459,7 @@ impl<'src> BinaryOperation<'src> {
     }
 }
 
-node!(NamedArgument: K::NamedArgument);
+node!(NamedArgument);
 
 impl<'src> NamedArgument<'src> {
     pub fn name(self) -> SyntaxNode<'src> {
@@ -471,9 +471,9 @@ impl<'src> NamedArgument<'src> {
     }
 }
 
-node!(Literal: K::Literal);
+node!(Literal);
 
-node!(Lvalue: K::Lvalue);
+node!(Lvalue);
 
 impl<'src> Lvalue<'src> {
     pub fn inner(self) -> Option<Expression<'src>> {
@@ -481,7 +481,7 @@ impl<'src> Lvalue<'src> {
     }
 }
 
-node!(GenericTypeInstantiation: K::GenericTypeInstantiation);
+node!(GenericTypeInstantiation);
 
 impl<'src> GenericTypeInstantiation<'src> {
     pub fn generic(self) -> Expression<'src> {
@@ -493,7 +493,7 @@ impl<'src> GenericTypeInstantiation<'src> {
     }
 }
 
-node!(TypeParameters: K::TypeParameters);
+node!(TypeParameters);
 
 impl<'src> TypeParameters<'src> {
     pub fn iter(self) -> impl Iterator<Item = Expression<'src>> {
@@ -501,7 +501,7 @@ impl<'src> TypeParameters<'src> {
     }
 }
 
-node!(ListLiteral: K::ListLiteral);
+node!(ListLiteral);
 
 impl<'src> ListLiteral<'src> {
     pub fn iter(self) -> impl Iterator<Item = Expression<'src>> {
@@ -513,7 +513,7 @@ impl<'src> ListLiteral<'src> {
     }
 }
 
-node!(TypeAscription: K::TypeAscription);
+node!(TypeAscription);
 
 impl<'src> TypeAscription<'src> {
     pub fn operator(self) -> SyntaxNode<'src> {
@@ -537,7 +537,7 @@ impl<'src> TypeAscription<'src> {
     }
 }
 
-node!(MethodCall: K::MethodCall);
+node!(MethodCall);
 
 impl<'src> MethodCall<'src> {
     pub fn dot(self) -> SyntaxNode<'src> {
