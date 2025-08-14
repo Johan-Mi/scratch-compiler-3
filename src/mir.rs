@@ -12,6 +12,7 @@ pub struct Program {
     pub basic_blocks: BeachMap<BasicBlock>,
     pub ops: BeachMap<Op>,
     pub variables: BeachMap<Variable>,
+    pub lists: BeachMap<List>,
 }
 
 #[derive(Clone, Copy)]
@@ -130,13 +131,12 @@ pub enum Value {
 #[derive(Clone, Copy)]
 pub enum Ref {
     Variable(Id<Variable>),
-    List { list: List, index: Value },
+    List { list: Id<List>, index: Value },
 }
 
 pub struct Variable;
 
-#[derive(Clone, Copy)]
-pub struct List(u16);
+pub struct List;
 
 enum Either<L, R> {
     Left(L),
