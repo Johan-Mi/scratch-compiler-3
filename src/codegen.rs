@@ -32,10 +32,23 @@ pub fn compile(
             }))
             .collect();
 
+        let lists = mir
+            .lists
+            .iter_with_id()
+            .map(|(it, _)| it)
+            .zip(std::iter::repeat_with(|| {
+                target.add_list(sb3::List {
+                    name: String::new(), // TODO
+                    items: Vec::new(),
+                })
+            }))
+            .collect();
+
         let mut compiler = Compiler {
             target,
             ops: HashMap::new(),
             variables,
+            lists,
         };
 
         let functions = &mir.basic_blocks; // TODO
@@ -50,6 +63,7 @@ struct Compiler<'a> {
     target: sb3::Target<'a>,
     ops: HashMap<Id<mir::Op>, sb3::Operand>,
     variables: HashMap<Id<mir::Variable>, sb3::VariableRef>,
+    lists: HashMap<Id<mir::List>, sb3::ListRef>,
 }
 
 impl Compiler<'_> {
@@ -74,19 +88,21 @@ impl Compiler<'_> {
                 mir::Ref::Variable(variable) => self.variables[&variable].clone().into(),
                 mir::Ref::List { list, index } => {
                     let index = self.value(index);
-                    self.target.item_num_of_list(todo!(), index)
+                    self.target
+                        .item_num_of_list(self.lists[&list].clone(), index)
                 }
             }),
             mir::Op::Store { target, value } => {
                 let value = self.value(value);
-                self.target.put(match target {
+                let block = match target {
                     mir::Ref::Variable(variable) => {
                         block::set_variable(self.variables[&variable].clone(), value)
                     }
                     mir::Ref::List { list, index } => {
-                        block::replace(todo!(), self.value(index), value)
+                        block::replace(self.lists[&list].clone(), self.value(index), value)
                     }
-                });
+                };
+                self.target.put(block);
                 None
             }
             mir::Op::Repeat { times, body } => {
