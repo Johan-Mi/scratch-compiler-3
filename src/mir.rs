@@ -11,7 +11,7 @@ pub struct Program {
     parameters: BeachMap<Parameter>,
     pub basic_blocks: BeachMap<BasicBlock>,
     pub ops: BeachMap<Op>,
-    variables: BeachMap<Variable>,
+    pub variables: BeachMap<Variable>,
 }
 
 #[derive(Clone, Copy)]

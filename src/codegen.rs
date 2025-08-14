@@ -18,11 +18,24 @@ pub fn compile(
     {
         let span = sprite.span();
         let file = code_map.find_file(span.low());
-        let target = project.add_sprite(file.source_slice(span).to_owned());
+        let mut target = project.add_sprite(file.source_slice(span).to_owned());
+
+        let variables = mir
+            .variables
+            .iter_with_id()
+            .map(|(it, _)| it)
+            .zip(std::iter::repeat_with(|| {
+                target.add_variable(sb3::Variable {
+                    name: String::new(), // TODO
+                    value: sb3::Constant::Number(0.0),
+                })
+            }))
+            .collect();
 
         let mut compiler = Compiler {
             target,
             ops: HashMap::new(),
+            variables,
         };
 
         let functions = &mir.basic_blocks; // TODO
@@ -36,6 +49,7 @@ pub fn compile(
 struct Compiler<'a> {
     target: sb3::Target<'a>,
     ops: HashMap<Id<mir::Op>, sb3::Operand>,
+    variables: HashMap<Id<mir::Variable>, sb3::VariableRef>,
 }
 
 impl Compiler<'_> {
@@ -57,7 +71,7 @@ impl Compiler<'_> {
     fn op(&mut self, op: &mir::Op, mir: &mir::Program) -> Option<sb3::Operand> {
         match *op {
             mir::Op::Load { source } => Some(match source {
-                mir::Ref::Variable(_) => (todo!() as sb3::VariableRef).into(),
+                mir::Ref::Variable(variable) => self.variables[&variable].clone().into(),
                 mir::Ref::List { list, index } => {
                     let index = self.value(index);
                     self.target.item_num_of_list(todo!(), index)
@@ -66,7 +80,9 @@ impl Compiler<'_> {
             mir::Op::Store { target, value } => {
                 let value = self.value(value);
                 self.target.put(match target {
-                    mir::Ref::Variable(_) => block::set_variable(todo!(), value),
+                    mir::Ref::Variable(variable) => {
+                        block::set_variable(self.variables[&variable].clone(), value)
+                    }
                     mir::Ref::List { list, index } => {
                         block::replace(todo!(), self.value(index), value)
                     }
