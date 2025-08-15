@@ -44,4 +44,6 @@ fn returns(program: &mut Program) {
             values.retain(|it, _| used_returns.contains(it));
         }
     }
+
+    program.returns.retain(|it, _| used_returns.contains(&it));
 }

@@ -13,6 +13,7 @@ pub struct Program {
     pub ops: BeachMap<Op>,
     pub variables: BeachMap<Variable>,
     pub lists: BeachMap<List>,
+    pub returns: BeachMap<Return>,
 }
 
 #[derive(Clone, Copy)]
@@ -20,8 +21,7 @@ pub struct Parameter {
     owner: Id<BasicBlock>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
-pub struct Return(u8);
+pub struct Return;
 
 pub struct BasicBlock(pub Vec<Id<Op>>);
 
@@ -44,7 +44,7 @@ pub enum Op {
         then: Id<BasicBlock>,
         r#else: Id<BasicBlock>,
     },
-    Return(HashMap<Return, Value>),
+    Return(HashMap<Id<Return>, Value>),
 
     Call {
         function: Id<BasicBlock>,
@@ -122,7 +122,7 @@ impl Op {
 pub enum Value {
     FunctionParameter(Id<Parameter>),
     Op(Id<Op>),
-    Returned { call: Id<Op>, id: Return },
+    Returned { call: Id<Op>, id: Id<Return> },
     Num(f64),
     String(&'static str),
     Bool(bool),

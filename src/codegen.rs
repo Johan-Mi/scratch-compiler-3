@@ -44,11 +44,24 @@ pub fn compile(
             }))
             .collect();
 
+        let returns = mir
+            .returns
+            .iter_with_id()
+            .map(|(it, _)| it)
+            .zip(std::iter::repeat_with(|| {
+                target.add_variable(sb3::Variable {
+                    name: String::new(), // TODO
+                    value: sb3::Constant::Number(0.0),
+                })
+            }))
+            .collect();
+
         let mut compiler = Compiler {
             target,
             ops: HashMap::new(),
             variables,
             lists,
+            returns,
         };
 
         let functions = &mir.basic_blocks; // TODO
@@ -64,6 +77,7 @@ struct Compiler<'a> {
     ops: HashMap<Id<mir::Op>, sb3::Operand>,
     variables: HashMap<Id<mir::Variable>, sb3::VariableRef>,
     lists: HashMap<Id<mir::List>, sb3::ListRef>,
+    returns: HashMap<Id<mir::Return>, sb3::VariableRef>,
 }
 
 impl Compiler<'_> {
@@ -133,7 +147,7 @@ impl Compiler<'_> {
             mir::Op::Return(ref returns) => {
                 for (id, &value) in returns {
                     let value = self.value(value);
-                    let variable = todo!();
+                    let variable = self.returns[id].clone();
                     self.target.put(block::set_variable(variable, value));
                 }
                 self.target.put(block::stop_this_script());
