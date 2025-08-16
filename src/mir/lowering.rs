@@ -8,5 +8,7 @@ pub fn lower(hir: &hir::Program) -> mir::Program {
         basic_blocks: BeachMap::new(),
         ops: BeachMap::new(),
         variables: BeachMap::new(),
+        lists: BeachMap::new(),
+        returns: BeachMap::new(),
     }
 }
