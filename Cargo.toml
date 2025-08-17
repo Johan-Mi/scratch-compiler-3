@@ -5,10 +5,10 @@ edition = "2024"
 
 [lints]
 rust.unsafe_code = "forbid"
+rust.unused_results = "deny"
 clippy.allow_attributes = "deny"
 clippy.allow_attributes_without_reason = "deny"
 clippy.let_underscore_untyped = "deny"
-rust.unused_results = "deny"
 clippy.nursery = { level = "warn", priority = -1 }
 clippy.pedantic = { level = "warn", priority = -1 }
 
