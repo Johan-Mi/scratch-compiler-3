@@ -9,12 +9,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
 
 [[package]]
-name = "beach_map"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad0e3007796f99ab13959597dc276038a3b39b27368a8160d7b5720f05a753da"
-
-[[package]]
 name = "beef"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -130,6 +124,11 @@ dependencies = [
 ]
 
 [[package]]
+name = "map"
+version = "0.1.0"
+source = "git+https://github.com/Johan-Mi/map#18beaa4ee5873cc9e8dbb8e476f496d55f5ecf29"
+
+[[package]]
 name = "md5"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -205,12 +204,12 @@ dependencies = [
 name = "scratch-compiler-3"
 version = "0.1.0"
 dependencies = [
- "beach_map",
  "codemap",
  "codemap-diagnostic",
  "cst",
  "logos",
  "logos-derive",
+ "map",
  "sb3-builder",
 ]
 

@@ -1,5 +1,5 @@
 use crate::{ast, mir};
-use beach_map::Id;
+use map::Id;
 use sb3_builder::{self as sb3, block};
 use std::{collections::HashMap, error::Error, fs::File};
 
@@ -22,7 +22,7 @@ pub fn compile(
 
         let variables = mir
             .variables
-            .iter_with_id()
+            .iter()
             .map(|(it, _)| it)
             .zip(std::iter::repeat_with(|| {
                 target.add_variable(sb3::Variable {
@@ -34,7 +34,7 @@ pub fn compile(
 
         let lists = mir
             .lists
-            .iter_with_id()
+            .iter()
             .map(|(it, _)| it)
             .zip(std::iter::repeat_with(|| {
                 target.add_list(sb3::List {
@@ -46,7 +46,7 @@ pub fn compile(
 
         let returns = mir
             .returns
-            .iter_with_id()
+            .iter()
             .map(|(it, _)| it)
             .zip(std::iter::repeat_with(|| {
                 target.add_variable(sb3::Variable {
@@ -65,7 +65,7 @@ pub fn compile(
         };
 
         let functions = &mir.basic_blocks; // TODO
-        for function in functions {
+        for function in functions.values() {
             compiler.function(function, mir);
         }
     }

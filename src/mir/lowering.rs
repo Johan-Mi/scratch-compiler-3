@@ -1,14 +1,14 @@
 use crate::{hir, mir};
-use beach_map::BeachMap;
+use map::Map;
 
 pub fn lower(hir: &hir::Program) -> mir::Program {
     // TODO
     mir::Program {
-        parameters: BeachMap::new(),
-        basic_blocks: BeachMap::new(),
-        ops: BeachMap::new(),
-        variables: BeachMap::new(),
-        lists: BeachMap::new(),
-        returns: BeachMap::new(),
+        parameters: Map::default(),
+        basic_blocks: Map::default(),
+        ops: Map::default(),
+        variables: Map::default(),
+        lists: Map::default(),
+        returns: Map::default(),
     }
 }

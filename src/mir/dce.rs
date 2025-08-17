@@ -9,7 +9,7 @@ pub fn perform(program: &mut Program) {
 fn parameters(program: &mut Program) {
     let used_parameters: HashSet<_> = program
         .ops
-        .iter()
+        .values()
         .flat_map(Op::args)
         .filter_map(|&it| match it {
             Value::FunctionParameter(parameter) => Some(parameter),
@@ -21,7 +21,7 @@ fn parameters(program: &mut Program) {
         .parameters
         .retain(|it, _| used_parameters.contains(&it));
 
-    for op in &mut program.ops {
+    for op in program.ops.values_mut() {
         if let Op::Call { arguments, .. } = op {
             arguments.retain(|it, _| used_parameters.contains(it));
         }
@@ -31,7 +31,7 @@ fn parameters(program: &mut Program) {
 fn returns(program: &mut Program) {
     let used_returns: HashSet<_> = program
         .ops
-        .iter()
+        .values()
         .flat_map(Op::args)
         .filter_map(|&it| match it {
             Value::Returned { id, .. } => Some(id),
@@ -39,7 +39,7 @@ fn returns(program: &mut Program) {
         })
         .collect();
 
-    for op in &mut program.ops {
+    for op in program.ops.values_mut() {
         if let Op::Return(values) = op {
             values.retain(|it, _| used_returns.contains(it));
         }

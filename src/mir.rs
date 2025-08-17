@@ -4,16 +4,16 @@ mod lowering;
 
 pub use lowering::lower;
 
-use beach_map::{BeachMap, Id};
+use map::{Id, Map};
 use std::collections::{BTreeMap, HashMap};
 
 pub struct Program {
-    parameters: BeachMap<Parameter>,
-    pub basic_blocks: BeachMap<BasicBlock>,
-    pub ops: BeachMap<Op>,
-    pub variables: BeachMap<Variable>,
-    pub lists: BeachMap<List>,
-    pub returns: BeachMap<Return>,
+    parameters: Map<Parameter>,
+    pub basic_blocks: Map<BasicBlock>,
+    pub ops: Map<Op>,
+    pub variables: Map<Variable>,
+    pub lists: Map<List>,
+    pub returns: Map<Return>,
 }
 
 #[derive(Clone, Copy)]
