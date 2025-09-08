@@ -160,7 +160,7 @@ impl<'src> Generics<'src> {
 node!(FunctionParameters);
 
 impl<'src> FunctionParameters<'src> {
-    pub fn parameters(self) -> impl Iterator<Item = Parameter<'src>> {
+    pub fn iter(self) -> impl Iterator<Item = Parameter<'src>> {
         children(self.syntax)
     }
 }

@@ -5,6 +5,7 @@ mod debug;
 mod diagnostics;
 mod hir;
 mod mir;
+mod name;
 mod parser;
 
 use codemap::CodeMap;
