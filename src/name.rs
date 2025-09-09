@@ -36,12 +36,10 @@ pub fn resolve(document: SyntaxNode, code_map: &CodeMap) -> impl Iterator<Item =
     let usages = document.pre_order().filter(|it| it.kind() == K::Variable);
     usages.map(cst::Node::span).filter_map(move |usage| {
         let text = file.source_slice(usage);
-        let definition = definitions
+        let possible = definitions
             .iter()
-            .filter(|it| it.scope.contains(usage) && file.source_slice(it.identifier) == text)
-            .min_by_key(|it| it.scope.len())?
-            .identifier
-            .low();
+            .filter(|it| it.scope.contains(usage) && file.source_slice(it.identifier) == text);
+        let definition = possible.min_by_key(|it| it.scope.len())?.identifier.low();
         let usage = usage.low();
         Some(Resolution { usage, definition })
     })
