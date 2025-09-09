@@ -3,7 +3,6 @@ mod codegen;
 #[cfg(debug_assertions)]
 mod debug;
 mod diagnostics;
-mod hir;
 mod mir;
 mod name;
 mod parser;
@@ -54,18 +53,16 @@ fn real_main(code_map: &mut CodeMap, diagnostics: &mut Diagnostics) -> Result<()
         }
     }
 
-    let mut hir = hir::Program;
     let asts: Vec<_> = csts
         .iter()
         .map(|cst| ast::Node::cast(cst.root()).unwrap())
-        .inspect(|ast| hir.lower(ast))
         .collect();
 
     if !diagnostics.successful() {
         return Err(());
     }
 
-    let mut mir = mir::lower(&hir);
+    let mut mir = mir::lower();
     mir::dce::perform(&mut mir);
 
     codegen::compile(code_map, &asts, &mir, "project.sb3").map_err(|err| {

@@ -1,7 +1,7 @@
-use crate::{hir, mir};
+use crate::mir;
 use map::Map;
 
-pub fn lower(hir: &hir::Program) -> mir::Program {
+pub fn lower() -> mir::Program {
     // TODO
     mir::Program {
         parameters: Map::default(),
