@@ -25,7 +25,13 @@ pub fn resolve(document: SyntaxNode, code_map: &CodeMap) -> impl Iterator<Item =
                 Some(Definition { identifier, scope })
             })
         });
-    let definitions: Vec<_> = lets.chain(parameters).collect();
+    let fors = document.pre_order().filter_map(|node| {
+        let it = ast::For::cast(node)?;
+        let identifier = it.variable()?.span();
+        let scope = it.body()?.syntax().span();
+        Some(Definition { identifier, scope })
+    });
+    let definitions: Vec<_> = lets.chain(parameters).chain(fors).collect();
 
     let usages = document.pre_order().filter(|it| it.kind() == K::Variable);
     usages.map(cst::Node::span).filter_map(move |usage| {
