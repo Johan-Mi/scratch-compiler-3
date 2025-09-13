@@ -206,7 +206,7 @@ pub enum Statement<'src> {
     Until(Until<'src>),
     For(For<'src>),
     Return(Return<'src>),
-    Expr(Expression<'src>),
+    Expression(Expression<'src>),
 }
 
 impl<'src> Node<'src> for Statement<'src> {
@@ -220,7 +220,7 @@ impl<'src> Node<'src> for Statement<'src> {
             K::Until => Node::cast(node).map(Self::Until),
             K::For => Node::cast(node).map(Self::For),
             K::Return => Node::cast(node).map(Self::Return),
-            _ => Expression::cast(node).map(Self::Expr),
+            _ => Expression::cast(node).map(Self::Expression),
         }
     }
 
@@ -234,7 +234,7 @@ impl<'src> Node<'src> for Statement<'src> {
             Self::Until(inner) => inner.syntax,
             Self::For(inner) => inner.syntax,
             Self::Return(inner) => inner.syntax,
-            Self::Expr(inner) => inner.syntax(),
+            Self::Expression(inner) => inner.syntax(),
         }
     }
 }
