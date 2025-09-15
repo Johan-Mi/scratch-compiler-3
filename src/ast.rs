@@ -347,6 +347,7 @@ impl<'src> Return<'src> {
     }
 }
 
+#[derive(Clone, Copy)]
 pub enum Expression<'src> {
     Parenthesized(ParenthesizedExpression<'src>),
     Variable(Variable<'src>),
@@ -472,6 +473,12 @@ impl<'src> NamedArgument<'src> {
 }
 
 node!(Literal);
+
+impl<'src> Literal<'src> {
+    pub fn token(self) -> SyntaxNode<'src> {
+        self.syntax.children().next().unwrap()
+    }
+}
 
 node!(Lvalue);
 

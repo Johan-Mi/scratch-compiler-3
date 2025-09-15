@@ -46,8 +46,8 @@ pub fn resolve(document: SyntaxNode, code_map: &CodeMap) -> impl Iterator<Item =
 }
 
 pub struct Resolution {
-    usage: Pos,
-    definition: Pos,
+    pub usage: Pos,
+    pub definition: Pos,
 }
 
 struct Definition {

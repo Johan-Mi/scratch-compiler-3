@@ -6,6 +6,7 @@ mod diagnostics;
 mod mir;
 mod name;
 mod parser;
+mod ty;
 
 use codemap::CodeMap;
 use diagnostics::Diagnostics;
