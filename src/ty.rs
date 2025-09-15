@@ -26,23 +26,28 @@ fn check(documents: &[ast::Document], code_map: &CodeMap, diagnostics: &mut Diag
 
     let mut c = Checker {
         variable_definitions,
+        global_variables: HashMap::new(),
         type_expressions,
         diagnostics,
     };
 
-    let global_variables: HashMap<Pos, Type> = documents
+    for (variable, ty) in documents
         .iter()
         .flat_map(|it| it.syntax().pre_order())
         .filter(|it| matches!(it.kind(), K::Document | K::Sprite))
         .flat_map(cst::Node::children)
         .filter_map(ast::Let::cast)
         .filter_map(|it| Some((it.variable()?.span().low(), of(it.value()?, &mut c)?)))
-        .collect();
+    {
+        assert!(c.global_variables.insert(variable, ty).is_none());
+    }
+
     let expressions: HashMap<Span, Type> = todo!();
 }
 
 struct Checker<'a> {
     variable_definitions: HashMap<Pos, Pos>,
+    global_variables: HashMap<Pos, Type>,
     type_expressions: HashMap<Span, Type>,
     diagnostics: &'a mut Diagnostics,
 }
