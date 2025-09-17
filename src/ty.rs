@@ -21,7 +21,17 @@ fn check(documents: &[ast::Document], code_map: &CodeMap, diagnostics: &mut Diag
         .map(|it| (it.usage, it.definition))
         .collect();
 
-    let type_expressions: HashMap<Span, Type> = todo!();
+    let type_expressions: HashMap<Span, Type> = documents
+        .iter()
+        .flat_map(|it| it.syntax().pre_order())
+        .filter_map(|it| {
+            None.or_else(|| Node::cast(it).map(ast::FieldDefinition::ty))
+                .or_else(|| Node::cast(it).map(ast::Parameter::ty))
+                .or_else(|| Node::cast(it).map(ast::TypeAscription::ty))?
+        })
+        .filter_map(|it| Some((it.syntax().span(), evaluate(it, diagnostics)?)))
+        .collect();
+
     let functions = todo!();
 
     let mut c = Checker {
@@ -107,5 +117,31 @@ fn of(expression: ast::Expression, c: &mut Checker) -> Option<Type> {
             actual_ty
         }
         ast::Expression::MethodCall(it) => todo!(),
+    }
+}
+
+fn evaluate(expression: ast::Expression, diagnostics: &mut Diagnostics) -> Option<Type> {
+    let span = expression.syntax().span();
+    let mut err = |message| {
+        diagnostics.error(message, [primary(span, "")]);
+        None
+    };
+
+    match expression {
+        ast::Expression::Parenthesized(_) => {
+            err("parenthesized expression cannot be used as a type")
+        }
+        ast::Expression::Variable(_) => err("variable cannot be used as a type"),
+        ast::Expression::FunctionCall(_) => err("function call cannot be used as a type"),
+        ast::Expression::BinaryOperation(_) => err("binary operation cannot be used as a type"),
+        ast::Expression::NamedArgument(_) => err("named argument cannot be used as a type"),
+        ast::Expression::Literal(_) => err("literal cannot be used as a type"),
+        ast::Expression::Lvalue(_) => err("lvalue cannot be used as a type"),
+        ast::Expression::GenericTypeInstantiation(_) => {
+            err("generic type instantiation cannot be used as a type")
+        }
+        ast::Expression::ListLiteral(_) => err("list literal cannot be used as a type"),
+        ast::Expression::TypeAscription(_) => err("type ascription cannot be used as a type"),
+        ast::Expression::MethodCall(_) => err("method call cannot be used as a type"),
     }
 }
