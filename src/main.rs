@@ -59,6 +59,8 @@ fn real_main(code_map: &mut CodeMap, diagnostics: &mut Diagnostics) -> Result<()
         .map(|cst| ast::Node::cast(cst.root()).unwrap())
         .collect();
 
+    ty::check(&asts, code_map, diagnostics);
+
     if !diagnostics.successful() {
         return Err(());
     }

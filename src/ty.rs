@@ -14,7 +14,7 @@ enum Type {
     List,   // TODO: Of what item type?
 }
 
-fn check(documents: &[ast::Document], code_map: &CodeMap, diagnostics: &mut Diagnostics) {
+pub fn check(documents: &[ast::Document], code_map: &CodeMap, diagnostics: &mut Diagnostics) {
     let variable_definitions = documents
         .iter()
         .flat_map(|it| crate::name::resolve(it.syntax(), code_map))
