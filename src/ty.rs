@@ -32,33 +32,33 @@ pub fn check(documents: &[ast::Document], code_map: &CodeMap, diagnostics: &mut 
         .filter_map(|it| Some((it.syntax().span(), evaluate(it, diagnostics)?)))
         .collect();
 
-    let functions = todo!();
-
     let mut c = Checker {
         variable_definitions,
         global_variables: HashMap::new(),
         type_expressions,
+        code_map,
         diagnostics,
     };
 
-    for (variable, ty) in documents
+    for (variable, value) in documents
         .iter()
         .flat_map(|it| it.syntax().pre_order())
         .filter(|it| matches!(it.kind(), K::Document | K::Sprite))
         .flat_map(cst::Node::children)
         .filter_map(ast::Let::cast)
-        .filter_map(|it| Some((it.variable()?.span().low(), of(it.value()?, &mut c)?)))
+        .filter_map(|it| Some((it.variable()?.span().low(), it.value()?)))
     {
-        assert!(c.global_variables.insert(variable, ty).is_none());
+        if let Some(ty) = of(value, &mut c) {
+            assert!(c.global_variables.insert(variable, ty).is_none());
+        }
     }
-
-    let expressions: HashMap<Span, Type> = todo!();
 }
 
 struct Checker<'a> {
     variable_definitions: HashMap<Pos, Pos>,
     global_variables: HashMap<Pos, Type>,
     type_expressions: HashMap<Span, Type>,
+    code_map: &'a CodeMap,
     diagnostics: &'a mut Diagnostics,
 }
 
@@ -68,7 +68,10 @@ fn of(expression: ast::Expression, c: &mut Checker) -> Option<Type> {
         ast::Expression::Variable(it) => {
             let definition = todo!();
         }
-        ast::Expression::FunctionCall(it) => todo!(),
+        ast::Expression::FunctionCall(it) => {
+            let return_ty = resolve_call(it, c.code_map, c.diagnostics)?.return_ty()?;
+            c.type_expressions.get(&return_ty.syntax().span()).copied()
+        }
         ast::Expression::BinaryOperation(it) => todo!(),
         ast::Expression::NamedArgument(it) => of(it.value()?, c),
         ast::Expression::Literal(it) => Some(match it.token().kind() {
@@ -143,5 +146,45 @@ fn evaluate(expression: ast::Expression, diagnostics: &mut Diagnostics) -> Optio
         ast::Expression::ListLiteral(_) => err("list literal cannot be used as a type"),
         ast::Expression::TypeAscription(_) => err("type ascription cannot be used as a type"),
         ast::Expression::MethodCall(_) => err("method call cannot be used as a type"),
+    }
+}
+
+fn resolve_call<'src>(
+    call: ast::FunctionCall,
+    code_map: &CodeMap,
+    diagnostics: &mut Diagnostics,
+) -> Option<ast::Function<'src>> {
+    let name = call.name().span();
+    let name_text = code_map.find_file(name.low()).source_slice(name);
+
+    let all_in_scope = todo!() as std::iter::Empty<ast::Function>;
+
+    let all_overloads: Vec<ast::Function> = all_in_scope
+        .filter(|function| {
+            let span = function.name().map(cst::Node::span);
+            span.is_some_and(|it| code_map.find_file(it.low()).source_slice(it) == name_text)
+        })
+        .collect();
+    if all_overloads.is_empty() {
+        diagnostics.error("undefined function", [primary(name, "")]);
+        return None;
+    }
+
+    let viable_overloads: Vec<ast::Function> =
+        all_overloads.iter().copied().filter(|_| todo!()).collect();
+    match *viable_overloads {
+        [] => {
+            diagnostics.error("function call has no viable overload", [primary(name, "")]);
+            None
+        }
+        [it] => Some(it),
+        _ => {
+            let spans: Vec<_> = all_overloads
+                .iter()
+                .filter_map(|it| Some(primary(it.name()?.span(), "")))
+                .collect();
+            diagnostics.note("following are all of the non-viable overloads:", spans);
+            None
+        }
     }
 }
