@@ -10,11 +10,10 @@ impl Diagnostics {
             return;
         }
 
-        let total_errors = self.0.iter().filter(|it| it.level == Level::Error).count();
-        match total_errors {
+        match self.0.iter().filter(|it| it.level == Level::Error).count() {
             0 => {}
             1 => self.note("1 error was generated during compilation", []),
-            _ => self.note(
+            total_errors => self.note(
                 format!("{total_errors} errors were generated during compilation"),
                 [],
             ),
@@ -60,10 +59,7 @@ impl Diagnostics {
     }
 
     pub fn successful(&self) -> bool {
-        !self
-            .0
-            .iter()
-            .any(|diagnostic| diagnostic.level == Level::Error)
+        !self.0.iter().any(|it| it.level == Level::Error)
     }
 }
 
