@@ -66,7 +66,8 @@ fn of(expression: ast::Expression, c: &mut Checker) -> Option<Type> {
     match expression {
         ast::Expression::Parenthesized(it) => of(it.inner()?, c),
         ast::Expression::Variable(it) => {
-            let definition = todo!();
+            let definition = c.variable_definitions.get(&it.syntax().span().low())?;
+            c.global_variables.get(definition).copied()
         }
         ast::Expression::FunctionCall(it) => {
             let Some(return_ty) = resolve_call(it, c.code_map, c.diagnostics)?.return_ty() else {
