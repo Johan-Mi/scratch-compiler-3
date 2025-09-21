@@ -69,7 +69,9 @@ fn of(expression: ast::Expression, c: &mut Checker) -> Option<Type> {
             let definition = todo!();
         }
         ast::Expression::FunctionCall(it) => {
-            let return_ty = resolve_call(it, c.code_map, c.diagnostics)?.return_ty()?;
+            let Some(return_ty) = resolve_call(it, c.code_map, c.diagnostics)?.return_ty() else {
+                return Some(Type::Unit);
+            };
             c.type_expressions.get(&return_ty.syntax().span()).copied()
         }
         ast::Expression::BinaryOperation(it) => todo!(),
