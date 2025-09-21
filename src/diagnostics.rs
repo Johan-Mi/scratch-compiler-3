@@ -58,8 +58,8 @@ impl Diagnostics {
         });
     }
 
-    pub fn successful(&self) -> bool {
-        !self.0.iter().any(|it| it.level == Level::Error)
+    pub fn have_errors(&self) -> bool {
+        self.0.iter().any(|it| it.level == Level::Error)
     }
 }
 

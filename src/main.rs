@@ -61,7 +61,7 @@ fn real_main(code_map: &mut CodeMap, diagnostics: &mut Diagnostics) -> Result<()
 
     ty::check(&asts, code_map, diagnostics);
 
-    if !diagnostics.successful() {
+    if diagnostics.have_errors() {
         return Err(());
     }
 
