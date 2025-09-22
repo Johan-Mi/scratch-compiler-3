@@ -105,7 +105,7 @@ pub enum K {
     While,
     Until,
     For,
-    ParenthesizedExpression,
+    Parenthesized,
     BinaryOperation,
     Literal,
     Lvalue,
@@ -403,7 +403,7 @@ impl Parser<'_> {
                 }
             }
             K::Lparen => {
-                self.start_node(K::ParenthesizedExpression);
+                self.start_node(K::Parenthesized);
                 self.bump();
                 self.parse_expression();
                 if !self.eat(K::Rparen) {

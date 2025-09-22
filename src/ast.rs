@@ -349,7 +349,7 @@ impl<'src> Return<'src> {
 
 #[derive(Clone, Copy)]
 pub enum Expression<'src> {
-    Parenthesized(ParenthesizedExpression<'src>),
+    Parenthesized(Parenthesized<'src>),
     Variable(Variable<'src>),
     FunctionCall(FunctionCall<'src>),
     BinaryOperation(BinaryOperation<'src>),
@@ -365,7 +365,7 @@ pub enum Expression<'src> {
 impl<'src> Node<'src> for Expression<'src> {
     fn cast(node: SyntaxNode<'src>) -> Option<Self> {
         match node.kind() {
-            K::ParenthesizedExpression => Node::cast(node).map(Self::Parenthesized),
+            K::Parenthesized => Node::cast(node).map(Self::Parenthesized),
             K::Variable => Node::cast(node).map(Self::Variable),
             K::FunctionCall => Node::cast(node).map(Self::FunctionCall),
             K::BinaryOperation => Node::cast(node).map(Self::BinaryOperation),
@@ -397,9 +397,9 @@ impl<'src> Node<'src> for Expression<'src> {
     }
 }
 
-node!(ParenthesizedExpression);
+node!(Parenthesized);
 
-impl<'src> ParenthesizedExpression<'src> {
+impl<'src> Parenthesized<'src> {
     pub fn inner(self) -> Option<Expression<'src>> {
         child(self.syntax)
     }
