@@ -12,6 +12,7 @@ enum Type {
     Bool,
     Struct, // TODO: Which one?
     List,   // TODO: Of what item type?
+    Ref,    // TODO: To what type?
 }
 
 pub fn check(documents: &[ast::Document], code_map: &CodeMap, diagnostics: &mut Diagnostics) {
@@ -87,7 +88,10 @@ fn of(expression: ast::Expression, c: &mut Checker) -> Option<Type> {
             K::KwFalse | K::KwTrue => Type::Bool,
             _ => unreachable!(),
         }),
-        ast::Expression::Lvalue(it) => todo!(),
+        ast::Expression::Lvalue(it) => {
+            let inner = of(it.inner()?, c)?;
+            Some(Type::Ref)
+        }
         ast::Expression::GenericTypeInstantiation(it) => todo!(),
         ast::Expression::ListLiteral(it) => {
             let span = it.syntax().span();
