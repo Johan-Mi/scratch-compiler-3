@@ -129,8 +129,7 @@ fn of(expression: ast::Expression, c: &mut Checker) -> Option<Type> {
             let ascribed_ty: Option<Type> =
                 c.type_expressions.get(&it.ty()?.syntax().span()).copied();
             let inner = it.inner()?;
-            let actual_ty = of(inner, c);
-            if let Some(actual) = actual_ty
+            if let Some(actual) = of(inner, c)
                 && let Some(ascribed) = ascribed_ty
                 && actual != ascribed
             {
@@ -140,7 +139,7 @@ fn of(expression: ast::Expression, c: &mut Checker) -> Option<Type> {
                     [primary(span, format!("this has type `{actual}`"))],
                 );
             }
-            actual_ty
+            ascribed_ty
         }
         ast::Expression::MethodCall(it) => todo!(),
     }
