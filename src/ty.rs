@@ -126,8 +126,7 @@ fn of(expression: ast::Expression, c: &mut Checker) -> Option<Type> {
             Some(Type::List)
         }
         ast::Expression::TypeAscription(it) => {
-            let ascribed_ty: Option<Type> =
-                c.type_expressions.get(&it.ty()?.syntax().span()).copied();
+            let ascribed_ty = c.type_expressions.get(&it.ty()?.syntax().span()).copied();
             let inner = it.inner()?;
             if let Some(actual) = of(inner, c)
                 && let Some(ascribed) = ascribed_ty
