@@ -2,7 +2,7 @@ use crate::ast::{self, Node};
 use crate::diagnostics::{Diagnostics, primary};
 use crate::parser::K;
 use codemap::{CodeMap, Pos, Span};
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt};
 
 #[derive(Clone, Copy, PartialEq)]
 enum Type {
@@ -13,6 +13,18 @@ enum Type {
     Struct, // TODO: Which one?
     List,   // TODO: Of what item type?
     Ref,    // TODO: To what type?
+}
+
+impl fmt::Display for Type {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Unit => f.write_str("Unit"),
+            Self::Num => f.write_str("Num"),
+            Self::String => f.write_str("String"),
+            Self::Bool => f.write_str("Bool"),
+            Self::Struct | Self::List | Self::Ref => todo!(),
+        }
+    }
 }
 
 pub fn check(documents: &[ast::Document], code_map: &CodeMap, diagnostics: &mut Diagnostics) {
@@ -114,18 +126,18 @@ fn of(expression: ast::Expression, c: &mut Checker) -> Option<Type> {
             Some(Type::List)
         }
         ast::Expression::TypeAscription(it) => {
-            let ascribed_type: Option<Type> =
+            let ascribed_ty: Option<Type> =
                 c.type_expressions.get(&it.ty()?.syntax().span()).copied();
             let inner = it.inner()?;
             let actual_ty = of(inner, c);
-            if ascribed_type
-                .zip(actual_ty)
-                .is_some_and(|(ascribed, actual)| ascribed != actual)
+            if let Some(actual) = actual_ty
+                && let Some(ascribed) = ascribed_ty
+                && actual != ascribed
             {
                 let span = inner.syntax().span();
                 c.diagnostics.error(
                     "type mismatch in ascription",
-                    [primary(span, "TODO: show what type this has")],
+                    [primary(span, format!("this has type `{actual}`"))],
                 );
             }
             actual_ty
