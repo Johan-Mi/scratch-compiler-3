@@ -36,6 +36,7 @@ pub fn check(documents: &[ast::Document], code_map: &CodeMap, diagnostics: &mut 
         variable_definitions,
         global_variables: HashMap::new(),
         type_expressions,
+        documents,
         code_map,
         diagnostics,
     };
@@ -58,6 +59,7 @@ struct Checker<'a> {
     variable_definitions: HashMap<Pos, Pos>,
     global_variables: HashMap<Pos, Type>,
     type_expressions: HashMap<Span, Type>,
+    documents: &'a [ast::Document<'a>],
     code_map: &'a CodeMap,
     diagnostics: &'a mut Diagnostics,
 }
@@ -70,7 +72,9 @@ fn of(expression: ast::Expression, c: &mut Checker) -> Option<Type> {
             c.global_variables.get(definition).copied()
         }
         ast::Expression::FunctionCall(it) => {
-            let Some(return_ty) = resolve_call(it, c.code_map, c.diagnostics)?.return_ty() else {
+            let Some(return_ty) =
+                resolve_call(it, c.documents, c.code_map, c.diagnostics)?.return_ty()
+            else {
                 return Some(Type::Unit);
             };
             c.type_expressions.get(&return_ty.syntax().span()).copied()
@@ -154,13 +158,22 @@ fn evaluate(expression: ast::Expression, diagnostics: &mut Diagnostics) -> Optio
 
 fn resolve_call<'src>(
     call: ast::FunctionCall,
+    documents: &[ast::Document<'src>],
     code_map: &CodeMap,
     diagnostics: &mut Diagnostics,
 ) -> Option<ast::Function<'src>> {
     let name = call.name().span();
     let name_text = code_map.find_file(name.low()).source_slice(name);
 
-    let all_in_scope = todo!() as std::iter::Empty<ast::Function>;
+    let all_in_scope = {
+        let global_functions = documents.iter().flat_map(|it| it.functions());
+        let sprite_functions = documents
+            .iter()
+            .flat_map(|it| it.sprites())
+            .filter(|it| it.syntax().span().contains(call.syntax().span()))
+            .flat_map(ast::Sprite::functions);
+        global_functions.chain(sprite_functions)
+    };
 
     let all_overloads: Vec<ast::Function> = all_in_scope
         .filter(|function| {
