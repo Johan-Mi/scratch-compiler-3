@@ -66,6 +66,24 @@ pub fn check(documents: &[ast::Document], code_map: &CodeMap, diagnostics: &mut 
             assert!(c.global_variables.insert(variable, ty).is_none());
         }
     }
+
+    for function in documents
+        .iter()
+        .flat_map(|it| it.syntax().pre_order())
+        .filter_map(ast::Function::cast)
+    {
+        if let Some(body) = function.body()
+            && let Some(body_ty) = of_block(body, &mut c)
+            && let Some(return_ty) = function.return_ty().map_or(Some(Type::Unit), |it| {
+                c.type_expressions.get(&it.syntax().span()).copied()
+            })
+            && body_ty != return_ty
+        {
+            let span = function.syntax().span();
+            c.diagnostics
+                .error("function return type mismatch", [primary(span, "")]);
+        }
+    }
 }
 
 struct Checker<'a> {
@@ -75,6 +93,10 @@ struct Checker<'a> {
     documents: &'a [ast::Document<'a>],
     code_map: &'a CodeMap,
     diagnostics: &'a mut Diagnostics,
+}
+
+fn of_block(block: ast::Block, c: &mut Checker) -> Option<Type> {
+    todo!()
 }
 
 fn of(expression: ast::Expression, c: &mut Checker) -> Option<Type> {
