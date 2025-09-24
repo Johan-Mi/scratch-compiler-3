@@ -197,6 +197,7 @@ impl<'src> Block<'src> {
     }
 }
 
+#[derive(Clone, Copy)]
 pub enum Statement<'src> {
     Let(Let<'src>),
     If(If<'src>),

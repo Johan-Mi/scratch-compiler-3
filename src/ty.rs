@@ -96,7 +96,90 @@ struct Checker<'a> {
 }
 
 fn of_block(block: ast::Block, c: &mut Checker) -> Option<Type> {
-    todo!()
+    block
+        .statements()
+        .fold(
+            (block.syntax().span(), Some(Type::Unit)),
+            |(prev_span, prev_ty), statement| {
+                do_not_ignore(prev_ty, prev_span, c.diagnostics);
+                (statement.syntax().span(), of_statement(statement, c))
+            },
+        )
+        .1
+}
+
+fn of_statement(statement: ast::Statement, c: &mut Checker) -> Option<Type> {
+    match statement {
+        ast::Statement::Let(_) => todo!(),
+        ast::Statement::If(it) => {
+            if let Some(condition) = it.condition()
+                && let Some(condition_ty) = of(condition, c)
+                && condition_ty != Type::Bool
+            {
+                todo!()
+            }
+            if let Some(then) = it.then() {
+                do_not_ignore(of_block(then, c), then.syntax().span(), c.diagnostics);
+            }
+            if let Some(else_clause) = it.else_clause() {
+                if let Some(r#else) = else_clause.block() {
+                    do_not_ignore(of_block(r#else, c), r#else.syntax().span(), c.diagnostics);
+                } else if let Some(else_if) = else_clause.if_() {
+                    do_not_ignore(
+                        of_statement(ast::Statement::If(else_if), c),
+                        else_if.syntax().span(),
+                        c.diagnostics,
+                    );
+                }
+            }
+            Some(Type::Unit)
+        }
+        ast::Statement::Repeat(it) => {
+            if let Some(times) = it.times()
+                && let Some(times_ty) = of(times, c)
+                && times_ty != Type::Num
+            {
+                todo!()
+            }
+            if let Some(body) = it.body() {
+                do_not_ignore(of_block(body, c), body.syntax().span(), c.diagnostics);
+            }
+            Some(Type::Unit)
+        }
+        ast::Statement::Forever(it) => {
+            if let Some(body) = it.body() {
+                do_not_ignore(of_block(body, c), body.syntax().span(), c.diagnostics);
+            }
+            Some(Type::Unit)
+        }
+        ast::Statement::While(it) => {
+            if let Some(condition) = it.condition()
+                && let Some(condition_ty) = of(condition, c)
+                && condition_ty != Type::Bool
+            {
+                todo!()
+            }
+            if let Some(body) = it.body() {
+                do_not_ignore(of_block(body, c), body.syntax().span(), c.diagnostics);
+            }
+            Some(Type::Unit)
+        }
+        ast::Statement::Until(it) => {
+            if let Some(condition) = it.condition()
+                && let Some(condition_ty) = of(condition, c)
+                && condition_ty != Type::Bool
+            {
+                todo!()
+            }
+            if let Some(body) = it.body() {
+                do_not_ignore(of_block(body, c), body.syntax().span(), c.diagnostics);
+            }
+            Some(Type::Unit)
+        }
+        ast::Statement::For(_) => todo!(),
+        ast::Statement::Return(_) => todo!(),
+        ast::Statement::Expression(it) => of(it, c),
+    }
 }
 
 fn of(expression: ast::Expression, c: &mut Checker) -> Option<Type> {
@@ -238,5 +321,16 @@ fn resolve_call<'src>(
             diagnostics.note("following are all of the non-viable overloads:", spans);
             None
         }
+    }
+}
+
+fn do_not_ignore(ty: Option<Type>, span: Span, diagnostics: &mut Diagnostics) {
+    if let Some(ty) = ty
+        && ty != Type::Unit
+    {
+        diagnostics.error(
+            format!("value of type `{ty}` is ignored"),
+            [primary(span, "")],
+        );
     }
 }
