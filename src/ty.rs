@@ -184,7 +184,22 @@ fn of_statement(statement: ast::Statement, c: &mut Checker) -> Option<Type> {
             }
             Some(Type::Unit)
         }
-        ast::Statement::For(_) => todo!(),
+        ast::Statement::For(it) => {
+            if let Some(times) = it.times()
+                && let Some(times_ty) = of(times, c)
+                && times_ty != Type::Num
+            {
+                todo!()
+            }
+            if let Some(variable) = it.variable() {
+                let variable = variable.span().low();
+                assert!(c.variable_types.insert(variable, Type::Num).is_none());
+            }
+            if let Some(body) = it.body() {
+                do_not_ignore(of_block(body, c), body.syntax().span(), c.diagnostics);
+            }
+            Some(Type::Unit)
+        }
         ast::Statement::Return(_) => todo!(),
         ast::Statement::Expression(it) => of(it, c),
     }
