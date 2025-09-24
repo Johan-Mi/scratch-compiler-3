@@ -117,14 +117,19 @@ fn of_statement(statement: ast::Statement, c: &mut Checker) -> Option<Type> {
             {
                 assert!(c.variable_types.insert(variable.span().low(), ty).is_none());
             }
-            Some(Type::Unit)
         }
         ast::Statement::If(it) => {
             if let Some(condition) = it.condition()
                 && let Some(condition_ty) = of(condition, c)
                 && condition_ty != Type::Bool
             {
-                todo!()
+                c.diagnostics.error(
+                    "type mismatch",
+                    [primary(
+                        condition.syntax().span(),
+                        format!("expected `Bool`, got `{condition_ty}`"),
+                    )],
+                );
             }
             if let Some(then) = it.then() {
                 do_not_ignore(of_block(then, c), then.syntax().span(), c.diagnostics);
@@ -140,56 +145,75 @@ fn of_statement(statement: ast::Statement, c: &mut Checker) -> Option<Type> {
                     );
                 }
             }
-            Some(Type::Unit)
         }
         ast::Statement::Repeat(it) => {
             if let Some(times) = it.times()
                 && let Some(times_ty) = of(times, c)
                 && times_ty != Type::Num
             {
-                todo!()
+                c.diagnostics.error(
+                    "type mismatch",
+                    [primary(
+                        times.syntax().span(),
+                        format!("expected `Num`, got `{times_ty}`"),
+                    )],
+                );
             }
             if let Some(body) = it.body() {
                 do_not_ignore(of_block(body, c), body.syntax().span(), c.diagnostics);
             }
-            Some(Type::Unit)
         }
         ast::Statement::Forever(it) => {
             if let Some(body) = it.body() {
                 do_not_ignore(of_block(body, c), body.syntax().span(), c.diagnostics);
             }
-            Some(Type::Unit)
         }
         ast::Statement::While(it) => {
             if let Some(condition) = it.condition()
                 && let Some(condition_ty) = of(condition, c)
                 && condition_ty != Type::Bool
             {
-                todo!()
+                c.diagnostics.error(
+                    "type mismatch",
+                    [primary(
+                        condition.syntax().span(),
+                        format!("expected `Bool`, got `{condition_ty}`"),
+                    )],
+                );
             }
             if let Some(body) = it.body() {
                 do_not_ignore(of_block(body, c), body.syntax().span(), c.diagnostics);
             }
-            Some(Type::Unit)
         }
         ast::Statement::Until(it) => {
             if let Some(condition) = it.condition()
                 && let Some(condition_ty) = of(condition, c)
                 && condition_ty != Type::Bool
             {
-                todo!()
+                c.diagnostics.error(
+                    "type mismatch",
+                    [primary(
+                        condition.syntax().span(),
+                        format!("expected `Bool`, got `{condition_ty}`"),
+                    )],
+                );
             }
             if let Some(body) = it.body() {
                 do_not_ignore(of_block(body, c), body.syntax().span(), c.diagnostics);
             }
-            Some(Type::Unit)
         }
         ast::Statement::For(it) => {
             if let Some(times) = it.times()
                 && let Some(times_ty) = of(times, c)
                 && times_ty != Type::Num
             {
-                todo!()
+                c.diagnostics.error(
+                    "type mismatch",
+                    [primary(
+                        times.syntax().span(),
+                        format!("expected `Num`, got `{times_ty}`"),
+                    )],
+                );
             }
             if let Some(variable) = it.variable() {
                 let variable = variable.span().low();
@@ -198,11 +222,11 @@ fn of_statement(statement: ast::Statement, c: &mut Checker) -> Option<Type> {
             if let Some(body) = it.body() {
                 do_not_ignore(of_block(body, c), body.syntax().span(), c.diagnostics);
             }
-            Some(Type::Unit)
         }
         ast::Statement::Return(_) => todo!(),
-        ast::Statement::Expression(it) => of(it, c),
+        ast::Statement::Expression(it) => return of(it, c),
     }
+    Some(Type::Unit)
 }
 
 fn of(expression: ast::Expression, c: &mut Checker) -> Option<Type> {
