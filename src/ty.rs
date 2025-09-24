@@ -47,7 +47,7 @@ pub fn check(documents: &[ast::Document], code_map: &CodeMap, diagnostics: &mut 
 
     let mut c = Checker {
         variable_definitions,
-        global_variables: HashMap::new(),
+        variable_types: HashMap::new(),
         type_expressions,
         documents,
         code_map,
@@ -63,7 +63,7 @@ pub fn check(documents: &[ast::Document], code_map: &CodeMap, diagnostics: &mut 
         .filter_map(|it| Some((it.variable()?.span().low(), it.value()?)))
     {
         if let Some(ty) = of(value, &mut c) {
-            assert!(c.global_variables.insert(variable, ty).is_none());
+            assert!(c.variable_types.insert(variable, ty).is_none());
         }
     }
 
@@ -88,7 +88,7 @@ pub fn check(documents: &[ast::Document], code_map: &CodeMap, diagnostics: &mut 
 
 struct Checker<'a> {
     variable_definitions: HashMap<Pos, Pos>,
-    global_variables: HashMap<Pos, Type>,
+    variable_types: HashMap<Pos, Type>,
     type_expressions: HashMap<Span, Type>,
     documents: &'a [ast::Document<'a>],
     code_map: &'a CodeMap,
@@ -110,7 +110,15 @@ fn of_block(block: ast::Block, c: &mut Checker) -> Option<Type> {
 
 fn of_statement(statement: ast::Statement, c: &mut Checker) -> Option<Type> {
     match statement {
-        ast::Statement::Let(_) => todo!(),
+        ast::Statement::Let(it) => {
+            if let Some(value) = it.value()
+                && let Some(ty) = of(value, c)
+                && let Some(variable) = it.variable()
+            {
+                assert!(c.variable_types.insert(variable.span().low(), ty).is_none());
+            }
+            Some(Type::Unit)
+        }
         ast::Statement::If(it) => {
             if let Some(condition) = it.condition()
                 && let Some(condition_ty) = of(condition, c)
@@ -187,7 +195,7 @@ fn of(expression: ast::Expression, c: &mut Checker) -> Option<Type> {
         ast::Expression::Parenthesized(it) => of(it.inner()?, c),
         ast::Expression::Variable(it) => {
             let definition = c.variable_definitions.get(&it.syntax().span().low())?;
-            c.global_variables.get(definition).copied()
+            c.variable_types.get(definition).copied()
         }
         ast::Expression::FunctionCall(it) => {
             let Some(return_ty) =
