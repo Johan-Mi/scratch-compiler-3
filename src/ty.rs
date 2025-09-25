@@ -74,9 +74,7 @@ pub fn check(documents: &[ast::Document], code_map: &CodeMap, diagnostics: &mut 
     {
         if let Some(body) = function.body()
             && let Some(body_ty) = of_block(body, &mut c)
-            && let Some(return_ty) = function.return_ty().map_or(Some(Type::Unit), |it| {
-                c.type_expressions.get(&it.syntax().span()).copied()
-            })
+            && let Some(return_ty) = return_ty(function, &c)
             && body_ty != return_ty
         {
             let span = function.syntax().span();
@@ -191,15 +189,14 @@ fn of(expression: ast::Expression, c: &mut Checker) -> Option<Type> {
             let definition = c.variable_definitions.get(&it.syntax().span().low())?;
             c.variable_types.get(definition).copied()
         }
-        ast::Expression::FunctionCall(it) => {
-            let Some(return_ty) =
-                resolve_call(it, c.documents, c.code_map, c.diagnostics)?.return_ty()
-            else {
-                return Some(Type::Unit);
-            };
-            c.type_expressions.get(&return_ty.syntax().span()).copied()
-        }
-        ast::Expression::BinaryOperation(it) => todo!(),
+        ast::Expression::FunctionCall(it) => return_ty(
+            resolve_call(it.name().span(), c.documents, c.code_map, c.diagnostics)?,
+            c,
+        ),
+        ast::Expression::BinaryOperation(it) => return_ty(
+            resolve_call(it.operator().span(), c.documents, c.code_map, c.diagnostics)?,
+            c,
+        ),
         ast::Expression::NamedArgument(it) => of(it.value()?, c),
         ast::Expression::Literal(it) => Some(match it.token().kind() {
             K::DecimalNumber | K::BinaryNumber | K::OctalNumber | K::HexadecimalNumber => Type::Num,
@@ -251,6 +248,13 @@ fn of(expression: ast::Expression, c: &mut Checker) -> Option<Type> {
     }
 }
 
+fn return_ty(function: ast::Function, c: &Checker) -> Option<Type> {
+    let Some(ty) = function.return_ty() else {
+        return Some(Type::Unit);
+    };
+    c.type_expressions.get(&ty.syntax().span()).copied()
+}
+
 fn evaluate(expression: ast::Expression, diagnostics: &mut Diagnostics) -> Option<Type> {
     let span = expression.syntax().span();
     let mut err = |message| {
@@ -278,12 +282,11 @@ fn evaluate(expression: ast::Expression, diagnostics: &mut Diagnostics) -> Optio
 }
 
 fn resolve_call<'src>(
-    call: ast::FunctionCall,
+    name: Span,
     documents: &[ast::Document<'src>],
     code_map: &CodeMap,
     diagnostics: &mut Diagnostics,
 ) -> Option<ast::Function<'src>> {
-    let name = call.name().span();
     let name_text = code_map.find_file(name.low()).source_slice(name);
 
     let all_in_scope = {
@@ -291,7 +294,7 @@ fn resolve_call<'src>(
         let sprite_functions = documents
             .iter()
             .flat_map(|it| it.sprites())
-            .filter(|it| it.syntax().span().contains(call.syntax().span()))
+            .filter(|it| it.syntax().span().contains(name))
             .flat_map(ast::Sprite::functions);
         global_functions.chain(sprite_functions)
     };
