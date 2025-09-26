@@ -245,6 +245,7 @@ fn of(expression: ast::Expression, c: &mut Checker) -> Option<Type> {
             ascribed_ty
         }
         ast::Expression::MethodCall(it) => todo!(),
+        ast::Expression::FieldAccess(it) => todo!(),
     }
 }
 
@@ -278,6 +279,7 @@ fn evaluate(expression: ast::Expression, diagnostics: &mut Diagnostics) -> Optio
         ast::Expression::ListLiteral(_) => err("list literal cannot be used as a type"),
         ast::Expression::TypeAscription(_) => err("type ascription cannot be used as a type"),
         ast::Expression::MethodCall(_) => err("method call cannot be used as a type"),
+        ast::Expression::FieldAccess(_) => err("field access cannot be used as a type"),
     }
 }
 

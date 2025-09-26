@@ -114,6 +114,7 @@ pub enum K {
     ListLiteral,
     TypeAscription,
     MethodCall,
+    FieldAccess,
     Return,
 
     #[token("(")]
@@ -449,13 +450,31 @@ impl Parser<'_> {
         while let right = self.peek()
             && binding_power(left) < binding_power(right)
         {
-            let node_kind = match right {
-                K::KwAs => K::TypeAscription,
-                K::Dot => K::MethodCall,
-                _ => K::BinaryOperation,
+            let node_kind = if self.eat(K::Dot) {
+                if self.eat(K::Identifier) {
+                    if self.immediately_at(K::Lparen) {
+                        self.parse_arguments();
+                        K::MethodCall
+                    } else {
+                        K::FieldAccess
+                    }
+                } else {
+                    let span = self.peek_span();
+                    self.diagnostics.error(
+                        "expected field or function name after `.`",
+                        [primary(span, "")],
+                    );
+                    self.parse_anything();
+                    K::Error
+                }
+            } else {
+                self.bump(); // operator
+                self.parse_recursive_expression(right);
+                match right {
+                    K::KwAs => K::TypeAscription,
+                    _ => K::BinaryOperation,
+                }
             };
-            self.bump(); // operator
-            self.parse_recursive_expression(right);
             self.builder.finish_node_at(checkpoint, node_kind);
         }
     }

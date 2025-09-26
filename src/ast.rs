@@ -361,6 +361,7 @@ pub enum Expression<'src> {
     ListLiteral(ListLiteral<'src>),
     TypeAscription(TypeAscription<'src>),
     MethodCall(MethodCall<'src>),
+    FieldAccess(FieldAccess<'src>),
 }
 
 impl<'src> Node<'src> for Expression<'src> {
@@ -377,6 +378,7 @@ impl<'src> Node<'src> for Expression<'src> {
             K::ListLiteral => Node::cast(node).map(Self::ListLiteral),
             K::TypeAscription => Node::cast(node).map(Self::TypeAscription),
             K::MethodCall => Node::cast(node).map(Self::MethodCall),
+            K::FieldAccess => Node::cast(node).map(Self::FieldAccess),
             _ => None,
         }
     }
@@ -394,6 +396,7 @@ impl<'src> Node<'src> for Expression<'src> {
             Self::ListLiteral(inner) => inner.syntax,
             Self::TypeAscription(inner) => inner.syntax,
             Self::MethodCall(inner) => inner.syntax,
+            Self::FieldAccess(inner) => inner.syntax,
         }
     }
 }
@@ -548,27 +551,16 @@ impl<'src> TypeAscription<'src> {
 node!(MethodCall);
 
 impl<'src> MethodCall<'src> {
-    pub fn dot(self) -> SyntaxNode<'src> {
-        token(self.syntax, K::Dot).unwrap()
-    }
-
     pub fn caller(self) -> Expression<'src> {
-        let operator = self.dot().span().low();
-        self.syntax
-            .children()
-            .take_while(|child| child.span().high() <= operator)
-            .find_map(Node::cast)
-            .unwrap()
+        child(self.syntax).unwrap()
     }
 
-    pub fn rhs(self) -> Option<Expression<'src>> {
-        let operator = self.dot().span().high();
-        self.syntax
-            .children()
-            .skip_while(|child| child.span().low() < operator)
-            .find_map(Node::cast)
+    pub fn arguments(self) -> Arguments<'src> {
+        child(self.syntax).unwrap()
     }
 }
+
+node!(FieldAccess);
 
 fn child<'src, N: Node<'src>>(syntax: SyntaxNode<'src>) -> Option<N> {
     syntax.children().find_map(N::cast)
