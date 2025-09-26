@@ -244,7 +244,10 @@ fn of(expression: ast::Expression, c: &mut Checker) -> Option<Type> {
             }
             ascribed_ty
         }
-        ast::Expression::MethodCall(it) => todo!(),
+        ast::Expression::MethodCall(it) => return_ty(
+            resolve_call(it.name().span(), c.documents, c.code_map, c.diagnostics)?,
+            c,
+        ),
         ast::Expression::FieldAccess(it) => todo!(),
     }
 }

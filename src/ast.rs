@@ -555,6 +555,10 @@ impl<'src> MethodCall<'src> {
         child(self.syntax).unwrap()
     }
 
+    pub fn name(self) -> SyntaxNode<'src> {
+        token(self.syntax, K::Identifier).unwrap()
+    }
+
     pub fn arguments(self) -> Arguments<'src> {
         child(self.syntax).unwrap()
     }
