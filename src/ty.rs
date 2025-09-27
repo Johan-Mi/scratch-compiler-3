@@ -15,15 +15,36 @@ enum Type {
     Ref(Id),
 }
 
-impl fmt::Display for Type {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Unit => f.write_str("Unit"),
-            Self::Num => f.write_str("Num"),
-            Self::String => f.write_str("String"),
-            Self::Bool => f.write_str("Bool"),
-            Self::Struct | Self::List(_) | Self::Ref(_) => todo!(),
+impl Type {
+    fn display(self, interner: &Interner) -> impl fmt::Display {
+        struct Display<'a> {
+            ty: Type,
+            interner: &'a Interner,
         }
+
+        impl fmt::Display for Display<'_> {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                match self.ty {
+                    Type::Unit => f.write_str("Unit"),
+                    Type::Num => f.write_str("Num"),
+                    Type::String => f.write_str("String"),
+                    Type::Bool => f.write_str("Bool"),
+                    Type::Struct => todo!(),
+                    Type::List(inner) => write!(
+                        f,
+                        "List[{}]",
+                        self.interner.get(inner).display(self.interner)
+                    ),
+                    Type::Ref(inner) => write!(
+                        f,
+                        "Ref[{}]",
+                        self.interner.get(inner).display(self.interner)
+                    ),
+                }
+            }
+        }
+
+        Display { ty: self, interner }
     }
 }
 
@@ -101,7 +122,7 @@ fn of_block(block: ast::Block, c: &mut Checker) -> Option<Type> {
         .fold(
             (block.syntax().span(), Some(Type::Unit)),
             |(prev_span, prev_ty), statement| {
-                do_not_ignore(prev_ty, prev_span, c.diagnostics);
+                do_not_ignore(prev_ty, prev_span, c);
                 (statement.syntax().span(), of_statement(statement, c))
             },
         )
@@ -123,16 +144,16 @@ fn of_statement(statement: ast::Statement, c: &mut Checker) -> Option<Type> {
                 expect(condition, Type::Bool, c);
             }
             if let Some(then) = it.then() {
-                do_not_ignore(of_block(then, c), then.syntax().span(), c.diagnostics);
+                do_not_ignore(of_block(then, c), then.syntax().span(), c);
             }
             if let Some(else_clause) = it.else_clause() {
                 if let Some(r#else) = else_clause.block() {
-                    do_not_ignore(of_block(r#else, c), r#else.syntax().span(), c.diagnostics);
+                    do_not_ignore(of_block(r#else, c), r#else.syntax().span(), c);
                 } else if let Some(else_if) = else_clause.if_() {
                     do_not_ignore(
                         of_statement(ast::Statement::If(else_if), c),
                         else_if.syntax().span(),
-                        c.diagnostics,
+                        c,
                     );
                 }
             }
@@ -142,12 +163,12 @@ fn of_statement(statement: ast::Statement, c: &mut Checker) -> Option<Type> {
                 expect(times, Type::Num, c);
             }
             if let Some(body) = it.body() {
-                do_not_ignore(of_block(body, c), body.syntax().span(), c.diagnostics);
+                do_not_ignore(of_block(body, c), body.syntax().span(), c);
             }
         }
         ast::Statement::Forever(it) => {
             if let Some(body) = it.body() {
-                do_not_ignore(of_block(body, c), body.syntax().span(), c.diagnostics);
+                do_not_ignore(of_block(body, c), body.syntax().span(), c);
             }
         }
         ast::Statement::While(it) => {
@@ -155,7 +176,7 @@ fn of_statement(statement: ast::Statement, c: &mut Checker) -> Option<Type> {
                 expect(condition, Type::Bool, c);
             }
             if let Some(body) = it.body() {
-                do_not_ignore(of_block(body, c), body.syntax().span(), c.diagnostics);
+                do_not_ignore(of_block(body, c), body.syntax().span(), c);
             }
         }
         ast::Statement::Until(it) => {
@@ -163,7 +184,7 @@ fn of_statement(statement: ast::Statement, c: &mut Checker) -> Option<Type> {
                 expect(condition, Type::Bool, c);
             }
             if let Some(body) = it.body() {
-                do_not_ignore(of_block(body, c), body.syntax().span(), c.diagnostics);
+                do_not_ignore(of_block(body, c), body.syntax().span(), c);
             }
         }
         ast::Statement::For(it) => {
@@ -175,7 +196,7 @@ fn of_statement(statement: ast::Statement, c: &mut Checker) -> Option<Type> {
                 assert!(c.variable_types.insert(variable, Type::Num).is_none());
             }
             if let Some(body) = it.body() {
-                do_not_ignore(of_block(body, c), body.syntax().span(), c.diagnostics);
+                do_not_ignore(of_block(body, c), body.syntax().span(), c);
             }
         }
         ast::Statement::Return(_) => todo!(),
@@ -241,7 +262,10 @@ fn of(expression: ast::Expression, c: &mut Checker) -> Option<Type> {
                 let span = inner.syntax().span();
                 c.diagnostics.error(
                     "type mismatch in ascription",
-                    [primary(span, format!("this has type `{actual}`"))],
+                    [primary(
+                        span,
+                        format!("this has type `{}`", actual.display(&c.interner)),
+                    )],
                 );
             }
             ascribed_ty
@@ -336,12 +360,12 @@ fn resolve_call<'src>(
     }
 }
 
-fn do_not_ignore(ty: Option<Type>, span: Span, diagnostics: &mut Diagnostics) {
+fn do_not_ignore(ty: Option<Type>, span: Span, c: &mut Checker) {
     if let Some(ty) = ty
         && ty != Type::Unit
     {
-        diagnostics.error(
-            format!("value of type `{ty}` is ignored"),
+        c.diagnostics.error(
+            format!("value of type `{}` is ignored", ty.display(&c.interner)),
             [primary(span, "")],
         );
     }
@@ -355,7 +379,11 @@ fn expect(expression: ast::Expression, expected_ty: Type, c: &mut Checker) {
             "type mismatch",
             [primary(
                 expression.syntax().span(),
-                format!("expected `{expected_ty}`, got `{ty}`"),
+                format!(
+                    "expected `{}`, got `{}`",
+                    expected_ty.display(&c.interner),
+                    ty.display(&c.interner)
+                ),
             )],
         );
     }
@@ -372,6 +400,10 @@ impl Interner {
             self.0.push(ty);
             Id(index)
         }
+    }
+
+    fn get(&self, id: Id) -> Type {
+        self.0[id.0]
     }
 }
 
