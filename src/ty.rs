@@ -24,23 +24,31 @@ impl Type {
 
         impl fmt::Display for Display<'_> {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                match self.ty {
-                    Type::Unit => f.write_str("Unit"),
-                    Type::Num => f.write_str("Num"),
-                    Type::String => f.write_str("String"),
-                    Type::Bool => f.write_str("Bool"),
-                    Type::Struct => todo!(),
-                    Type::List(inner) => write!(
-                        f,
-                        "List[{}]",
-                        self.interner.get(inner).display(self.interner)
-                    ),
-                    Type::Ref(inner) => write!(
-                        f,
-                        "Ref[{}]",
-                        self.interner.get(inner).display(self.interner)
-                    ),
+                let mut next = Some(self.ty);
+                let mut nesting = 0;
+                while let Some(ty) = next.take() {
+                    match ty {
+                        Type::Unit => f.write_str("Unit")?,
+                        Type::Num => f.write_str("Num")?,
+                        Type::String => f.write_str("String")?,
+                        Type::Bool => f.write_str("Bool")?,
+                        Type::Struct => todo!(),
+                        Type::List(inner) => {
+                            f.write_str("List[")?;
+                            nesting += 1;
+                            next = Some(self.interner.get(inner));
+                        }
+                        Type::Ref(inner) => {
+                            f.write_str("Ref[")?;
+                            nesting += 1;
+                            next = Some(self.interner.get(inner));
+                        }
+                    }
                 }
+                for _ in 0..nesting {
+                    f.write_str("]")?;
+                }
+                Ok(())
             }
         }
 
