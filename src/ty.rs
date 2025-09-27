@@ -11,8 +11,8 @@ enum Type {
     String,
     Bool,
     Struct, // TODO: Which one?
-    List,   // TODO: Of what item type?
-    Ref,    // TODO: To what type?
+    List(Id),
+    Ref(Id),
 }
 
 impl fmt::Display for Type {
@@ -22,7 +22,7 @@ impl fmt::Display for Type {
             Self::Num => f.write_str("Num"),
             Self::String => f.write_str("String"),
             Self::Bool => f.write_str("Bool"),
-            Self::Struct | Self::List | Self::Ref => todo!(),
+            Self::Struct | Self::List(_) | Self::Ref(_) => todo!(),
         }
     }
 }
@@ -49,6 +49,7 @@ pub fn check(documents: &[ast::Document], code_map: &CodeMap, diagnostics: &mut 
         variable_definitions,
         variable_types: HashMap::new(),
         type_expressions,
+        interner: Interner(Vec::new()),
         documents,
         code_map,
         diagnostics,
@@ -88,6 +89,7 @@ struct Checker<'a> {
     variable_definitions: HashMap<Pos, Pos>,
     variable_types: HashMap<Pos, Type>,
     type_expressions: HashMap<Span, Type>,
+    interner: Interner,
     documents: &'a [ast::Document<'a>],
     code_map: &'a CodeMap,
     diagnostics: &'a mut Diagnostics,
@@ -206,7 +208,7 @@ fn of(expression: ast::Expression, c: &mut Checker) -> Option<Type> {
         }),
         ast::Expression::Lvalue(it) => {
             let inner = of(it.inner()?, c)?;
-            Some(Type::Ref)
+            Some(Type::Ref(c.interner.intern(inner)))
         }
         ast::Expression::GenericTypeInstantiation(it) => todo!(),
         ast::Expression::ListLiteral(it) => {
@@ -227,7 +229,7 @@ fn of(expression: ast::Expression, c: &mut Checker) -> Option<Type> {
                     );
                 }
             }
-            Some(Type::List)
+            Some(Type::List(c.interner.intern(first_type?)))
         }
         ast::Expression::TypeAscription(it) => {
             let ascribed_ty = c.type_expressions.get(&it.ty()?.syntax().span()).copied();
@@ -358,3 +360,20 @@ fn expect(expression: ast::Expression, expected_ty: Type, c: &mut Checker) {
         );
     }
 }
+
+struct Interner(Vec<Type>);
+
+impl Interner {
+    fn intern(&mut self, ty: Type) -> Id {
+        if let Some(index) = self.0.iter().position(|&it| it == ty) {
+            Id(index)
+        } else {
+            let index = self.0.len();
+            self.0.push(ty);
+            Id(index)
+        }
+    }
+}
+
+#[derive(Clone, Copy, PartialEq)]
+struct Id(usize);
