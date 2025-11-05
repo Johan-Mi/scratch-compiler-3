@@ -287,15 +287,32 @@ fn of<'src>(expression: ast::Expression<'src>, c: &mut Checker<'src>) -> Option<
         ),
         ast::Expression::FieldAccess(it) => {
             let aggregate_ty = of(it.aggregate(), c)?;
-            if let Type::Struct(_) = aggregate_ty {
-                todo!()
-            } else {
+            let name = it.field().span();
+            let name = c.code_map.find_file(name.low()).source_slice(name);
+            let Type::Struct(r#struct) = aggregate_ty else {
                 c.diagnostics.error(
                     format!("type `{}` has no fields", aggregate_ty.display(&c.interner)),
                     [primary(it.syntax().span(), "")],
                 );
-                None
-            }
+                return None;
+            };
+            let file = c.code_map.find_file(r#struct.syntax().span().low());
+            let Some(field) = r#struct
+                .fields()
+                .find(|it| file.source_slice(it.name().span()) == name)
+            else {
+                c.diagnostics.error(
+                    format!(
+                        "type `{}` has no field named `{name}`",
+                        aggregate_ty.display(&c.interner)
+                    ),
+                    [primary(it.syntax().span(), "")],
+                );
+                return None;
+            };
+            c.type_expressions
+                .get(&field.ty()?.syntax().span())
+                .copied()
         }
     }
 }

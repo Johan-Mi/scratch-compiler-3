@@ -576,6 +576,10 @@ impl<'src> FieldAccess<'src> {
     pub fn aggregate(self) -> Expression<'src> {
         child(self.syntax).unwrap()
     }
+
+    pub fn field(self) -> SyntaxNode<'src> {
+        token(self.syntax, K::Identifier).unwrap()
+    }
 }
 
 fn child<'src, N: Node<'src>>(syntax: SyntaxNode<'src>) -> Option<N> {
