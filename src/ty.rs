@@ -282,7 +282,18 @@ fn of(expression: ast::Expression, c: &mut Checker) -> Option<Type> {
             resolve_call(it.name().span(), c.documents, c.code_map, c.diagnostics)?,
             c,
         ),
-        ast::Expression::FieldAccess(it) => todo!(),
+        ast::Expression::FieldAccess(it) => {
+            let aggregate_ty = of(it.aggregate(), c)?;
+            if aggregate_ty == Type::Struct {
+                todo!()
+            } else {
+                c.diagnostics.error(
+                    format!("type `{}` has no fields", aggregate_ty.display(&c.interner)),
+                    [primary(it.syntax().span(), "")],
+                );
+                None
+            }
+        }
     }
 }
 

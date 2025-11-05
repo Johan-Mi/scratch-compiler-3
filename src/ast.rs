@@ -566,6 +566,12 @@ impl<'src> MethodCall<'src> {
 
 node!(FieldAccess);
 
+impl<'src> FieldAccess<'src> {
+    pub fn aggregate(self) -> Expression<'src> {
+        child(self.syntax).unwrap()
+    }
+}
+
 fn child<'src, N: Node<'src>>(syntax: SyntaxNode<'src>) -> Option<N> {
     syntax.children().find_map(N::cast)
 }
