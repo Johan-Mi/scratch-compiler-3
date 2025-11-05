@@ -5,21 +5,21 @@ use codemap::{CodeMap, Pos, Span};
 use std::{collections::HashMap, fmt};
 
 #[derive(Clone, Copy, PartialEq)]
-enum Type {
+enum Type<'src> {
     Unit,
     Num,
     String,
     Bool,
-    Struct, // TODO: Which one?
+    Struct(ast::Struct<'src>),
     List(Id),
     Ref(Id),
 }
 
-impl Type {
-    fn display(self, interner: &Interner) -> impl fmt::Display {
+impl<'src> Type<'src> {
+    fn display(self, interner: &'src Interner) -> impl fmt::Display + 'src {
         struct Display<'a> {
-            ty: Type,
-            interner: &'a Interner,
+            ty: Type<'a>,
+            interner: &'a Interner<'a>,
         }
 
         impl fmt::Display for Display<'_> {
@@ -32,7 +32,7 @@ impl Type {
                         Type::Num => f.write_str("Num")?,
                         Type::String => f.write_str("String")?,
                         Type::Bool => f.write_str("Bool")?,
-                        Type::Struct => todo!(),
+                        Type::Struct(_) => todo!(),
                         Type::List(inner) => {
                             f.write_str("List[")?;
                             nesting += 1;
@@ -114,17 +114,17 @@ pub fn check(documents: &[ast::Document], code_map: &CodeMap, diagnostics: &mut 
     }
 }
 
-struct Checker<'a> {
+struct Checker<'src> {
     variable_definitions: HashMap<Pos, Pos>,
-    variable_types: HashMap<Pos, Type>,
-    type_expressions: HashMap<Span, Type>,
-    interner: Interner,
-    documents: &'a [ast::Document<'a>],
-    code_map: &'a CodeMap,
-    diagnostics: &'a mut Diagnostics,
+    variable_types: HashMap<Pos, Type<'src>>,
+    type_expressions: HashMap<Span, Type<'src>>,
+    interner: Interner<'src>,
+    documents: &'src [ast::Document<'src>],
+    code_map: &'src CodeMap,
+    diagnostics: &'src mut Diagnostics,
 }
 
-fn of_block(block: ast::Block, c: &mut Checker) -> Option<Type> {
+fn of_block<'src>(block: ast::Block<'src>, c: &mut Checker<'src>) -> Option<Type<'src>> {
     block
         .statements()
         .fold(
@@ -137,7 +137,10 @@ fn of_block(block: ast::Block, c: &mut Checker) -> Option<Type> {
         .1
 }
 
-fn of_statement(statement: ast::Statement, c: &mut Checker) -> Option<Type> {
+fn of_statement<'src>(
+    statement: ast::Statement<'src>,
+    c: &mut Checker<'src>,
+) -> Option<Type<'src>> {
     match statement {
         ast::Statement::Let(it) => {
             if let Some(value) = it.value()
@@ -213,7 +216,7 @@ fn of_statement(statement: ast::Statement, c: &mut Checker) -> Option<Type> {
     Some(Type::Unit)
 }
 
-fn of(expression: ast::Expression, c: &mut Checker) -> Option<Type> {
+fn of<'src>(expression: ast::Expression<'src>, c: &mut Checker<'src>) -> Option<Type<'src>> {
     match expression {
         ast::Expression::Parenthesized(it) => of(it.inner()?, c),
         ast::Expression::Variable(it) => {
@@ -284,7 +287,7 @@ fn of(expression: ast::Expression, c: &mut Checker) -> Option<Type> {
         ),
         ast::Expression::FieldAccess(it) => {
             let aggregate_ty = of(it.aggregate(), c)?;
-            if aggregate_ty == Type::Struct {
+            if let Type::Struct(_) = aggregate_ty {
                 todo!()
             } else {
                 c.diagnostics.error(
@@ -297,14 +300,17 @@ fn of(expression: ast::Expression, c: &mut Checker) -> Option<Type> {
     }
 }
 
-fn return_ty(function: ast::Function, c: &Checker) -> Option<Type> {
+fn return_ty<'src>(function: ast::Function<'src>, c: &Checker<'src>) -> Option<Type<'src>> {
     let Some(ty) = function.return_ty() else {
         return Some(Type::Unit);
     };
     c.type_expressions.get(&ty.syntax().span()).copied()
 }
 
-fn evaluate(expression: ast::Expression, diagnostics: &mut Diagnostics) -> Option<Type> {
+fn evaluate<'src>(
+    expression: ast::Expression<'src>,
+    diagnostics: &mut Diagnostics,
+) -> Option<Type<'src>> {
     let span = expression.syntax().span();
     let mut err = |message| {
         diagnostics.error(message, [primary(span, "")]);
@@ -390,7 +396,7 @@ fn do_not_ignore(ty: Option<Type>, span: Span, c: &mut Checker) {
     }
 }
 
-fn expect(expression: ast::Expression, expected_ty: Type, c: &mut Checker) {
+fn expect<'src>(expression: ast::Expression<'src>, expected_ty: Type, c: &mut Checker<'src>) {
     if let Some(ty) = of(expression, c)
         && ty != expected_ty
     {
@@ -408,10 +414,10 @@ fn expect(expression: ast::Expression, expected_ty: Type, c: &mut Checker) {
     }
 }
 
-struct Interner(Vec<Type>);
+struct Interner<'src>(Vec<Type<'src>>);
 
-impl Interner {
-    fn intern(&mut self, ty: Type) -> Id {
+impl<'src> Interner<'src> {
+    fn intern(&mut self, ty: Type<'src>) -> Id {
         if let Some(index) = self.0.iter().position(|&it| it == ty) {
             Id(index)
         } else {
@@ -421,7 +427,7 @@ impl Interner {
         }
     }
 
-    fn get(&self, id: Id) -> Type {
+    fn get(&self, id: Id) -> Type<'src> {
         self.0[id.0]
     }
 }

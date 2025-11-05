@@ -47,6 +47,12 @@ impl<'src> Document<'src> {
 
 node!(Struct);
 
+impl PartialEq for Struct<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        self.syntax.span() == other.syntax.span()
+    }
+}
+
 impl<'src> Struct<'src> {
     pub fn name(self) -> Option<SyntaxNode<'src>> {
         token(self.syntax, K::Identifier)
