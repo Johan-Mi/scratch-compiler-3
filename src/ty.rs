@@ -16,9 +16,10 @@ enum Type<'src> {
 }
 
 impl<'src> Type<'src> {
-    fn display(self, interner: &'src Interner) -> impl fmt::Display + 'src {
+    fn display(self, c: &'src Checker) -> impl fmt::Display + 'src {
         struct Display<'a> {
             ty: Type<'a>,
+            code_map: &'a CodeMap,
             interner: &'a Interner<'a>,
         }
 
@@ -32,7 +33,11 @@ impl<'src> Type<'src> {
                         Type::Num => f.write_str("Num")?,
                         Type::String => f.write_str("String")?,
                         Type::Bool => f.write_str("Bool")?,
-                        Type::Struct(_) => todo!(),
+                        Type::Struct(s) => {
+                            let name = s.name().unwrap().span();
+                            let name = self.code_map.find_file(name.low()).source_slice(name);
+                            f.write_str(name)?;
+                        }
                         Type::List(inner) => {
                             f.write_str("List[")?;
                             nesting += 1;
@@ -52,7 +57,11 @@ impl<'src> Type<'src> {
             }
         }
 
-        Display { ty: self, interner }
+        Display {
+            ty: self,
+            code_map: c.code_map,
+            interner: &c.interner,
+        }
     }
 }
 
@@ -275,7 +284,7 @@ fn of<'src>(expression: ast::Expression<'src>, c: &mut Checker<'src>) -> Option<
                     "type mismatch in ascription",
                     [primary(
                         span,
-                        format!("this has type `{}`", actual.display(&c.interner)),
+                        format!("this has type `{}`", actual.display(c)),
                     )],
                 );
             }
@@ -291,7 +300,7 @@ fn of<'src>(expression: ast::Expression<'src>, c: &mut Checker<'src>) -> Option<
             let name = c.code_map.find_file(name.low()).source_slice(name);
             let Type::Struct(r#struct) = aggregate_ty else {
                 c.diagnostics.error(
-                    format!("type `{}` has no fields", aggregate_ty.display(&c.interner)),
+                    format!("type `{}` has no fields", aggregate_ty.display(c)),
                     [primary(it.syntax().span(), "")],
                 );
                 return None;
@@ -304,7 +313,7 @@ fn of<'src>(expression: ast::Expression<'src>, c: &mut Checker<'src>) -> Option<
                 c.diagnostics.error(
                     format!(
                         "type `{}` has no field named `{name}`",
-                        aggregate_ty.display(&c.interner)
+                        aggregate_ty.display(c)
                     ),
                     [primary(it.syntax().span(), "")],
                 );
@@ -407,7 +416,7 @@ fn do_not_ignore(ty: Option<Type>, span: Span, c: &mut Checker) {
         && ty != Type::Unit
     {
         c.diagnostics.error(
-            format!("value of type `{}` is ignored", ty.display(&c.interner)),
+            format!("value of type `{}` is ignored", ty.display(c)),
             [primary(span, "")],
         );
     }
@@ -423,8 +432,8 @@ fn expect<'src>(expression: ast::Expression<'src>, expected_ty: Type, c: &mut Ch
                 expression.syntax().span(),
                 format!(
                     "expected `{}`, got `{}`",
-                    expected_ty.display(&c.interner),
-                    ty.display(&c.interner)
+                    expected_ty.display(c),
+                    ty.display(c)
                 ),
             )],
         );
