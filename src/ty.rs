@@ -112,15 +112,15 @@ pub fn check(documents: &[ast::Document], code_map: &CodeMap, diagnostics: &mut 
         .flat_map(|it| it.syntax().pre_order())
         .filter_map(ast::Function::cast)
     {
-        c.return_ty = return_ty(function, &c);
-        if let Some(body) = function.body()
-            && let Some(body_ty) = of_block(body, &mut c)
-            && let Some(return_ty) = c.return_ty
-            && body_ty != return_ty
-        {
-            let span = function.syntax().span();
-            c.diagnostics
-                .error("function return type mismatch", [primary(span, "")]);
+        if let Some(body) = function.body() {
+            c.return_ty = return_ty(function, &c);
+            check_block(body, &mut c);
+            if c.return_ty.is_some_and(|it| it != Type::Unit) && !body.diverges() {
+                c.diagnostics.error(
+                    "function reaches end without returning",
+                    [primary(function.syntax().span(), "")],
+                );
+            }
         }
     }
 }
@@ -136,23 +136,13 @@ struct Checker<'src> {
     return_ty: Option<Type<'src>>,
 }
 
-fn of_block<'src>(block: ast::Block<'src>, c: &mut Checker<'src>) -> Option<Type<'src>> {
-    block
-        .statements()
-        .fold(
-            (block.syntax().span(), Some(Type::Unit)),
-            |(prev_span, prev_ty), statement| {
-                do_not_ignore(prev_ty, prev_span, c);
-                (statement.syntax().span(), of_statement(statement, c))
-            },
-        )
-        .1
+fn check_block<'src>(block: ast::Block<'src>, c: &mut Checker<'src>) {
+    for statement in block.statements() {
+        check_statement(statement, c);
+    }
 }
 
-fn of_statement<'src>(
-    statement: ast::Statement<'src>,
-    c: &mut Checker<'src>,
-) -> Option<Type<'src>> {
+fn check_statement<'src>(statement: ast::Statement<'src>, c: &mut Checker<'src>) {
     match statement {
         ast::Statement::Let(it) => {
             if let Some(value) = it.value()
@@ -167,17 +157,13 @@ fn of_statement<'src>(
                 expect(condition, Type::Bool, c);
             }
             if let Some(then) = it.then() {
-                do_not_ignore(of_block(then, c), then.syntax().span(), c);
+                check_block(then, c);
             }
             if let Some(else_clause) = it.else_clause() {
                 if let Some(r#else) = else_clause.block() {
-                    do_not_ignore(of_block(r#else, c), r#else.syntax().span(), c);
+                    check_block(r#else, c);
                 } else if let Some(else_if) = else_clause.if_() {
-                    do_not_ignore(
-                        of_statement(ast::Statement::If(else_if), c),
-                        else_if.syntax().span(),
-                        c,
-                    );
+                    check_statement(ast::Statement::If(else_if), c);
                 }
             }
         }
@@ -186,12 +172,12 @@ fn of_statement<'src>(
                 expect(times, Type::Num, c);
             }
             if let Some(body) = it.body() {
-                do_not_ignore(of_block(body, c), body.syntax().span(), c);
+                check_block(body, c);
             }
         }
         ast::Statement::Forever(it) => {
             if let Some(body) = it.body() {
-                do_not_ignore(of_block(body, c), body.syntax().span(), c);
+                check_block(body, c);
             }
         }
         ast::Statement::While(it) => {
@@ -199,7 +185,7 @@ fn of_statement<'src>(
                 expect(condition, Type::Bool, c);
             }
             if let Some(body) = it.body() {
-                do_not_ignore(of_block(body, c), body.syntax().span(), c);
+                check_block(body, c);
             }
         }
         ast::Statement::Until(it) => {
@@ -207,7 +193,7 @@ fn of_statement<'src>(
                 expect(condition, Type::Bool, c);
             }
             if let Some(body) = it.body() {
-                do_not_ignore(of_block(body, c), body.syntax().span(), c);
+                check_block(body, c);
             }
         }
         ast::Statement::For(it) => {
@@ -219,7 +205,7 @@ fn of_statement<'src>(
                 assert!(c.variable_types.insert(variable, Type::Num).is_none());
             }
             if let Some(body) = it.body() {
-                do_not_ignore(of_block(body, c), body.syntax().span(), c);
+                check_block(body, c);
             }
         }
         ast::Statement::Return(it) => {
@@ -234,9 +220,17 @@ fn of_statement<'src>(
                 );
             }
         }
-        ast::Statement::Expression(it) => return of(it, c),
+        ast::Statement::Expression(it) => {
+            if let Some(ty) = of(it, c)
+                && ty != Type::Unit
+            {
+                c.diagnostics.error(
+                    format!("value of type `{}` is ignored", ty.display(c)),
+                    [primary(it.syntax().span(), "")],
+                );
+            }
+        }
     }
-    Some(Type::Unit)
 }
 
 fn of<'src>(expression: ast::Expression<'src>, c: &mut Checker<'src>) -> Option<Type<'src>> {
@@ -425,17 +419,6 @@ fn resolve_call<'src>(
     }
 }
 
-fn do_not_ignore(ty: Option<Type>, span: Span, c: &mut Checker) {
-    if let Some(ty) = ty
-        && ty != Type::Unit
-    {
-        c.diagnostics.error(
-            format!("value of type `{}` is ignored", ty.display(c)),
-            [primary(span, "")],
-        );
-    }
-}
-
 fn expect<'src>(expression: ast::Expression<'src>, expected_ty: Type, c: &mut Checker<'src>) {
     if let Some(ty) = of(expression, c)
         && ty != expected_ty
@@ -474,3 +457,15 @@ impl<'src> Interner<'src> {
 
 #[derive(Clone, Copy, PartialEq)]
 struct Id(usize);
+
+impl ast::Block<'_> {
+    fn diverges(self) -> bool {
+        self.statements().any(ast::Statement::diverges)
+    }
+}
+
+impl ast::Statement<'_> {
+    const fn diverges(self) -> bool {
+        matches!(self, Self::Forever(_) | Self::Return(_))
+    }
+}
