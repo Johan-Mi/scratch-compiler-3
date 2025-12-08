@@ -74,7 +74,7 @@ fn parse_string_literal(text: &str, span: Span, diagnostics: &mut Diagnostics) -
     None
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Logos)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Logos)]
 #[repr(u16)]
 pub enum K {
     Eof = 0,
