@@ -91,6 +91,7 @@ pub fn check(documents: &[ast::Document], code_map: &CodeMap, diagnostics: &mut 
         documents,
         code_map,
         diagnostics,
+        return_ty: None,
     };
 
     for (variable, value) in documents
@@ -111,9 +112,10 @@ pub fn check(documents: &[ast::Document], code_map: &CodeMap, diagnostics: &mut 
         .flat_map(|it| it.syntax().pre_order())
         .filter_map(ast::Function::cast)
     {
+        c.return_ty = return_ty(function, &c);
         if let Some(body) = function.body()
             && let Some(body_ty) = of_block(body, &mut c)
-            && let Some(return_ty) = return_ty(function, &c)
+            && let Some(return_ty) = c.return_ty
             && body_ty != return_ty
         {
             let span = function.syntax().span();
@@ -131,6 +133,7 @@ struct Checker<'src> {
     documents: &'src [ast::Document<'src>],
     code_map: &'src CodeMap,
     diagnostics: &'src mut Diagnostics,
+    return_ty: Option<Type<'src>>,
 }
 
 fn of_block<'src>(block: ast::Block<'src>, c: &mut Checker<'src>) -> Option<Type<'src>> {
@@ -219,7 +222,18 @@ fn of_statement<'src>(
                 do_not_ignore(of_block(body, c), body.syntax().span(), c);
             }
         }
-        ast::Statement::Return(_) => todo!(),
+        ast::Statement::Return(it) => {
+            if let Some(returned) = it.expression()
+                && let Some(ty) = of(returned, c)
+                && let Some(expected) = c.return_ty
+                && ty != expected
+            {
+                c.diagnostics.error(
+                    "function return type mismatch",
+                    [primary(it.syntax().span(), "")],
+                );
+            }
+        }
         ast::Statement::Expression(it) => return of(it, c),
     }
     Some(Type::Unit)
