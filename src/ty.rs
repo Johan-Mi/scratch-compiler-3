@@ -280,10 +280,8 @@ fn of<'src>(
             for item in items {
                 let item_type = of(item, None, c);
                 if first_type.zip(item_type).is_some_and(|(f, i)| f != i) {
-                    c.diagnostics.error(
-                        "TODO: implement error for list item type mismatch",
-                        [primary(item.syntax().span(), "")],
-                    );
+                    c.diagnostics
+                        .error("type mismatch", [primary(item.syntax().span(), "")]);
                 }
             }
             Some(Type::List(c.interner.intern(first_type?)))
