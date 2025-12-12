@@ -102,7 +102,7 @@ pub fn check(documents: &[ast::Document], code_map: &CodeMap, diagnostics: &mut 
         .filter_map(ast::Let::cast)
         .filter_map(|it| Some((it.variable()?.span().low(), it.value()?)))
     {
-        if let Some(ty) = of(value, &mut c) {
+        if let Some(ty) = of(value, None, &mut c) {
             assert!(c.variable_types.insert(variable, ty).is_none());
         }
     }
@@ -146,7 +146,7 @@ fn check_statement<'src>(statement: ast::Statement<'src>, c: &mut Checker<'src>)
     match statement {
         ast::Statement::Let(it) => {
             if let Some(value) = it.value()
-                && let Some(ty) = of(value, c)
+                && let Some(ty) = of(value, None, c)
                 && let Some(variable) = it.variable()
             {
                 assert!(c.variable_types.insert(variable.span().low(), ty).is_none());
@@ -210,7 +210,7 @@ fn check_statement<'src>(statement: ast::Statement<'src>, c: &mut Checker<'src>)
         }
         ast::Statement::Return(it) => {
             if let Some(returned) = it.expression()
-                && let Some(ty) = of(returned, c)
+                && let Some(ty) = of(returned, None, c)
                 && let Some(expected) = c.return_ty
                 && ty != expected
             {
@@ -221,7 +221,7 @@ fn check_statement<'src>(statement: ast::Statement<'src>, c: &mut Checker<'src>)
             }
         }
         ast::Statement::Expression(it) => {
-            if let Some(ty) = of(it, c)
+            if let Some(ty) = of(it, None, c)
                 && ty != Type::Unit
             {
                 c.diagnostics.error(
@@ -233,9 +233,13 @@ fn check_statement<'src>(statement: ast::Statement<'src>, c: &mut Checker<'src>)
     }
 }
 
-fn of<'src>(expression: ast::Expression<'src>, c: &mut Checker<'src>) -> Option<Type<'src>> {
+fn of<'src>(
+    expression: ast::Expression<'src>,
+    ascribed: Option<Type<'src>>,
+    c: &mut Checker<'src>,
+) -> Option<Type<'src>> {
     match expression {
-        ast::Expression::Parenthesized(it) => of(it.inner()?, c),
+        ast::Expression::Parenthesized(it) => of(it.inner()?, ascribed, c),
         ast::Expression::Variable(it) => {
             let definition = c.variable_definitions.get(&it.syntax().span().low())?;
             c.variable_types.get(definition).copied()
@@ -248,7 +252,7 @@ fn of<'src>(expression: ast::Expression<'src>, c: &mut Checker<'src>) -> Option<
             resolve_call(it.operator().span(), c.documents, c.code_map, c.diagnostics)?,
             c,
         ),
-        ast::Expression::NamedArgument(it) => of(it.value()?, c),
+        ast::Expression::NamedArgument(it) => of(it.value()?, ascribed, c),
         ast::Expression::Literal(it) => Some(match it.token().kind() {
             K::DecimalNumber | K::BinaryNumber | K::OctalNumber | K::HexadecimalNumber => Type::Num,
             K::String => Type::String,
@@ -256,7 +260,7 @@ fn of<'src>(expression: ast::Expression<'src>, c: &mut Checker<'src>) -> Option<
             _ => unreachable!(),
         }),
         ast::Expression::Lvalue(it) => {
-            let inner = of(it.inner()?, c)?;
+            let inner = of(it.inner()?, None, c)?;
             Some(Type::Ref(c.interner.intern(inner)))
         }
         ast::Expression::GenericTypeInstantiation(it) => todo!(),
@@ -264,13 +268,17 @@ fn of<'src>(expression: ast::Expression<'src>, c: &mut Checker<'src>) -> Option<
             let span = it.syntax().span();
             let mut items = it.iter();
             let Some(first) = items.next() else {
-                c.diagnostics
-                    .error("cannot infer type of empty list", [primary(span, "")]);
-                return None;
+                return ascribed
+                    .filter(|it| matches!(it, Type::List(_)))
+                    .or_else(|| {
+                        c.diagnostics
+                            .error("cannot infer type of empty list", [primary(span, "")]);
+                        None
+                    });
             };
-            let first_type = of(first, c);
+            let first_type = of(first, None, c);
             for item in items {
-                let item_type = of(item, c);
+                let item_type = of(item, None, c);
                 if first_type.zip(item_type).is_some_and(|(f, i)| f != i) {
                     c.diagnostics.error(
                         "TODO: implement error for list item type mismatch",
@@ -283,7 +291,7 @@ fn of<'src>(expression: ast::Expression<'src>, c: &mut Checker<'src>) -> Option<
         ast::Expression::TypeAscription(it) => {
             let ascribed_ty = c.type_expressions.get(&it.ty()?.syntax().span()).copied();
             let inner = it.inner()?;
-            if let Some(actual) = of(inner, c)
+            if let Some(actual) = of(inner, ascribed_ty, c)
                 && let Some(ascribed) = ascribed_ty
                 && actual != ascribed
             {
@@ -303,7 +311,7 @@ fn of<'src>(expression: ast::Expression<'src>, c: &mut Checker<'src>) -> Option<
             c,
         ),
         ast::Expression::FieldAccess(it) => {
-            let aggregate_ty = of(it.aggregate(), c)?;
+            let aggregate_ty = of(it.aggregate(), None, c)?;
             let name = it.field().span();
             let name = c.code_map.find_file(name.low()).source_slice(name);
             let Type::Struct(r#struct) = aggregate_ty else {
@@ -420,7 +428,7 @@ fn resolve_call<'src>(
 }
 
 fn expect<'src>(expression: ast::Expression<'src>, expected_ty: Type, c: &mut Checker<'src>) {
-    if let Some(ty) = of(expression, c)
+    if let Some(ty) = of(expression, None, c)
         && ty != expected_ty
     {
         c.diagnostics.error(
