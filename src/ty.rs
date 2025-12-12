@@ -449,13 +449,11 @@ struct Interner<'src>(Vec<Type<'src>>);
 
 impl<'src> Interner<'src> {
     fn intern(&mut self, ty: Type<'src>) -> Id {
-        if let Some(index) = self.0.iter().position(|&it| it == ty) {
-            Id(index)
-        } else {
+        Id(self.0.iter().position(|&it| it == ty).unwrap_or_else(|| {
             let index = self.0.len();
             self.0.push(ty);
-            Id(index)
-        }
+            index
+        }))
     }
 
     fn get(&self, id: Id) -> Type<'src> {
