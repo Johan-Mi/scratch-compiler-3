@@ -310,36 +310,38 @@ fn of<'src>(
             resolve_call(it.name().span(), c.documents, c.code_map, c.diagnostics)?,
             c,
         ),
-        ast::Expression::FieldAccess(it) => {
-            let aggregate_ty = of(it.aggregate(), None, c)?;
-            let name = it.field().span();
-            let name = c.code_map.find_file(name.low()).source_slice(name);
-            let Type::Struct(r#struct) = aggregate_ty else {
-                c.diagnostics.error(
-                    format!("type `{}` has no fields", aggregate_ty.display(c)),
-                    [primary(it.syntax().span(), "")],
-                );
-                return None;
-            };
-            let file = c.code_map.find_file(r#struct.syntax().span().low());
-            let Some(field) = r#struct
-                .fields()
-                .find(|it| file.source_slice(it.name().span()) == name)
-            else {
-                c.diagnostics.error(
-                    format!(
-                        "type `{}` has no field named `{name}`",
-                        aggregate_ty.display(c)
-                    ),
-                    [primary(it.syntax().span(), "")],
-                );
-                return None;
-            };
-            c.type_expressions
-                .get(&field.ty()?.syntax().span())
-                .copied()
-        }
+        ast::Expression::FieldAccess(it) => of_field_access(it, c),
     }
+}
+
+fn of_field_access<'src>(it: ast::FieldAccess<'src>, c: &mut Checker<'src>) -> Option<Type<'src>> {
+    let aggregate_ty = of(it.aggregate(), None, c)?;
+    let name = it.field().span();
+    let name = c.code_map.find_file(name.low()).source_slice(name);
+    let Type::Struct(r#struct) = aggregate_ty else {
+        c.diagnostics.error(
+            format!("type `{}` has no fields", aggregate_ty.display(c)),
+            [primary(it.syntax().span(), "")],
+        );
+        return None;
+    };
+    let file = c.code_map.find_file(r#struct.syntax().span().low());
+    let Some(field) = r#struct
+        .fields()
+        .find(|it| file.source_slice(it.name().span()) == name)
+    else {
+        c.diagnostics.error(
+            format!(
+                "type `{}` has no field named `{name}`",
+                aggregate_ty.display(c)
+            ),
+            [primary(it.syntax().span(), "")],
+        );
+        return None;
+    };
+    c.type_expressions
+        .get(&field.ty()?.syntax().span())
+        .copied()
 }
 
 fn return_ty<'src>(function: ast::Function<'src>, c: &Checker<'src>) -> Option<Type<'src>> {
