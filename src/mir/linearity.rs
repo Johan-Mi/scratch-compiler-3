@@ -44,8 +44,7 @@ pub fn spill(program: &mut Program) {
         let load = program.ops.insert(Op::Load {
             source: Ref::Variable(variable),
         });
-        let user = &mut program.ops[user];
-        let arg = user
+        let arg = program.ops[user]
             .args_mut()
             .find(|&&mut it| matches!(it, Value::Op(op) if op == def))
             .unwrap();
