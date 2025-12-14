@@ -70,7 +70,7 @@ impl<'src> FieldDefinition<'src> {
         token(self.syntax, K::Identifier).unwrap()
     }
 
-    pub fn ty(self) -> Option<Expression<'src>> {
+    pub fn ty(self) -> Option<TypeExpression<'src>> {
         child(self.syntax)
     }
 }
@@ -144,7 +144,7 @@ impl<'src> Function<'src> {
         child(self.syntax)
     }
 
-    pub fn return_ty(self) -> Option<Expression<'src>> {
+    pub fn return_ty(self) -> Option<TypeExpression<'src>> {
         child(self.syntax)
     }
 
@@ -182,7 +182,7 @@ impl<'src> Parameter<'src> {
         token(self.syntax, K::Identifier)
     }
 
-    pub fn ty(self) -> Option<Expression<'src>> {
+    pub fn ty(self) -> Option<TypeExpression<'src>> {
         child(self.syntax)
     }
 }
@@ -355,6 +355,28 @@ impl<'src> Return<'src> {
 }
 
 #[derive(Clone, Copy)]
+pub enum TypeExpression<'src> {
+    TypeVariable(TypeVariable<'src>),
+}
+
+impl<'src> Node<'src> for TypeExpression<'src> {
+    fn cast(node: SyntaxNode<'src>) -> Option<Self> {
+        match node.kind() {
+            K::TypeVariable => Node::cast(node).map(Self::TypeVariable),
+            _ => None,
+        }
+    }
+
+    fn syntax(self) -> SyntaxNode<'src> {
+        match self {
+            TypeExpression::TypeVariable(inner) => inner.syntax,
+        }
+    }
+}
+
+node!(TypeVariable);
+
+#[derive(Clone, Copy)]
 pub enum Expression<'src> {
     Parenthesized(Parenthesized<'src>),
     Variable(Variable<'src>),
@@ -522,7 +544,7 @@ impl<'src> TypeAscription<'src> {
             .find_map(Node::cast)
     }
 
-    pub fn ty(self) -> Option<Expression<'src>> {
+    pub fn ty(self) -> Option<TypeExpression<'src>> {
         let operator = self.operator().span().high();
         self.syntax
             .children()

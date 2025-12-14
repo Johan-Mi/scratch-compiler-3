@@ -114,6 +114,7 @@ pub enum K {
     MethodCall,
     FieldAccess,
     Return,
+    TypeVariable,
 
     #[token("(")]
     Lparen,
@@ -360,7 +361,7 @@ impl Parser<'_> {
         if !self.eat(K::Colon) {
             self.error();
         }
-        self.parse_expression();
+        self.parse_type_expression();
         let _: bool = self.eat(K::Comma);
         self.builder.finish_node();
     }
@@ -432,6 +433,16 @@ impl Parser<'_> {
         }
     }
 
+    fn parse_type_expression(&mut self) {
+        if self.at(K::Identifier) {
+            self.start_node(K::TypeVariable);
+            self.bump();
+            self.builder.finish_node();
+        } else {
+            self.error();
+        }
+    }
+
     fn parse_expression(&mut self) {
         self.parse_recursive_expression(K::Eof);
     }
@@ -462,10 +473,12 @@ impl Parser<'_> {
                 }
             } else {
                 self.bump(); // operator
-                self.parse_recursive_expression(right);
-                match right {
-                    K::KwAs => K::TypeAscription,
-                    _ => K::BinaryOperation,
+                if right == K::KwAs {
+                    self.parse_type_expression();
+                    K::TypeAscription
+                } else {
+                    self.parse_recursive_expression(right);
+                    K::BinaryOperation
                 }
             };
             self.builder.finish_node_at(checkpoint, node_kind);
@@ -517,7 +530,7 @@ impl Parser<'_> {
                     [primary(span, "expected expression")],
                 );
             } else {
-                self.parse_expression();
+                self.parse_type_expression();
             }
             let _: bool = self.eat(K::Comma);
             self.builder.finish_node();
@@ -689,7 +702,7 @@ impl Parser<'_> {
             self.parse_function_parameters();
         }
         if self.eat(K::Arrow) {
-            self.parse_expression();
+            self.parse_type_expression();
         }
         self.parse_block();
         self.builder.finish_node_at(checkpoint, K::Function);

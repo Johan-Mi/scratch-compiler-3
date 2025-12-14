@@ -80,7 +80,7 @@ pub fn check(documents: &[ast::Document], code_map: &CodeMap, diagnostics: &mut 
                 .or_else(|| Node::cast(it).map(ast::Parameter::ty))
                 .or_else(|| Node::cast(it).map(ast::TypeAscription::ty))?
         })
-        .filter_map(|it| Some((it.syntax().span(), evaluate(it, diagnostics)?)))
+        .filter_map(|it| Some((it.syntax().span(), evaluate(it)?)))
         .collect();
 
     let mut c = Checker {
@@ -348,30 +348,9 @@ fn return_ty<'src>(function: ast::Function<'src>, c: &Checker<'src>) -> Option<T
     c.type_expressions.get(&ty.syntax().span()).copied()
 }
 
-fn evaluate<'src>(
-    expression: ast::Expression<'src>,
-    diagnostics: &mut Diagnostics,
-) -> Option<Type<'src>> {
-    let span = expression.syntax().span();
-    let mut err = |message| {
-        diagnostics.error(message, [primary(span, "")]);
-        None
-    };
-
+fn evaluate(expression: ast::TypeExpression) -> Option<Type> {
     match expression {
-        ast::Expression::Parenthesized(_) => {
-            err("parenthesized expression cannot be used as a type")
-        }
-        ast::Expression::Variable(_) => err("variable cannot be used as a type"),
-        ast::Expression::FunctionCall(_) => err("function call cannot be used as a type"),
-        ast::Expression::BinaryOperation(_) => err("binary operation cannot be used as a type"),
-        ast::Expression::NamedArgument(_) => err("named argument cannot be used as a type"),
-        ast::Expression::Literal(_) => err("literal cannot be used as a type"),
-        ast::Expression::Lvalue(_) => err("lvalue cannot be used as a type"),
-        ast::Expression::ListLiteral(_) => err("list literal cannot be used as a type"),
-        ast::Expression::TypeAscription(_) => err("type ascription cannot be used as a type"),
-        ast::Expression::MethodCall(_) => err("method call cannot be used as a type"),
-        ast::Expression::FieldAccess(_) => err("field access cannot be used as a type"),
+        ast::TypeExpression::TypeVariable(_) => todo!(),
     }
 }
 
