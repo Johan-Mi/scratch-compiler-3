@@ -363,7 +363,6 @@ pub enum Expression<'src> {
     NamedArgument(NamedArgument<'src>),
     Literal(Literal<'src>),
     Lvalue(Lvalue<'src>),
-    GenericTypeInstantiation(GenericTypeInstantiation<'src>),
     ListLiteral(ListLiteral<'src>),
     TypeAscription(TypeAscription<'src>),
     MethodCall(MethodCall<'src>),
@@ -380,7 +379,6 @@ impl<'src> Node<'src> for Expression<'src> {
             K::NamedArgument => Node::cast(node).map(Self::NamedArgument),
             K::Literal => Node::cast(node).map(Self::Literal),
             K::Lvalue => Node::cast(node).map(Self::Lvalue),
-            K::GenericTypeInstantiation => Node::cast(node).map(Self::GenericTypeInstantiation),
             K::ListLiteral => Node::cast(node).map(Self::ListLiteral),
             K::TypeAscription => Node::cast(node).map(Self::TypeAscription),
             K::MethodCall => Node::cast(node).map(Self::MethodCall),
@@ -398,7 +396,6 @@ impl<'src> Node<'src> for Expression<'src> {
             Self::NamedArgument(inner) => inner.syntax,
             Self::Literal(inner) => inner.syntax,
             Self::Lvalue(inner) => inner.syntax,
-            Self::GenericTypeInstantiation(inner) => inner.syntax,
             Self::ListLiteral(inner) => inner.syntax,
             Self::TypeAscription(inner) => inner.syntax,
             Self::MethodCall(inner) => inner.syntax,
@@ -495,26 +492,6 @@ node!(Lvalue);
 impl<'src> Lvalue<'src> {
     pub fn inner(self) -> Option<Expression<'src>> {
         child(self.syntax)
-    }
-}
-
-node!(GenericTypeInstantiation);
-
-impl<'src> GenericTypeInstantiation<'src> {
-    pub fn generic(self) -> Expression<'src> {
-        child(self.syntax).unwrap()
-    }
-
-    pub fn type_parameters(self) -> TypeParameters<'src> {
-        child(self.syntax).unwrap()
-    }
-}
-
-node!(TypeParameters);
-
-impl<'src> TypeParameters<'src> {
-    pub fn iter(self) -> impl Iterator<Item = Expression<'src>> {
-        children(self.syntax)
     }
 }
 

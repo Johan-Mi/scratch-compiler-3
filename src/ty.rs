@@ -263,7 +263,6 @@ fn of<'src>(
             let inner = of(it.inner()?, None, c)?;
             Some(Type::Ref(c.interner.intern(inner)))
         }
-        ast::Expression::GenericTypeInstantiation(it) => todo!(),
         ast::Expression::ListLiteral(it) => {
             let span = it.syntax().span();
             let mut items = it.iter();
@@ -369,9 +368,6 @@ fn evaluate<'src>(
         ast::Expression::NamedArgument(_) => err("named argument cannot be used as a type"),
         ast::Expression::Literal(_) => err("literal cannot be used as a type"),
         ast::Expression::Lvalue(_) => err("lvalue cannot be used as a type"),
-        ast::Expression::GenericTypeInstantiation(_) => {
-            err("generic type instantiation cannot be used as a type")
-        }
         ast::Expression::ListLiteral(_) => err("list literal cannot be used as a type"),
         ast::Expression::TypeAscription(_) => err("type ascription cannot be used as a type"),
         ast::Expression::MethodCall(_) => err("method call cannot be used as a type"),

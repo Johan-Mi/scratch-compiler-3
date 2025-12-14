@@ -109,8 +109,6 @@ pub enum K {
     BinaryOperation,
     Literal,
     Lvalue,
-    GenericTypeInstantiation,
-    TypeParameters,
     ListLiteral,
     TypeAscription,
     MethodCall,
@@ -441,11 +439,6 @@ impl Parser<'_> {
     fn parse_recursive_expression(&mut self, left: K) {
         let checkpoint = self.checkpoint();
         self.parse_atom();
-        while self.at(K::Lbracket) {
-            self.parse_type_parameters();
-            self.builder
-                .finish_node_at(checkpoint, K::GenericTypeInstantiation);
-        }
 
         while let right = self.peek()
             && binding_power(left) < binding_power(right)
@@ -477,16 +470,6 @@ impl Parser<'_> {
             };
             self.builder.finish_node_at(checkpoint, node_kind);
         }
-    }
-
-    fn parse_type_parameters(&mut self) {
-        self.start_node(K::TypeParameters);
-        self.bump(); // K::Lbracket
-        while !self.at(K::Eof) && !self.eat(K::Rbracket) {
-            self.parse_expression();
-            let _: bool = self.eat(K::Comma);
-        }
-        self.builder.finish_node();
     }
 
     fn parse_function_parameters(&mut self) {
