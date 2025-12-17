@@ -388,15 +388,24 @@ fn resolve_call<'src>(
     match *viable_overloads {
         [] => {
             diagnostics.error("function call has no viable overload", [primary(name, "")]);
-            None
-        }
-        [it] => Some(it),
-        _ => {
             let spans: Vec<_> = all_overloads
                 .iter()
                 .filter_map(|it| Some(primary(it.name()?.span(), "")))
                 .collect();
             diagnostics.note("following are all of the non-viable overloads:", spans);
+            None
+        }
+        [it] => Some(it),
+        _ => {
+            diagnostics.error(
+                "function call has multiple viable overloads",
+                [primary(name, "")],
+            );
+            let spans: Vec<_> = viable_overloads
+                .iter()
+                .filter_map(|it| Some(primary(it.name()?.span(), "")))
+                .collect();
+            diagnostics.note("following are all of the viable overloads:", spans);
             None
         }
     }
