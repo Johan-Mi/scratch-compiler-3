@@ -17,51 +17,37 @@ enum Type<'src> {
 
 impl<'src> Type<'src> {
     fn display(self, c: &'src Checker) -> impl fmt::Display + 'src {
-        struct Display<'a> {
-            ty: Type<'a>,
-            code_map: &'a CodeMap,
-            interner: &'a Interner<'a>,
-        }
-
-        impl fmt::Display for Display<'_> {
-            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                let mut next = Some(self.ty);
-                let mut nesting = 0;
-                while let Some(ty) = next.take() {
-                    match ty {
-                        Type::Unit => f.write_str("Unit")?,
-                        Type::Num => f.write_str("Num")?,
-                        Type::String => f.write_str("String")?,
-                        Type::Bool => f.write_str("Bool")?,
-                        Type::Struct(s) => {
-                            let name = s.name().unwrap().span();
-                            let name = self.code_map.find_file(name.low()).source_slice(name);
-                            f.write_str(name)?;
-                        }
-                        Type::List(inner) => {
-                            f.write_str("List[")?;
-                            nesting += 1;
-                            next = Some(self.interner.get(inner));
-                        }
-                        Type::Ref(inner) => {
-                            f.write_str("Ref[")?;
-                            nesting += 1;
-                            next = Some(self.interner.get(inner));
-                        }
+        std::fmt::from_fn(move |f| {
+            let mut next = Some(self);
+            let mut nesting = 0;
+            while let Some(ty) = next.take() {
+                match ty {
+                    Type::Unit => f.write_str("Unit")?,
+                    Type::Num => f.write_str("Num")?,
+                    Type::String => f.write_str("String")?,
+                    Type::Bool => f.write_str("Bool")?,
+                    Type::Struct(s) => {
+                        let name = s.name().unwrap().span();
+                        let name = c.code_map.find_file(name.low()).source_slice(name);
+                        f.write_str(name)?;
+                    }
+                    Type::List(inner) => {
+                        f.write_str("List[")?;
+                        nesting += 1;
+                        next = Some(c.interner.get(inner));
+                    }
+                    Type::Ref(inner) => {
+                        f.write_str("Ref[")?;
+                        nesting += 1;
+                        next = Some(c.interner.get(inner));
                     }
                 }
-                for _ in 0..nesting {
-                    f.write_str("]")?;
-                }
-                Ok(())
             }
-        }
-
-        Display {
-            ty: self,
-            code_map: c.code_map,
-            interner: &c.interner,
-        }
+            for _ in 0..nesting {
+                f.write_str("]")?;
+            }
+            Ok(())
+        })
     }
 }
 
