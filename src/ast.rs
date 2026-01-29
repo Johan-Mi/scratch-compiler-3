@@ -189,12 +189,6 @@ impl<'src> Parameter<'src> {
 
 node!(ExternalParameterName);
 
-impl<'src> ExternalParameterName<'src> {
-    pub fn identifier(self) -> SyntaxNode<'src> {
-        token(self.syntax, K::Identifier).unwrap()
-    }
-}
-
 node!(Block);
 
 impl<'src> Block<'src> {

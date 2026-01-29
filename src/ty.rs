@@ -231,11 +231,23 @@ fn of<'src>(
             c.variable_types.get(definition).copied()
         }
         ast::Expression::FunctionCall(it) => return_ty(
-            resolve_call(it.name().span(), c.documents, c.code_map, c.diagnostics)?,
+            resolve_call(
+                it.name().span(),
+                &c.type_expressions,
+                c.documents,
+                c.code_map,
+                c.diagnostics,
+            )?,
             c,
         ),
         ast::Expression::BinaryOperation(it) => return_ty(
-            resolve_call(it.operator().span(), c.documents, c.code_map, c.diagnostics)?,
+            resolve_call(
+                it.operator().span(),
+                &c.type_expressions,
+                c.documents,
+                c.code_map,
+                c.diagnostics,
+            )?,
             c,
         ),
         ast::Expression::NamedArgument(it) => of(it.value()?, ascribed, c),
@@ -290,7 +302,13 @@ fn of<'src>(
             ascribed_ty
         }
         ast::Expression::MethodCall(it) => return_ty(
-            resolve_call(it.name().span(), c.documents, c.code_map, c.diagnostics)?,
+            resolve_call(
+                it.name().span(),
+                &c.type_expressions,
+                c.documents,
+                c.code_map,
+                c.diagnostics,
+            )?,
             c,
         ),
         ast::Expression::FieldAccess(it) => of_field_access(it, c),
@@ -342,6 +360,7 @@ fn evaluate(expression: ast::TypeExpression) -> Option<Type> {
 
 fn resolve_call<'src>(
     name: Span,
+    type_expressions: &HashMap<Span, Type<'src>>,
     documents: &[ast::Document<'src>],
     code_map: &CodeMap,
     diagnostics: &mut Diagnostics,
@@ -369,8 +388,27 @@ fn resolve_call<'src>(
         return None;
     }
 
-    let viable_overloads: Vec<ast::Function> =
-        all_overloads.iter().copied().filter(|_| todo!()).collect();
+    let labels: &[Option<&str>] = todo!();
+    let argument_types: &[Option<Type>] = todo!();
+
+    let viable_overloads: Vec<ast::Function> = all_overloads
+        .iter()
+        .copied()
+        .filter(|it| {
+            let file = code_map.find_file(it.syntax().span().low());
+            it.parameters().is_none_or(|it| {
+                it.iter()
+                    .map(|it| Some(file.source_slice(it.external_name()?.syntax().span())))
+                    .eq(labels.iter().copied())
+                    && it
+                        .iter()
+                        .map(|it| type_expressions.get(&it.ty()?.syntax().span()).copied())
+                        .zip(argument_types.iter().copied())
+                        .filter_map(|(a, b)| a.zip(b))
+                        .all(|(a, b)| a == b)
+            })
+        })
+        .collect();
     match *viable_overloads {
         [] => {
             diagnostics.error("function call has no viable overload", [primary(name, "")]);
