@@ -395,8 +395,8 @@ fn resolve_call<'src>(
         .iter()
         .copied()
         .filter(|it| {
-            let file = code_map.find_file(it.syntax().span().low());
             it.parameters().is_none_or(|it| {
+                let file = code_map.find_file(it.syntax().span().low());
                 it.iter()
                     .map(|it| Some(file.source_slice(it.external_name()?.syntax().span())))
                     .eq(labels.iter().copied())
