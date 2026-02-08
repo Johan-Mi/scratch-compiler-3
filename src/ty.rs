@@ -230,23 +230,14 @@ fn of<'src>(
             let definition = c.variable_definitions.get(&it.syntax().span().low())?;
             c.variable_types.get(definition).copied()
         }
-        ast::Expression::FunctionCall(it) => return_ty(
-            resolve_call(
-                it.name().span(),
-                &c.type_expressions,
-                c.documents,
-                c.code_map,
-                c.diagnostics,
-            )?,
-            c,
-        ),
+        ast::Expression::FunctionCall(it) => {
+            return_ty(resolve_call(it.name().span(), &mut it.args().iter(), c)?, c)
+        }
         ast::Expression::BinaryOperation(it) => return_ty(
             resolve_call(
                 it.operator().span(),
-                &c.type_expressions,
-                c.documents,
-                c.code_map,
-                c.diagnostics,
+                &mut [it.lhs()?, it.rhs()?].into_iter(),
+                c,
             )?,
             c,
         ),
@@ -304,10 +295,8 @@ fn of<'src>(
         ast::Expression::MethodCall(it) => return_ty(
             resolve_call(
                 it.name().span(),
-                &c.type_expressions,
-                c.documents,
-                c.code_map,
-                c.diagnostics,
+                &mut std::iter::once(it.caller()).chain(it.arguments().iter()),
+                c,
             )?,
             c,
         ),
@@ -360,16 +349,16 @@ fn evaluate(expression: ast::TypeExpression) -> Option<Type> {
 
 fn resolve_call<'src>(
     name: Span,
-    type_expressions: &HashMap<Span, Type<'src>>,
-    documents: &[ast::Document<'src>],
-    code_map: &CodeMap,
-    diagnostics: &mut Diagnostics,
+    arguments: &mut dyn Iterator<Item = ast::Expression<'src>>,
+    c: &mut Checker<'src>,
 ) -> Option<ast::Function<'src>> {
-    let name_text = code_map.find_file(name.low()).source_slice(name);
+    let file = c.code_map.find_file(name.low());
+    let name_text = file.source_slice(name);
 
     let all_in_scope = {
-        let global_functions = documents.iter().flat_map(|it| it.functions());
-        let sprite_functions = documents
+        let global_functions = c.documents.iter().flat_map(|it| it.functions());
+        let sprite_functions = c
+            .documents
             .iter()
             .flat_map(|it| it.sprites())
             .filter(|it| it.syntax().span().contains(name))
@@ -380,29 +369,40 @@ fn resolve_call<'src>(
     let all_overloads: Vec<ast::Function> = all_in_scope
         .filter(|function| {
             let span = function.name().map(cst::Node::span);
-            span.is_some_and(|it| code_map.find_file(it.low()).source_slice(it) == name_text)
+            span.is_some_and(|it| c.code_map.find_file(it.low()).source_slice(it) == name_text)
         })
         .collect();
     if all_overloads.is_empty() {
-        diagnostics.error("undefined function", [primary(name, "")]);
+        c.diagnostics
+            .error("undefined function", [primary(name, "")]);
         return None;
     }
 
-    let labels: &[Option<&str>] = todo!();
-    let argument_types: &[Option<Type>] = todo!();
+    let (labels, argument_types): (Vec<_>, Vec<_>) = arguments
+        .map(|it| {
+            (
+                if let ast::Expression::NamedArgument(it) = it {
+                    Some(file.source_slice(it.name().span()))
+                } else {
+                    None
+                },
+                of(it, None, c),
+            )
+        })
+        .collect();
 
     let viable_overloads: Vec<ast::Function> = all_overloads
         .iter()
         .copied()
         .filter(|it| {
             it.parameters().is_none_or(|it| {
-                let file = code_map.find_file(it.syntax().span().low());
+                let file = c.code_map.find_file(it.syntax().span().low());
                 it.iter()
                     .map(|it| Some(file.source_slice(it.external_name()?.syntax().span())))
                     .eq(labels.iter().copied())
                     && it
                         .iter()
-                        .map(|it| type_expressions.get(&it.ty()?.syntax().span()).copied())
+                        .map(|it| c.type_expressions.get(&it.ty()?.syntax().span()).copied())
                         .zip(argument_types.iter().copied())
                         .filter_map(|(a, b)| a.zip(b))
                         .all(|(a, b)| a == b)
@@ -411,17 +411,19 @@ fn resolve_call<'src>(
         .collect();
     match *viable_overloads {
         [] => {
-            diagnostics.error("function call has no viable overload", [primary(name, "")]);
+            c.diagnostics
+                .error("function call has no viable overload", [primary(name, "")]);
             let spans: Vec<_> = all_overloads
                 .iter()
                 .filter_map(|it| Some(primary(it.name()?.span(), "")))
                 .collect();
-            diagnostics.note("following are all of the non-viable overloads:", spans);
+            c.diagnostics
+                .note("following are all of the non-viable overloads:", spans);
             None
         }
         [it] => Some(it),
         _ => {
-            diagnostics.error(
+            c.diagnostics.error(
                 "function call has multiple viable overloads",
                 [primary(name, "")],
             );
@@ -429,7 +431,8 @@ fn resolve_call<'src>(
                 .iter()
                 .filter_map(|it| Some(primary(it.name()?.span(), "")))
                 .collect();
-            diagnostics.note("following are all of the viable overloads:", spans);
+            c.diagnostics
+                .note("following are all of the viable overloads:", spans);
             None
         }
     }
