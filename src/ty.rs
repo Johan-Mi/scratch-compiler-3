@@ -66,7 +66,12 @@ pub fn check(documents: &[ast::Document], code_map: &CodeMap, diagnostics: &mut 
                 .or_else(|| Node::cast(it).map(ast::Parameter::ty))
                 .or_else(|| Node::cast(it).map(ast::TypeAscription::ty))?
         })
-        .filter_map(|it| Some((it.syntax().span(), evaluate(it)?)))
+        .filter_map(|it| {
+            Some((
+                it.syntax().span(),
+                evaluate(it, documents, code_map, diagnostics)?,
+            ))
+        })
         .collect();
 
     let mut c = Checker {
@@ -341,10 +346,33 @@ fn return_ty<'src>(function: ast::Function<'src>, c: &Checker<'src>) -> Option<T
     c.type_expressions.get(&ty.syntax().span()).copied()
 }
 
-fn evaluate(expression: ast::TypeExpression) -> Option<Type> {
-    match expression {
-        ast::TypeExpression::TypeVariable(_) => todo!(),
-    }
+fn evaluate<'src>(
+    expression: ast::TypeExpression,
+    documents: &[ast::Document<'src>],
+    code_map: &CodeMap,
+    diagnostics: &mut Diagnostics,
+) -> Option<Type<'src>> {
+    Some(match expression {
+        ast::TypeExpression::TypeVariable(variable) => {
+            let span = variable.syntax().span();
+            let variable = code_map.find_file(span.low()).source_slice(span);
+            Type::Struct(
+                documents
+                    .iter()
+                    .find_map(|document| {
+                        let file = code_map.find_file(document.syntax().span().low());
+                        document.structs().find(|it| {
+                            it.name()
+                                .is_some_and(|it| file.source_slice(it.span()) == variable)
+                        })
+                    })
+                    .or_else(|| {
+                        diagnostics.error("undefined type variable", [primary(span, "")]);
+                        None
+                    })?,
+            )
+        }
+    })
 }
 
 fn resolve_call<'src>(
