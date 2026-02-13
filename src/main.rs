@@ -54,12 +54,7 @@ fn real_main(code_map: &mut CodeMap, diagnostics: &mut Diagnostics) -> Result<()
         }
     }
 
-    let asts: Vec<_> = csts
-        .iter()
-        .map(|cst| ast::Node::cast(cst.root()).unwrap())
-        .collect();
-
-    ty::check(&asts, code_map, diagnostics);
+    ty::check(&csts, code_map, diagnostics);
 
     if diagnostics.have_errors() {
         return Err(());
@@ -68,7 +63,7 @@ fn real_main(code_map: &mut CodeMap, diagnostics: &mut Diagnostics) -> Result<()
     let mut mir = mir::lower();
     mir::dce::perform(&mut mir);
 
-    codegen::compile(code_map, &asts, &mir, "project.sb3").map_err(|err| {
+    codegen::compile(code_map, &csts, &mir, "project.sb3").map_err(|err| {
         diagnostics.error("failed to create project file", []);
         diagnostics.note(err.to_string(), []);
     })

@@ -51,16 +51,16 @@ impl<'src> Type<'src> {
     }
 }
 
-pub fn check(documents: &[ast::Document], code_map: &CodeMap, diagnostics: &mut Diagnostics) {
+pub fn check(documents: &[cst::Tree<K>], code_map: &CodeMap, diagnostics: &mut Diagnostics) {
     let variable_definitions = documents
         .iter()
-        .flat_map(|it| crate::name::resolve(it.syntax(), code_map))
+        .flat_map(|it| crate::name::resolve(it.root(), code_map))
         .map(|it| (it.usage, it.definition))
         .collect();
 
     let type_expressions: HashMap<Span, Type> = documents
         .iter()
-        .flat_map(|it| it.syntax().pre_order())
+        .flat_map(|it| it.root().pre_order())
         .filter_map(|it| {
             None.or_else(|| Node::cast(it).map(ast::FieldDefinition::ty))
                 .or_else(|| Node::cast(it).map(ast::Parameter::ty))
@@ -87,7 +87,7 @@ pub fn check(documents: &[ast::Document], code_map: &CodeMap, diagnostics: &mut 
 
     for (variable, value) in documents
         .iter()
-        .flat_map(|it| it.syntax().pre_order())
+        .flat_map(|it| it.root().pre_order())
         .filter(|it| matches!(it.kind(), K::Document | K::Sprite))
         .flat_map(cst::Node::children)
         .filter_map(ast::Let::cast)
@@ -100,7 +100,7 @@ pub fn check(documents: &[ast::Document], code_map: &CodeMap, diagnostics: &mut 
 
     for function in documents
         .iter()
-        .flat_map(|it| it.syntax().pre_order())
+        .flat_map(|it| it.root().pre_order())
         .filter_map(ast::Function::cast)
     {
         if let Some(body) = function.body() {
@@ -121,7 +121,7 @@ struct Checker<'src> {
     variable_types: HashMap<Pos, Type<'src>>,
     type_expressions: HashMap<Span, Type<'src>>,
     interner: Interner<'src>,
-    documents: &'src [ast::Document<'src>],
+    documents: &'src [cst::Tree<K>],
     code_map: &'src CodeMap,
     diagnostics: &'src mut Diagnostics,
     return_ty: Option<Type<'src>>,
@@ -348,7 +348,7 @@ fn return_ty<'src>(function: ast::Function<'src>, c: &Checker<'src>) -> Option<T
 
 fn evaluate<'src>(
     expression: ast::TypeExpression,
-    documents: &[ast::Document<'src>],
+    documents: &'src [cst::Tree<K>],
     code_map: &CodeMap,
     diagnostics: &mut Diagnostics,
 ) -> Option<Type<'src>> {
@@ -365,11 +365,14 @@ fn evaluate<'src>(
                     documents
                         .iter()
                         .find_map(|document| {
-                            let file = code_map.find_file(document.syntax().span().low());
-                            document.structs().find(|it| {
-                                it.name()
-                                    .is_some_and(|it| file.source_slice(it.span()) == variable)
-                            })
+                            let file = code_map.find_file(document.root().span().low());
+                            ast::Document::cast(document.root())
+                                .unwrap()
+                                .structs()
+                                .find(|it| {
+                                    it.name()
+                                        .is_some_and(|it| file.source_slice(it.span()) == variable)
+                                })
                         })
                         .or_else(|| {
                             diagnostics.error("undefined type variable", [primary(span, "")]);
@@ -390,11 +393,14 @@ fn resolve_call<'src>(
     let name_text = file.source_slice(name);
 
     let all_in_scope = {
-        let global_functions = c.documents.iter().flat_map(|it| it.functions());
+        let global_functions = c
+            .documents
+            .iter()
+            .flat_map(|it| ast::Document::cast(it.root()).unwrap().functions());
         let sprite_functions = c
             .documents
             .iter()
-            .flat_map(|it| it.sprites())
+            .flat_map(|it| ast::Document::cast(it.root()).unwrap().sprites())
             .filter(|it| it.syntax().span().contains(name))
             .flat_map(ast::Sprite::functions);
         global_functions.chain(sprite_functions)
