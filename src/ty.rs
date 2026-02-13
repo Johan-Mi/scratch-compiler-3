@@ -356,21 +356,27 @@ fn evaluate<'src>(
         ast::TypeExpression::TypeVariable(variable) => {
             let span = variable.syntax().span();
             let variable = code_map.find_file(span.low()).source_slice(span);
-            Type::Struct(
-                documents
-                    .iter()
-                    .find_map(|document| {
-                        let file = code_map.find_file(document.syntax().span().low());
-                        document.structs().find(|it| {
-                            it.name()
-                                .is_some_and(|it| file.source_slice(it.span()) == variable)
+            match variable {
+                "Unit" => Type::Unit,
+                "Num" => Type::Num,
+                "String" => Type::String,
+                "Bool" => Type::Bool,
+                _ => Type::Struct(
+                    documents
+                        .iter()
+                        .find_map(|document| {
+                            let file = code_map.find_file(document.syntax().span().low());
+                            document.structs().find(|it| {
+                                it.name()
+                                    .is_some_and(|it| file.source_slice(it.span()) == variable)
+                            })
                         })
-                    })
-                    .or_else(|| {
-                        diagnostics.error("undefined type variable", [primary(span, "")]);
-                        None
-                    })?,
-            )
+                        .or_else(|| {
+                            diagnostics.error("undefined type variable", [primary(span, "")]);
+                            None
+                        })?,
+                ),
+            }
         }
     })
 }
