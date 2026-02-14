@@ -46,8 +46,8 @@ impl<'src> Type<'src> {
         std::fmt::from_fn(move |f| {
             match self.shape {
                 Shape::Flat => {}
-                Shape::List => f.write_str("List[")?,
-                Shape::Ref => f.write_str("Ref[")?,
+                Shape::List => f.write_str("[]")?,
+                Shape::Ref => f.write_str("*")?,
             }
             match self.base {
                 Base::Unit => f.write_str("Unit")?,
@@ -59,10 +59,6 @@ impl<'src> Type<'src> {
                     let name = c.code_map.find_file(name.low()).source_slice(name);
                     f.write_str(name)?;
                 }
-            }
-            match self.shape {
-                Shape::Flat => {}
-                Shape::List | Shape::Ref => f.write_str("]")?,
             }
             Ok(())
         })
