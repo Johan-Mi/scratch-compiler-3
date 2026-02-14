@@ -5,46 +5,64 @@ use codemap::{CodeMap, Pos, Span};
 use std::{collections::HashMap, fmt};
 
 #[derive(Clone, Copy, PartialEq)]
-enum Type<'src> {
+struct Type<'src> {
+    shape: Shape,
+    base: Base<'src>,
+}
+
+#[derive(Clone, Copy, PartialEq)]
+enum Shape {
+    Flat,
+    List,
+    Ref,
+}
+
+#[derive(Clone, Copy, PartialEq)]
+enum Base<'src> {
     Unit,
     Num,
     String,
     Bool,
     Struct(ast::Struct<'src>),
-    List(Id),
-    Ref(Id),
+}
+
+impl<'src> From<Base<'src>> for Type<'src> {
+    fn from(value: Base<'src>) -> Self {
+        Self {
+            shape: Shape::Flat,
+            base: value,
+        }
+    }
+}
+
+impl PartialEq<Base<'_>> for Type<'_> {
+    fn eq(&self, other: &Base) -> bool {
+        self.shape == Shape::Flat && self.base == *other
+    }
 }
 
 impl<'src> Type<'src> {
     fn display(self, c: &'src Checker) -> impl fmt::Display + 'src {
         std::fmt::from_fn(move |f| {
-            let mut next = Some(self);
-            let mut nesting = 0;
-            while let Some(ty) = next.take() {
-                match ty {
-                    Type::Unit => f.write_str("Unit")?,
-                    Type::Num => f.write_str("Num")?,
-                    Type::String => f.write_str("String")?,
-                    Type::Bool => f.write_str("Bool")?,
-                    Type::Struct(s) => {
-                        let name = s.name().unwrap().span();
-                        let name = c.code_map.find_file(name.low()).source_slice(name);
-                        f.write_str(name)?;
-                    }
-                    Type::List(inner) => {
-                        f.write_str("List[")?;
-                        nesting += 1;
-                        next = Some(c.interner.get(inner));
-                    }
-                    Type::Ref(inner) => {
-                        f.write_str("Ref[")?;
-                        nesting += 1;
-                        next = Some(c.interner.get(inner));
-                    }
+            match self.shape {
+                Shape::Flat => {}
+                Shape::List => f.write_str("List[")?,
+                Shape::Ref => f.write_str("Ref[")?,
+            }
+            match self.base {
+                Base::Unit => f.write_str("Unit")?,
+                Base::Num => f.write_str("Num")?,
+                Base::String => f.write_str("String")?,
+                Base::Bool => f.write_str("Bool")?,
+                Base::Struct(s) => {
+                    let name = s.name().unwrap().span();
+                    let name = c.code_map.find_file(name.low()).source_slice(name);
+                    f.write_str(name)?;
                 }
             }
-            for _ in 0..nesting {
-                f.write_str("]")?;
+            match self.shape {
+                Shape::Flat => {}
+                Shape::List | Shape::Ref => f.write_str("]")?,
             }
             Ok(())
         })
@@ -78,7 +96,6 @@ pub fn check(documents: &[cst::Tree<K>], code_map: &CodeMap, diagnostics: &mut D
         variable_definitions,
         variable_types: HashMap::new(),
         type_expressions,
-        interner: Interner(Vec::new()),
         documents,
         code_map,
         diagnostics,
@@ -106,7 +123,7 @@ pub fn check(documents: &[cst::Tree<K>], code_map: &CodeMap, diagnostics: &mut D
         if let Some(body) = function.body() {
             c.return_ty = return_ty(function, &c);
             check_block(body, &mut c);
-            if c.return_ty.is_some_and(|it| it != Type::Unit) && !body.diverges() {
+            if c.return_ty.is_some_and(|it| it != Base::Unit) && !body.diverges() {
                 c.diagnostics.error(
                     "function reaches end without returning",
                     [primary(function.syntax().span(), "")],
@@ -120,7 +137,6 @@ struct Checker<'src> {
     variable_definitions: HashMap<Pos, Pos>,
     variable_types: HashMap<Pos, Type<'src>>,
     type_expressions: HashMap<Span, Type<'src>>,
-    interner: Interner<'src>,
     documents: &'src [cst::Tree<K>],
     code_map: &'src CodeMap,
     diagnostics: &'src mut Diagnostics,
@@ -145,7 +161,7 @@ fn check_statement<'src>(statement: ast::Statement<'src>, c: &mut Checker<'src>)
         }
         ast::Statement::If(it) => {
             if let Some(condition) = it.condition() {
-                expect(condition, Type::Bool, c);
+                expect(condition, Base::Bool.into(), c);
             }
             if let Some(then) = it.then() {
                 check_block(then, c);
@@ -160,7 +176,7 @@ fn check_statement<'src>(statement: ast::Statement<'src>, c: &mut Checker<'src>)
         }
         ast::Statement::Repeat(it) => {
             if let Some(times) = it.times() {
-                expect(times, Type::Num, c);
+                expect(times, Base::Num.into(), c);
             }
             if let Some(body) = it.body() {
                 check_block(body, c);
@@ -173,7 +189,7 @@ fn check_statement<'src>(statement: ast::Statement<'src>, c: &mut Checker<'src>)
         }
         ast::Statement::While(it) => {
             if let Some(condition) = it.condition() {
-                expect(condition, Type::Bool, c);
+                expect(condition, Base::Bool.into(), c);
             }
             if let Some(body) = it.body() {
                 check_block(body, c);
@@ -181,7 +197,7 @@ fn check_statement<'src>(statement: ast::Statement<'src>, c: &mut Checker<'src>)
         }
         ast::Statement::Until(it) => {
             if let Some(condition) = it.condition() {
-                expect(condition, Type::Bool, c);
+                expect(condition, Base::Bool.into(), c);
             }
             if let Some(body) = it.body() {
                 check_block(body, c);
@@ -189,11 +205,15 @@ fn check_statement<'src>(statement: ast::Statement<'src>, c: &mut Checker<'src>)
         }
         ast::Statement::For(it) => {
             if let Some(times) = it.times() {
-                expect(times, Type::Num, c);
+                expect(times, Base::Num.into(), c);
             }
             if let Some(variable) = it.variable() {
                 let variable = variable.span().low();
-                assert!(c.variable_types.insert(variable, Type::Num).is_none());
+                assert!(
+                    c.variable_types
+                        .insert(variable, Base::Num.into())
+                        .is_none()
+                );
             }
             if let Some(body) = it.body() {
                 check_block(body, c);
@@ -213,7 +233,7 @@ fn check_statement<'src>(statement: ast::Statement<'src>, c: &mut Checker<'src>)
         }
         ast::Statement::Expression(it) => {
             if let Some(ty) = of(it, None, c)
-                && ty != Type::Unit
+                && ty != Base::Unit
             {
                 c.diagnostics.error(
                     format!("value of type `{}` is ignored", ty.display(c)),
@@ -248,26 +268,45 @@ fn of<'src>(
         ),
         ast::Expression::NamedArgument(it) => of(it.value()?, ascribed, c),
         ast::Expression::Literal(it) => Some(match it.token().kind() {
-            K::DecimalNumber | K::BinaryNumber | K::OctalNumber | K::HexadecimalNumber => Type::Num,
-            K::String => Type::String,
-            K::KwFalse | K::KwTrue => Type::Bool,
+            K::DecimalNumber | K::BinaryNumber | K::OctalNumber | K::HexadecimalNumber => {
+                Base::Num.into()
+            }
+            K::String => Base::String.into(),
+            K::KwFalse | K::KwTrue => Base::Bool.into(),
             _ => unreachable!(),
         }),
         ast::Expression::Lvalue(it) => {
             let inner = of(it.inner()?, None, c)?;
-            Some(Type::Ref(c.interner.intern(inner)))
+            match inner.shape {
+                Shape::Flat => Some(Type {
+                    shape: Shape::Ref,
+                    ..inner
+                }),
+                Shape::List => {
+                    c.diagnostics.error(
+                        "references to lists are not supported",
+                        [primary(it.syntax().span(), "")],
+                    );
+                    None
+                }
+                Shape::Ref => {
+                    c.diagnostics.error(
+                        "references to references are not supported",
+                        [primary(it.syntax().span(), "")],
+                    );
+                    None
+                }
+            }
         }
         ast::Expression::ListLiteral(it) => {
             let span = it.syntax().span();
             let mut items = it.iter();
             let Some(first) = items.next() else {
-                return ascribed
-                    .filter(|it| matches!(it, Type::List(_)))
-                    .or_else(|| {
-                        c.diagnostics
-                            .error("cannot infer type of empty list", [primary(span, "")]);
-                        None
-                    });
+                return ascribed.filter(|it| it.shape == Shape::List).or_else(|| {
+                    c.diagnostics
+                        .error("cannot infer type of empty list", [primary(span, "")]);
+                    None
+                });
             };
             let first_type = of(first, None, c);
             for item in items {
@@ -277,7 +316,27 @@ fn of<'src>(
                         .error("type mismatch", [primary(item.syntax().span(), "")]);
                 }
             }
-            Some(Type::List(c.interner.intern(first_type?)))
+            let first_type = first_type?;
+            match first_type.shape {
+                Shape::Flat => Some(Type {
+                    shape: Shape::List,
+                    ..first_type
+                }),
+                Shape::List => {
+                    c.diagnostics.error(
+                        "lists of lists are not supported",
+                        [primary(it.syntax().span(), "")],
+                    );
+                    None
+                }
+                Shape::Ref => {
+                    c.diagnostics.error(
+                        "lists of references are not supported",
+                        [primary(it.syntax().span(), "")],
+                    );
+                    None
+                }
+            }
         }
         ast::Expression::TypeAscription(it) => {
             let ascribed_ty = c.type_expressions.get(&it.ty()?.syntax().span()).copied();
@@ -313,7 +372,11 @@ fn of_field_access<'src>(it: ast::FieldAccess<'src>, c: &mut Checker<'src>) -> O
     let aggregate_ty = of(it.aggregate(), None, c)?;
     let name = it.field().span();
     let name = c.code_map.find_file(name.low()).source_slice(name);
-    let Type::Struct(r#struct) = aggregate_ty else {
+    let Type {
+        shape: Shape::Flat,
+        base: Base::Struct(r#struct),
+    } = aggregate_ty
+    else {
         c.diagnostics.error(
             format!("type `{}` has no fields", aggregate_ty.display(c)),
             [primary(it.syntax().span(), "")],
@@ -341,7 +404,7 @@ fn of_field_access<'src>(it: ast::FieldAccess<'src>, c: &mut Checker<'src>) -> O
 
 fn return_ty<'src>(function: ast::Function<'src>, c: &Checker<'src>) -> Option<Type<'src>> {
     let Some(ty) = function.return_ty() else {
-        return Some(Type::Unit);
+        return Some(Base::Unit.into());
     };
     c.type_expressions.get(&ty.syntax().span()).copied()
 }
@@ -352,16 +415,16 @@ fn evaluate<'src>(
     code_map: &CodeMap,
     diagnostics: &mut Diagnostics,
 ) -> Option<Type<'src>> {
-    Some(match expression {
+    Some(Type::from(match expression {
         ast::TypeExpression::TypeVariable(variable) => {
             let span = variable.syntax().span();
             let variable = code_map.find_file(span.low()).source_slice(span);
             match variable {
-                "Unit" => Type::Unit,
-                "Num" => Type::Num,
-                "String" => Type::String,
-                "Bool" => Type::Bool,
-                _ => Type::Struct(
+                "Unit" => Base::Unit,
+                "Num" => Base::Num,
+                "String" => Base::String,
+                "Bool" => Base::Bool,
+                _ => Base::Struct(
                     documents
                         .iter()
                         .find_map(|document| {
@@ -381,7 +444,7 @@ fn evaluate<'src>(
                 ),
             }
         }
-    })
+    }))
 }
 
 fn resolve_call<'src>(
@@ -495,25 +558,6 @@ fn expect<'src>(expression: ast::Expression<'src>, expected_ty: Type, c: &mut Ch
         );
     }
 }
-
-struct Interner<'src>(Vec<Type<'src>>);
-
-impl<'src> Interner<'src> {
-    fn intern(&mut self, ty: Type<'src>) -> Id {
-        Id(self.0.iter().position(|&it| it == ty).unwrap_or_else(|| {
-            let index = self.0.len();
-            self.0.push(ty);
-            index
-        }))
-    }
-
-    fn get(&self, id: Id) -> Type<'src> {
-        self.0[id.0]
-    }
-}
-
-#[derive(Clone, Copy, PartialEq)]
-struct Id(usize);
 
 impl ast::Block<'_> {
     fn diverges(self) -> bool {
