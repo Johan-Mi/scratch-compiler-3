@@ -412,7 +412,12 @@ fn evaluate<'src>(
 ) -> Option<Type<'src>> {
     let span = expression.variable()?.span();
     let variable = code_map.find_file(span.low()).source_slice(span);
-    Some(Type::from(match variable {
+    let shape = match expression.syntax().children().next().map(cst::Node::kind) {
+        Some(K::Lbracket) => Shape::List,
+        Some(K::Star) => Shape::Ref,
+        _ => Shape::Flat,
+    };
+    let base = match variable {
         "Unit" => Base::Unit,
         "Num" => Base::Num,
         "String" => Base::String,
@@ -435,7 +440,8 @@ fn evaluate<'src>(
                     None
                 })?,
         ),
-    }))
+    };
+    Some(Type { shape, base })
 }
 
 fn resolve_call<'src>(
