@@ -348,27 +348,13 @@ impl<'src> Return<'src> {
     }
 }
 
-#[derive(Clone, Copy)]
-pub enum TypeExpression<'src> {
-    TypeVariable(TypeVariable<'src>),
-}
+node!(TypeExpression);
 
-impl<'src> Node<'src> for TypeExpression<'src> {
-    fn cast(node: SyntaxNode<'src>) -> Option<Self> {
-        match node.kind() {
-            K::TypeVariable => Node::cast(node).map(Self::TypeVariable),
-            _ => None,
-        }
-    }
-
-    fn syntax(self) -> SyntaxNode<'src> {
-        match self {
-            TypeExpression::TypeVariable(inner) => inner.syntax,
-        }
+impl<'src> TypeExpression<'src> {
+    pub fn variable(self) -> Option<SyntaxNode<'src>> {
+        token(self.syntax, K::Identifier)
     }
 }
-
-node!(TypeVariable);
 
 #[derive(Clone, Copy)]
 pub enum Expression<'src> {

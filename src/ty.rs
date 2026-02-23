@@ -410,35 +410,31 @@ fn evaluate<'src>(
     code_map: &CodeMap,
     diagnostics: &mut Diagnostics,
 ) -> Option<Type<'src>> {
-    Some(Type::from(match expression {
-        ast::TypeExpression::TypeVariable(variable) => {
-            let span = variable.syntax().span();
-            let variable = code_map.find_file(span.low()).source_slice(span);
-            match variable {
-                "Unit" => Base::Unit,
-                "Num" => Base::Num,
-                "String" => Base::String,
-                "Bool" => Base::Bool,
-                _ => Base::Struct(
-                    documents
-                        .iter()
-                        .find_map(|document| {
-                            let file = code_map.find_file(document.root().span().low());
-                            ast::Document::cast(document.root())
-                                .unwrap()
-                                .structs()
-                                .find(|it| {
-                                    it.name()
-                                        .is_some_and(|it| file.source_slice(it.span()) == variable)
-                                })
+    let span = expression.variable()?.span();
+    let variable = code_map.find_file(span.low()).source_slice(span);
+    Some(Type::from(match variable {
+        "Unit" => Base::Unit,
+        "Num" => Base::Num,
+        "String" => Base::String,
+        "Bool" => Base::Bool,
+        _ => Base::Struct(
+            documents
+                .iter()
+                .find_map(|document| {
+                    let file = code_map.find_file(document.root().span().low());
+                    ast::Document::cast(document.root())
+                        .unwrap()
+                        .structs()
+                        .find(|it| {
+                            it.name()
+                                .is_some_and(|it| file.source_slice(it.span()) == variable)
                         })
-                        .or_else(|| {
-                            diagnostics.error("undefined type variable", [primary(span, "")]);
-                            None
-                        })?,
-                ),
-            }
-        }
+                })
+                .or_else(|| {
+                    diagnostics.error("undefined type variable", [primary(span, "")]);
+                    None
+                })?,
+        ),
     }))
 }
 

@@ -114,7 +114,7 @@ pub enum K {
     MethodCall,
     FieldAccess,
     Return,
-    TypeVariable,
+    TypeExpression,
 
     #[token("(")]
     Lparen,
@@ -434,13 +434,28 @@ impl Parser<'_> {
     }
 
     fn parse_type_expression(&mut self) {
-        if self.at(K::Identifier) {
-            self.start_node(K::TypeVariable);
-            self.bump();
-            self.builder.finish_node();
-        } else {
+        match self.peek() {
+            K::Lbracket => {
+                self.start_node(K::TypeExpression);
+                self.bump();
+                if !self.eat(K::Rbracket) {
+                    self.error();
+                }
+            }
+            K::Star => {
+                self.start_node(K::TypeExpression);
+                self.bump();
+            }
+            K::Identifier => self.start_node(K::TypeExpression),
+            _ => {
+                self.error();
+                return;
+            }
+        }
+        if !self.eat(K::Identifier) {
             self.error();
         }
+        self.builder.finish_node();
     }
 
     fn parse_expression(&mut self) {
