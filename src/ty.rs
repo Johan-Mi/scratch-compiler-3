@@ -117,6 +117,14 @@ pub fn check(documents: &[cst::Tree<K>], code_map: &CodeMap, diagnostics: &mut D
     {
         if let Some(body) = function.body() {
             c.return_ty = return_ty(function, &c);
+            if let Some(return_ty) = c.return_ty
+                && matches!(return_ty.shape, Shape::List | Shape::Ref)
+            {
+                c.diagnostics.error(
+                    format!("type `{}` cannot be used at runtime", return_ty.display(&c)),
+                    [primary(function.return_ty().unwrap().syntax().span(), "")],
+                );
+            }
             check_block(body, &mut c);
             if c.return_ty.is_some_and(|it| it != Base::Unit) && !body.diverges() {
                 c.diagnostics.error(
