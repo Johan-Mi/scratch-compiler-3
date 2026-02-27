@@ -152,6 +152,12 @@ fn check_statement<'src>(statement: ast::Statement<'src>, c: &mut Checker<'src>)
                 && let Some(variable) = it.variable()
             {
                 assert!(c.variable_types.insert(variable.span().low(), ty).is_none());
+                if matches!(ty.shape, Shape::List | Shape::Ref) {
+                    c.diagnostics.error(
+                        format!("type `{}` cannot be used at runtime", ty.display(c)),
+                        [primary(value.syntax().span(), "")],
+                    );
+                }
             }
         }
         ast::Statement::If(it) => {
