@@ -32,8 +32,12 @@ fn real_main(code_map: &mut CodeMap, diagnostics: &mut Diagnostics) -> Result<()
 
     let mut string_literals = HashMap::new();
 
-    let csts = args
-        .map(|source_path| {
+    let builtins = include_str!("builtins.sc3");
+    let builtins = code_map.add_file("<builtins>".to_owned(), builtins.to_owned());
+    let builtins = parser::parse(&builtins, &mut string_literals, diagnostics);
+
+    let csts = std::iter::once(Ok(builtins))
+        .chain(args.map(|source_path| {
             let source_code = std::fs::read_to_string(&source_path).map_err(|err| {
                 diagnostics.error("failed to read source code", []);
                 diagnostics.note(err.to_string(), []);
@@ -44,7 +48,7 @@ fn real_main(code_map: &mut CodeMap, diagnostics: &mut Diagnostics) -> Result<()
                 &mut string_literals,
                 diagnostics,
             ))
-        })
+        }))
         .collect::<Result<Vec<_>, _>>()?;
 
     #[cfg(debug_assertions)]
