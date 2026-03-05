@@ -40,24 +40,6 @@ impl Diagnostics {
         });
     }
 
-    pub fn warning(&mut self, message: impl Into<String>, labels: impl Into<Vec<SpanLabel>>) {
-        self.0.push(Diagnostic {
-            level: Level::Warning,
-            message: message.into(),
-            code: None,
-            spans: labels.into(),
-        });
-    }
-
-    pub fn help(&mut self, message: impl Into<String>, labels: impl Into<Vec<SpanLabel>>) {
-        self.0.push(Diagnostic {
-            level: Level::Help,
-            message: message.into(),
-            code: None,
-            spans: labels.into(),
-        });
-    }
-
     pub fn have_errors(&self) -> bool {
         self.0.iter().any(|it| it.level == Level::Error)
     }
