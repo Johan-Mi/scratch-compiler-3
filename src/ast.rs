@@ -504,10 +504,6 @@ impl<'src> ListLiteral<'src> {
     pub fn iter(self) -> impl Iterator<Item = Expression<'src>> {
         children(self.syntax)
     }
-
-    pub fn lbracket(self) -> SyntaxNode<'src> {
-        token(self.syntax, K::Lbracket).unwrap()
-    }
 }
 
 node!(TypeAscription);
