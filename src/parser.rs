@@ -89,7 +89,7 @@ pub enum K {
     Costume,
     Function,
     Generics,
-    FunctionParameters,
+    Parameters,
     Parameter,
     ExternalParameterName,
     Block,
@@ -501,7 +501,7 @@ impl Parser<'_> {
     }
 
     fn parse_function_parameters(&mut self) {
-        self.start_node(K::FunctionParameters);
+        self.start_node(K::Parameters);
         self.bump(); // K::Lparen
         while !self.at(K::Eof) && !self.eat(K::Rparen) {
             if self.at(K::Comma) {

@@ -133,7 +133,7 @@ impl<'src> Function<'src> {
         child(self.syntax)
     }
 
-    pub fn parameters(self) -> Option<FunctionParameters<'src>> {
+    pub fn parameters(self) -> Option<Parameters<'src>> {
         child(self.syntax)
     }
 
@@ -156,9 +156,9 @@ impl<'src> Generics<'src> {
     }
 }
 
-node!(FunctionParameters);
+node!(Parameters);
 
-impl<'src> FunctionParameters<'src> {
+impl<'src> Parameters<'src> {
     pub fn iter(self) -> impl Iterator<Item = Parameter<'src>> {
         children(self.syntax)
     }
@@ -598,7 +598,7 @@ impl<'src> FunctionLike<'src> {
                 Either::Left(
                     it.parameters()
                         .into_iter()
-                        .flat_map(FunctionParameters::iter)
+                        .flat_map(Parameters::iter)
                         .map(|it| Some(it.external_name()?.syntax)),
                 )
             },
@@ -619,7 +619,7 @@ impl<'src> FunctionLike<'src> {
                 Either::Left(
                     it.parameters()
                         .into_iter()
-                        .flat_map(FunctionParameters::iter)
+                        .flat_map(Parameters::iter)
                         .map(Parameter::ty),
                 )
             },
