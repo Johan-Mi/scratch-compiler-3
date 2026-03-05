@@ -409,12 +409,6 @@ impl<'src> Parenthesized<'src> {
 
 node!(Variable);
 
-impl<'src> Variable<'src> {
-    pub fn identifier(self) -> SyntaxNode<'src> {
-        token(self.syntax, K::Identifier).unwrap()
-    }
-}
-
 node!(FunctionCall);
 
 impl<'src> FunctionCall<'src> {
