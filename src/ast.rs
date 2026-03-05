@@ -1,3 +1,4 @@
+use crate::either::Either;
 use crate::parser::{K, SyntaxNode};
 
 pub trait Node<'src>: Sized {
@@ -571,4 +572,75 @@ fn children<'src, N: Node<'src>>(syntax: SyntaxNode<'src>) -> impl Iterator<Item
 
 fn token(syntax: SyntaxNode<'_>, kind: K) -> Option<SyntaxNode<'_>> {
     syntax.children().find(|it| it.kind() == kind)
+}
+
+#[derive(Clone, Copy)]
+pub struct FunctionLike<'src> {
+    syntax: SyntaxNode<'src>,
+}
+
+impl<'src> From<Function<'src>> for FunctionLike<'src> {
+    fn from(value: Function<'src>) -> Self {
+        let syntax = value.syntax;
+        Self { syntax }
+    }
+}
+
+impl<'src> From<Struct<'src>> for FunctionLike<'src> {
+    fn from(value: Struct<'src>) -> Self {
+        let syntax = value.syntax;
+        Self { syntax }
+    }
+}
+
+impl<'src> FunctionLike<'src> {
+    pub const fn syntax(self) -> SyntaxNode<'src> {
+        self.syntax
+    }
+
+    pub fn name(self) -> Option<SyntaxNode<'src>> {
+        token(self.syntax, K::Identifier)
+    }
+
+    pub fn labels(self) -> impl Iterator<Item = Option<SyntaxNode<'src>>> {
+        Function::cast(self.syntax).map_or_else(
+            || {
+                Either::Right(
+                    Struct::cast(self.syntax)
+                        .unwrap()
+                        .fields()
+                        .map(|it| Some(it.name())),
+                )
+            },
+            |it| {
+                Either::Left(
+                    it.parameters()
+                        .into_iter()
+                        .flat_map(FunctionParameters::iter)
+                        .map(|it| Some(it.external_name()?.syntax)),
+                )
+            },
+        )
+    }
+
+    pub fn types(self) -> impl Iterator<Item = Option<TypeExpression<'src>>> {
+        Function::cast(self.syntax).map_or_else(
+            || {
+                Either::Right(
+                    Struct::cast(self.syntax)
+                        .unwrap()
+                        .fields()
+                        .map(FieldDefinition::ty),
+                )
+            },
+            |it| {
+                Either::Left(
+                    it.parameters()
+                        .into_iter()
+                        .flat_map(FunctionParameters::iter)
+                        .map(Parameter::ty),
+                )
+            },
+        )
+    }
 }

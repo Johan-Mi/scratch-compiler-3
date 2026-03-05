@@ -3,6 +3,7 @@ mod codegen;
 #[cfg(debug_assertions)]
 mod debug;
 mod diagnostics;
+mod either;
 mod mir;
 mod name;
 mod parser;

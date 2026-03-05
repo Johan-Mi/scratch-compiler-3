@@ -116,7 +116,7 @@ pub fn check(documents: &[cst::Tree<K>], code_map: &CodeMap, diagnostics: &mut D
         .filter_map(ast::Function::cast)
     {
         if let Some(body) = function.body() {
-            c.return_ty = return_ty(function, &c);
+            c.return_ty = return_ty(function.into(), &c);
             if let Some(return_ty) = c.return_ty
                 && matches!(return_ty.shape, Shape::List | Shape::Ref)
             {
@@ -411,11 +411,19 @@ fn of_field_access<'src>(it: ast::FieldAccess<'src>, c: &mut Checker<'src>) -> O
         .copied()
 }
 
-fn return_ty<'src>(function: ast::Function<'src>, c: &Checker<'src>) -> Option<Type<'src>> {
-    let Some(ty) = function.return_ty() else {
-        return Some(Base::Unit.into());
-    };
-    c.type_expressions.get(&ty.syntax().span()).copied()
+fn return_ty<'src>(
+    function_like: ast::FunctionLike<'src>,
+    c: &Checker<'src>,
+) -> Option<Type<'src>> {
+    if let Some(it) = ast::Function::cast(function_like.syntax()) {
+        let Some(ty) = it.return_ty() else {
+            return Some(Base::Unit.into());
+        };
+        c.type_expressions.get(&ty.syntax().span()).copied()
+    } else {
+        let it = ast::Struct::cast(function_like.syntax()).unwrap();
+        Some(Base::Struct(it).into())
+    }
 }
 
 fn evaluate<'src>(
@@ -462,7 +470,7 @@ fn resolve_call<'src>(
     name: Span,
     arguments: &mut dyn Iterator<Item = ast::Expression<'src>>,
     c: &mut Checker<'src>,
-) -> Option<ast::Function<'src>> {
+) -> Option<ast::FunctionLike<'src>> {
     let file = c.code_map.find_file(name.low());
     let name_text = file.source_slice(name);
 
@@ -477,10 +485,18 @@ fn resolve_call<'src>(
             .flat_map(|it| ast::Document::cast(it.root()).unwrap().sprites())
             .filter(|it| it.syntax().span().contains(name))
             .flat_map(ast::Sprite::functions);
-        global_functions.chain(sprite_functions)
+        let structs = c
+            .documents
+            .iter()
+            .flat_map(|it| ast::Document::cast(it.root()).unwrap().structs())
+            .map(ast::FunctionLike::from);
+        global_functions
+            .chain(sprite_functions)
+            .map(ast::FunctionLike::from)
+            .chain(structs)
     };
 
-    let all_overloads: Vec<ast::Function> = all_in_scope
+    let all_overloads: Vec<ast::FunctionLike> = all_in_scope
         .filter(|function| {
             let span = function.name().map(cst::Node::span);
             span.is_some_and(|it| c.code_map.find_file(it.low()).source_slice(it) == name_text)
@@ -505,22 +521,20 @@ fn resolve_call<'src>(
         })
         .collect();
 
-    let viable_overloads: Vec<ast::Function> = all_overloads
+    let viable_overloads: Vec<ast::FunctionLike> = all_overloads
         .iter()
         .copied()
         .filter(|it| {
-            it.parameters().is_none_or(|it| {
-                let file = c.code_map.find_file(it.syntax().span().low());
-                it.iter()
-                    .map(|it| Some(file.source_slice(it.external_name()?.syntax().span())))
-                    .eq(labels.iter().copied())
-                    && it
-                        .iter()
-                        .map(|it| c.type_expressions.get(&it.ty()?.syntax().span()).copied())
-                        .zip(argument_types.iter().copied())
-                        .filter_map(|(a, b)| a.zip(b))
-                        .all(|(a, b)| a == b)
-            })
+            let file = c.code_map.find_file(it.syntax().span().low());
+            it.labels()
+                .map(|it| Some(file.source_slice(it?.span())))
+                .eq(labels.iter().copied())
+                && it
+                    .types()
+                    .map(|it| c.type_expressions.get(&it?.syntax().span()).copied())
+                    .zip(argument_types.iter().copied())
+                    .filter_map(|(a, b)| a.zip(b))
+                    .all(|(a, b)| a == b)
         })
         .collect();
     match *viable_overloads {
