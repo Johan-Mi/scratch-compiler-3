@@ -40,10 +40,6 @@ impl<'src> Document<'src> {
     pub fn functions(self) -> impl Iterator<Item = Function<'src>> {
         children(self.syntax)
     }
-
-    pub fn lets(self) -> impl Iterator<Item = Let<'src>> {
-        children(self.syntax)
-    }
 }
 
 node!(Struct);
@@ -88,10 +84,6 @@ impl<'src> Sprite<'src> {
     }
 
     pub fn functions(self) -> impl Iterator<Item = Function<'src>> {
-        children(self.syntax)
-    }
-
-    pub fn lets(self) -> impl Iterator<Item = Let<'src>> {
         children(self.syntax)
     }
 }
