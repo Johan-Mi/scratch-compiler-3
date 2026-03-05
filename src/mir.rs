@@ -4,6 +4,7 @@ mod lowering;
 
 pub use lowering::lower;
 
+use crate::either::Either;
 use map::{Id, Map};
 use std::collections::{BTreeMap, HashMap};
 
@@ -137,19 +138,3 @@ pub enum Ref {
 pub struct Variable;
 
 pub struct List;
-
-enum Either<L, R> {
-    Left(L),
-    Right(R),
-}
-
-impl<I, L: Iterator<Item = I>, R: Iterator<Item = I>> Iterator for Either<L, R> {
-    type Item = I;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match self {
-            Self::Left(it) => it.next(),
-            Self::Right(it) => it.next(),
-        }
-    }
-}
