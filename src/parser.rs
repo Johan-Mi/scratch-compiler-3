@@ -536,13 +536,15 @@ impl Parser<'_> {
             }
             if self.at(K::Comma) {
                 let span = self.peek_span();
-                self.diagnostics
-                    .error("unexpected `,`", [primary(span, "expected expression")]);
+                self.diagnostics.error(
+                    "unexpected `,`",
+                    [primary(span, "expected type expression")],
+                );
             } else if self.at(K::Rparen) {
                 let span = self.peek_span();
                 self.diagnostics.error(
                     "unexpected end of parameter list",
-                    [primary(span, "expected expression")],
+                    [primary(span, "expected type expression")],
                 );
             } else {
                 self.parse_type_expression();
