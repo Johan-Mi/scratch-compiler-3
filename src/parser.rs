@@ -500,7 +500,7 @@ impl Parser<'_> {
         }
     }
 
-    fn parse_function_parameters(&mut self) {
+    fn parse_parameters(&mut self) {
         self.start_node(K::Parameters);
         self.bump(); // K::Lparen
         while !self.at(K::Eof) && !self.eat(K::Rparen) {
@@ -714,7 +714,7 @@ impl Parser<'_> {
             self.parse_generics();
         }
         if self.at(K::Lparen) {
-            self.parse_function_parameters();
+            self.parse_parameters();
         }
         if self.eat(K::Arrow) {
             self.parse_type_expression();
