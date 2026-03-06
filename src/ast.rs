@@ -1,4 +1,3 @@
-use crate::either::Either;
 use crate::parser::{K, SyntaxNode};
 
 pub trait Node<'src>: Sized {
@@ -55,19 +54,7 @@ impl<'src> Struct<'src> {
         token(self.syntax, K::Identifier)
     }
 
-    pub fn fields(self) -> impl Iterator<Item = FieldDefinition<'src>> {
-        children(self.syntax)
-    }
-}
-
-node!(FieldDefinition);
-
-impl<'src> FieldDefinition<'src> {
-    pub fn name(self) -> SyntaxNode<'src> {
-        token(self.syntax, K::Identifier).unwrap()
-    }
-
-    pub fn ty(self) -> Option<TypeExpression<'src>> {
+    pub fn parameters(self) -> Option<Parameters<'src>> {
         child(self.syntax)
     }
 }
@@ -167,20 +154,22 @@ impl<'src> Parameters<'src> {
 node!(Parameter);
 
 impl<'src> Parameter<'src> {
-    pub fn external_name(self) -> Option<ExternalParameterName<'src>> {
-        child(self.syntax)
+    pub fn external_name(self) -> SyntaxNode<'src> {
+        token(self.syntax, K::Identifier).unwrap()
     }
 
-    pub fn internal_name(self) -> Option<SyntaxNode<'src>> {
-        token(self.syntax, K::Identifier)
+    pub fn internal_name(self) -> SyntaxNode<'src> {
+        self.syntax
+            .children()
+            .filter(|it| it.kind() == K::Identifier)
+            .last()
+            .unwrap()
     }
 
     pub fn ty(self) -> Option<TypeExpression<'src>> {
         child(self.syntax)
     }
 }
-
-node!(ExternalParameterName);
 
 node!(Block);
 
@@ -584,45 +573,7 @@ impl<'src> FunctionLike<'src> {
         token(self.syntax, K::Identifier)
     }
 
-    pub fn labels(self) -> impl Iterator<Item = Option<SyntaxNode<'src>>> {
-        Function::cast(self.syntax).map_or_else(
-            || {
-                Either::Right(
-                    Struct::cast(self.syntax)
-                        .unwrap()
-                        .fields()
-                        .map(|it| Some(it.name())),
-                )
-            },
-            |it| {
-                Either::Left(
-                    it.parameters()
-                        .into_iter()
-                        .flat_map(Parameters::iter)
-                        .map(|it| Some(it.external_name()?.syntax)),
-                )
-            },
-        )
-    }
-
-    pub fn types(self) -> impl Iterator<Item = Option<TypeExpression<'src>>> {
-        Function::cast(self.syntax).map_or_else(
-            || {
-                Either::Right(
-                    Struct::cast(self.syntax)
-                        .unwrap()
-                        .fields()
-                        .map(FieldDefinition::ty),
-                )
-            },
-            |it| {
-                Either::Left(
-                    it.parameters()
-                        .into_iter()
-                        .flat_map(Parameters::iter)
-                        .map(Parameter::ty),
-                )
-            },
-        )
+    pub fn parameters(self) -> Option<Parameters<'src>> {
+        child(self.syntax)
     }
 }

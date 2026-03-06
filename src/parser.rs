@@ -83,7 +83,6 @@ pub enum K {
 
     Document,
     Struct,
-    FieldDefinition,
     Sprite,
     CostumeList,
     Costume,
@@ -91,7 +90,6 @@ pub enum K {
     Generics,
     Parameters,
     Parameter,
-    ExternalParameterName,
     Block,
     Variable,
     FunctionCall,
@@ -343,26 +341,9 @@ impl Parser<'_> {
         if !self.at(K::Lbrace) && !self.eat(K::Identifier) {
             self.error();
         }
-        if self.eat(K::Lbrace) {
-            while !self.at(K::Eof) && !self.eat(K::Rbrace) {
-                if self.at(K::Identifier) {
-                    self.parse_field_definition();
-                } else {
-                    self.error();
-                }
-            }
+        if self.at(K::Lparen) {
+            self.parse_parameters();
         }
-        self.builder.finish_node();
-    }
-
-    fn parse_field_definition(&mut self) {
-        self.start_node(K::FieldDefinition);
-        self.bump(); // K::Identifier
-        if !self.eat(K::Colon) {
-            self.error();
-        }
-        self.parse_type_expression();
-        let _: bool = self.eat(K::Comma);
         self.builder.finish_node();
     }
 
@@ -525,9 +506,7 @@ impl Parser<'_> {
             }
 
             self.start_node(K::Parameter);
-            self.start_node(K::ExternalParameterName);
             self.bump();
-            self.builder.finish_node();
             if !self.at(K::Colon) && !self.eat(K::Identifier) {
                 self.error();
             }

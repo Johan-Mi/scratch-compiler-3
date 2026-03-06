@@ -75,8 +75,7 @@ pub fn check(documents: &[cst::Tree<K>], code_map: &CodeMap, diagnostics: &mut D
         .iter()
         .flat_map(|it| it.root().pre_order())
         .filter_map(|it| {
-            None.or_else(|| Node::cast(it).map(ast::FieldDefinition::ty))
-                .or_else(|| Node::cast(it).map(ast::Parameter::ty))
+            None.or_else(|| Node::cast(it).map(ast::Parameter::ty))
                 .or_else(|| Node::cast(it).map(ast::TypeAscription::ty))?
         })
         .filter_map(|it| {
@@ -393,10 +392,10 @@ fn of_field_access<'src>(it: ast::FieldAccess<'src>, c: &mut Checker<'src>) -> O
         return None;
     };
     let file = c.code_map.find_file(r#struct.syntax().span().low());
-    let Some(field) = r#struct
-        .fields()
-        .find(|it| file.source_slice(it.name().span()) == name)
-    else {
+    let Some(field) = r#struct.parameters().and_then(|it| {
+        it.iter()
+            .find(|it| file.source_slice(it.internal_name().span()) == name)
+    }) else {
         c.diagnostics.error(
             format!(
                 "type `{}` has no field named `{name}`",
@@ -526,12 +525,16 @@ fn resolve_call<'src>(
         .copied()
         .filter(|it| {
             let file = c.code_map.find_file(it.syntax().span().low());
-            it.labels()
-                .map(|it| Some(file.source_slice(it?.span())))
+            it.parameters()
+                .into_iter()
+                .flat_map(ast::Parameters::iter)
+                .map(|it| Some(file.source_slice(it.external_name().span())))
                 .eq(labels.iter().copied())
                 && it
-                    .types()
-                    .map(|it| c.type_expressions.get(&it?.syntax().span()).copied())
+                    .parameters()
+                    .into_iter()
+                    .flat_map(ast::Parameters::iter)
+                    .map(|it| c.type_expressions.get(&it.ty()?.syntax().span()).copied())
                     .zip(argument_types.iter().copied())
                     .filter_map(|(a, b)| a.zip(b))
                     .all(|(a, b)| a == b)

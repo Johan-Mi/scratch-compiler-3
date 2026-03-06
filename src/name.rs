@@ -20,9 +20,9 @@ pub fn resolve(document: SyntaxNode, code_map: &CodeMap) -> impl Iterator<Item =
         .filter_map(ast::Function::cast)
         .filter_map(|it| Some((it.body()?.syntax().span(), it.parameters()?)))
         .flat_map(|(scope, parameters)| {
-            parameters.iter().filter_map(move |it| {
-                let identifier = it.internal_name()?.span();
-                Some(Definition { identifier, scope })
+            parameters.iter().map(move |it| {
+                let identifier = it.internal_name().span();
+                Definition { identifier, scope }
             })
         });
     let fors = document.pre_order().filter_map(|node| {
