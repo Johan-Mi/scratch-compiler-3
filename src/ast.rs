@@ -345,7 +345,13 @@ pub enum Expression<'src> {
     FunctionCall(FunctionCall<'src>),
     BinaryOperation(BinaryOperation<'src>),
     NamedArgument(NamedArgument<'src>),
-    Literal(Literal<'src>),
+    DecimalNumber(DecimalNumber<'src>),
+    BinaryNumber(BinaryNumber<'src>),
+    OctalNumber(OctalNumber<'src>),
+    HexadecimalNumber(HexadecimalNumber<'src>),
+    String(String<'src>),
+    KwFalse(KwFalse<'src>),
+    KwTrue(KwTrue<'src>),
     Lvalue(Lvalue<'src>),
     ListLiteral(ListLiteral<'src>),
     TypeAscription(TypeAscription<'src>),
@@ -361,7 +367,13 @@ impl<'src> Node<'src> for Expression<'src> {
             K::FunctionCall => Node::cast(node).map(Self::FunctionCall),
             K::BinaryOperation => Node::cast(node).map(Self::BinaryOperation),
             K::NamedArgument => Node::cast(node).map(Self::NamedArgument),
-            K::Literal => Node::cast(node).map(Self::Literal),
+            K::DecimalNumber => Node::cast(node).map(Self::DecimalNumber),
+            K::BinaryNumber => Node::cast(node).map(Self::BinaryNumber),
+            K::OctalNumber => Node::cast(node).map(Self::OctalNumber),
+            K::HexadecimalNumber => Node::cast(node).map(Self::HexadecimalNumber),
+            K::String => Node::cast(node).map(Self::String),
+            K::KwFalse => Node::cast(node).map(Self::KwFalse),
+            K::KwTrue => Node::cast(node).map(Self::KwTrue),
             K::Lvalue => Node::cast(node).map(Self::Lvalue),
             K::ListLiteral => Node::cast(node).map(Self::ListLiteral),
             K::TypeAscription => Node::cast(node).map(Self::TypeAscription),
@@ -378,7 +390,13 @@ impl<'src> Node<'src> for Expression<'src> {
             Self::BinaryOperation(inner) => inner.syntax,
             Self::Parenthesized(inner) => inner.syntax,
             Self::NamedArgument(inner) => inner.syntax,
-            Self::Literal(inner) => inner.syntax,
+            Self::DecimalNumber(inner) => inner.syntax,
+            Self::BinaryNumber(inner) => inner.syntax,
+            Self::OctalNumber(inner) => inner.syntax,
+            Self::HexadecimalNumber(inner) => inner.syntax,
+            Self::String(inner) => inner.syntax,
+            Self::KwFalse(inner) => inner.syntax,
+            Self::KwTrue(inner) => inner.syntax,
             Self::Lvalue(inner) => inner.syntax,
             Self::ListLiteral(inner) => inner.syntax,
             Self::TypeAscription(inner) => inner.syntax,
@@ -457,13 +475,13 @@ impl<'src> NamedArgument<'src> {
     }
 }
 
-node!(Literal);
-
-impl<'src> Literal<'src> {
-    pub fn token(self) -> SyntaxNode<'src> {
-        self.syntax.children().next().unwrap()
-    }
-}
+node!(DecimalNumber);
+node!(BinaryNumber);
+node!(OctalNumber);
+node!(HexadecimalNumber);
+node!(String);
+node!(KwFalse);
+node!(KwTrue);
 
 node!(Lvalue);
 

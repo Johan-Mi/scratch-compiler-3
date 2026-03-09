@@ -275,14 +275,12 @@ fn of<'src>(
             c,
         ),
         ast::Expression::NamedArgument(it) => of(it.value()?, ascribed, c),
-        ast::Expression::Literal(it) => Some(match it.token().kind() {
-            K::DecimalNumber | K::BinaryNumber | K::OctalNumber | K::HexadecimalNumber => {
-                Base::Num.into()
-            }
-            K::String => Base::String.into(),
-            K::KwFalse | K::KwTrue => Base::Bool.into(),
-            _ => unreachable!(),
-        }),
+        ast::Expression::DecimalNumber(_)
+        | ast::Expression::BinaryNumber(_)
+        | ast::Expression::OctalNumber(_)
+        | ast::Expression::HexadecimalNumber(_) => Some(Base::Num.into()),
+        ast::Expression::String(_) => Some(Base::String.into()),
+        ast::Expression::KwFalse(_) | ast::Expression::KwTrue(_) => Some(Base::Bool.into()),
         ast::Expression::Lvalue(it) => {
             let inner = of(it.inner()?, None, c)?;
             match inner.shape {

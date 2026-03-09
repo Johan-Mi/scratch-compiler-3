@@ -105,7 +105,6 @@ pub enum K {
     For,
     Parenthesized,
     BinaryOperation,
-    Literal,
     Lvalue,
     ListLiteral,
     TypeAscription,
@@ -398,11 +397,7 @@ impl Parser<'_> {
             | K::HexadecimalNumber
             | K::String
             | K::KwFalse
-            | K::KwTrue => {
-                self.start_node(K::Literal);
-                self.bump();
-                self.builder.finish_node();
-            }
+            | K::KwTrue => self.bump(),
             K::Ampersand => {
                 self.start_node(K::Lvalue);
                 self.bump();
