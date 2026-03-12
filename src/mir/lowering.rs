@@ -80,7 +80,7 @@ fn lower_statement(
         ast::Statement::Until(_) => todo!(),
         ast::Statement::For(_) => todo!(),
         ast::Statement::Return(_) => todo!(),
-        ast::Statement::Expression(_) => todo!(),
+        ast::Statement::Expression(it) => assert!(lower_expression(it, program).is_empty()),
     }
 }
 
