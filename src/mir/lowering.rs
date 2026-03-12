@@ -2,7 +2,7 @@ use crate::ast::{self, Node};
 use crate::{mir, parser::K};
 use map::{Id, Map};
 
-pub fn lower(documents: &[cst::Tree<K>]) -> mir::Program {
+pub fn lower(documents: &[cst::Tree<K>], code_map: &codemap::CodeMap) -> mir::Program {
     let program = mir::Program {
         parameters: Map::default(),
         basic_blocks: Map::default(),
@@ -12,7 +12,7 @@ pub fn lower(documents: &[cst::Tree<K>]) -> mir::Program {
         returns: Map::default(),
     };
 
-    let mut context = Context { program };
+    let mut context = Context { program, code_map };
 
     for function_body in documents
         .iter()
@@ -31,8 +31,9 @@ pub fn lower(documents: &[cst::Tree<K>]) -> mir::Program {
     context.program
 }
 
-struct Context {
+struct Context<'src> {
     program: mir::Program,
+    code_map: &'src codemap::CodeMap,
 }
 
 fn lower_block(block: ast::Block, c: &mut Context) -> Id<mir::BasicBlock> {
