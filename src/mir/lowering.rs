@@ -103,44 +103,37 @@ fn lower_expression(expression: ast::Expression, c: &mut Context) -> Vec<mir::Va
             let span = it.syntax().span();
             let file = c.code_map.find_file(span.low());
             let text = file.source_slice(span);
-            let (is_negative, text) = match text.as_bytes() {
-                [b'+', b'0', b'b' | b'B', ..] => (false, &text[3..]),
-                [b'-', b'0', b'b' | b'B', ..] => (true, &text[3..]),
-                _ => (false, &text[2..]),
+            let (sign, text) = match text.as_bytes() {
+                [b'+', b'0', b'b' | b'B', ..] => (1.0, &text[3..]),
+                [b'-', b'0', b'b' | b'B', ..] => (-1.0, &text[3..]),
+                _ => (1.0, &text[2..]),
             };
-            [mir::Value::Num(
-                u64::from_str_radix(text, 2).unwrap() as f64 * if is_negative { -1.0 } else { 1.0 },
-            )]
-            .into()
+            let number = u64::from_str_radix(text, 2).unwrap() as f64 * sign;
+            [mir::Value::Num(number)].into()
         }
         ast::Expression::OctalNumber(it) => {
             let span = it.syntax().span();
             let file = c.code_map.find_file(span.low());
             let text = file.source_slice(span);
-            let (is_negative, text) = match text.as_bytes() {
-                [b'+', b'0', b'o' | b'O', ..] => (false, &text[3..]),
-                [b'-', b'0', b'o' | b'O', ..] => (true, &text[3..]),
-                _ => (false, &text[2..]),
+            let (sign, text) = match text.as_bytes() {
+                [b'+', b'0', b'o' | b'O', ..] => (1.0, &text[3..]),
+                [b'-', b'0', b'o' | b'O', ..] => (-1.0, &text[3..]),
+                _ => (1.0, &text[2..]),
             };
-            [mir::Value::Num(
-                u64::from_str_radix(text, 8).unwrap() as f64 * if is_negative { -1.0 } else { 1.0 },
-            )]
-            .into()
+            let number = u64::from_str_radix(text, 8).unwrap() as f64 * sign;
+            [mir::Value::Num(number)].into()
         }
         ast::Expression::HexadecimalNumber(it) => {
             let span = it.syntax().span();
             let file = c.code_map.find_file(span.low());
             let text = file.source_slice(span);
-            let (is_negative, text) = match text.as_bytes() {
-                [b'+', b'0', b'x' | b'X', ..] => (false, &text[3..]),
-                [b'-', b'0', b'x' | b'X', ..] => (true, &text[3..]),
-                _ => (false, &text[2..]),
+            let (sign, text) = match text.as_bytes() {
+                [b'+', b'0', b'x' | b'X', ..] => (1.0, &text[3..]),
+                [b'-', b'0', b'x' | b'X', ..] => (-1.0, &text[3..]),
+                _ => (1.0, &text[2..]),
             };
-            [mir::Value::Num(
-                u64::from_str_radix(text, 16).unwrap() as f64
-                    * if is_negative { -1.0 } else { 1.0 },
-            )]
-            .into()
+            let number = u64::from_str_radix(text, 16).unwrap() as f64 * sign;
+            [mir::Value::Num(number)].into()
         }
         ast::Expression::String(_) => todo!(),
         ast::Expression::KwFalse(_) => [mir::Value::Bool(false)].into(),
