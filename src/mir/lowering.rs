@@ -1,8 +1,13 @@
 use crate::ast::{self, Node};
 use crate::{mir, parser::K};
 use map::{Id, Map};
+use std::collections::HashMap;
 
-pub fn lower(documents: &[cst::Tree<K>], code_map: &codemap::CodeMap) -> mir::Program {
+pub fn lower(
+    documents: &[cst::Tree<K>],
+    code_map: &codemap::CodeMap,
+    string_literals: &HashMap<codemap::Pos, String>,
+) -> mir::Program {
     let program = mir::Program {
         parameters: Map::default(),
         basic_blocks: Map::default(),
@@ -12,7 +17,11 @@ pub fn lower(documents: &[cst::Tree<K>], code_map: &codemap::CodeMap) -> mir::Pr
         returns: Map::default(),
     };
 
-    let mut context = Context { program, code_map };
+    let mut context = Context {
+        program,
+        code_map,
+        string_literals,
+    };
 
     for function_body in documents
         .iter()
@@ -34,6 +43,7 @@ pub fn lower(documents: &[cst::Tree<K>], code_map: &codemap::CodeMap) -> mir::Pr
 struct Context<'src> {
     program: mir::Program,
     code_map: &'src codemap::CodeMap,
+    string_literals: &'src HashMap<codemap::Pos, String>,
 }
 
 fn lower_block(block: ast::Block, c: &mut Context) -> Id<mir::BasicBlock> {
@@ -135,7 +145,11 @@ fn lower_expression(expression: ast::Expression, c: &mut Context) -> Vec<mir::Va
             let number = u64::from_str_radix(text, 16).unwrap() as f64 * sign;
             [mir::Value::Num(number)].into()
         }
-        ast::Expression::String(_) => todo!(),
+        ast::Expression::String(it) => [mir::Value::String(
+            // FIXME
+            c.string_literals[&it.syntax().span().low()].clone().leak(),
+        )]
+        .into(),
         ast::Expression::KwFalse(_) => [mir::Value::Bool(false)].into(),
         ast::Expression::KwTrue(_) => [mir::Value::Bool(true)].into(),
         ast::Expression::Lvalue(_) => todo!(),
