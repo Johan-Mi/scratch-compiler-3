@@ -45,7 +45,7 @@ fn lower_statement(
     match statement {
         ast::Statement::Let(_) => todo!(),
         ast::Statement::If(it) => {
-            let condition = lower_expression(it.condition().unwrap(), program);
+            let condition = one(lower_expression(it.condition().unwrap(), program));
             let then = lower_block(it.then().unwrap(), program);
             let r#else = if let Some(else_clause) = it.else_clause() {
                 if let Some(else_if) = else_clause.if_() {
@@ -66,7 +66,7 @@ fn lower_statement(
             program.basic_blocks[basic_block].0.push(op);
         }
         ast::Statement::Repeat(it) => {
-            let times = lower_expression(it.times().unwrap(), program);
+            let times = one(lower_expression(it.times().unwrap(), program));
             let body = lower_block(it.body().unwrap(), program);
             let op = program.ops.insert(mir::Op::Repeat { times, body });
             program.basic_blocks[basic_block].0.push(op);
@@ -84,7 +84,7 @@ fn lower_statement(
     }
 }
 
-fn lower_expression(expression: ast::Expression, program: &mut mir::Program) -> mir::Value {
+fn lower_expression(expression: ast::Expression, program: &mut mir::Program) -> Vec<mir::Value> {
     match expression {
         ast::Expression::Parenthesized(it) => lower_expression(it.inner().unwrap(), program),
         ast::Expression::Variable(_) => todo!(),
@@ -96,8 +96,8 @@ fn lower_expression(expression: ast::Expression, program: &mut mir::Program) -> 
         ast::Expression::OctalNumber(_) => todo!(),
         ast::Expression::HexadecimalNumber(_) => todo!(),
         ast::Expression::String(_) => todo!(),
-        ast::Expression::KwFalse(_) => mir::Value::Bool(false),
-        ast::Expression::KwTrue(_) => mir::Value::Bool(true),
+        ast::Expression::KwFalse(_) => [mir::Value::Bool(false)].into(),
+        ast::Expression::KwTrue(_) => [mir::Value::Bool(true)].into(),
         ast::Expression::Lvalue(_) => todo!(),
         ast::Expression::ListLiteral(_) => todo!(),
         ast::Expression::TypeAscription(it) => lower_expression(it.inner().unwrap(), program),
@@ -106,6 +106,10 @@ fn lower_expression(expression: ast::Expression, program: &mut mir::Program) -> 
     }
 }
 
-fn lower_call(program: &mut mir::Program) -> ! {
+fn lower_call(program: &mut mir::Program) -> Vec<mir::Value> {
     todo!()
+}
+
+fn one(values: Vec<mir::Value>) -> mir::Value {
+    <[_; 1]>::try_from(values).unwrap_or_else(|_| unreachable!())[0]
 }
