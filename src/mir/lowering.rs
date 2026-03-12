@@ -94,7 +94,11 @@ fn lower_expression(expression: ast::Expression, c: &mut Context) -> Vec<mir::Va
         ast::Expression::FunctionCall(_) => lower_call(c),
         ast::Expression::BinaryOperation(_) => lower_call(c),
         ast::Expression::NamedArgument(_) => todo!(),
-        ast::Expression::DecimalNumber(_) => todo!(),
+        ast::Expression::DecimalNumber(it) => {
+            let span = it.syntax().span();
+            let file = c.code_map.find_file(span.low());
+            [mir::Value::Num(file.source_slice(span).parse().unwrap())].into()
+        }
         ast::Expression::BinaryNumber(_) => todo!(),
         ast::Expression::OctalNumber(_) => todo!(),
         ast::Expression::HexadecimalNumber(_) => todo!(),
