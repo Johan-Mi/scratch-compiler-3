@@ -75,7 +75,6 @@ fn parse_string_literal(text: &str, span: Span, diagnostics: &mut Diagnostics) -
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Logos)]
-#[repr(u16)]
 pub enum K {
     Eof = 0,
     #[regex(r"(\p{Whitespace}|#.*)+")]
