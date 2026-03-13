@@ -1,6 +1,7 @@
 use crate::ast::{self, Node};
 use crate::{mir, parser::K};
 use map::{Id, Map};
+use std::collections::HashMap;
 
 pub fn lower(documents: &[cst::Tree<K>], code_map: &codemap::CodeMap) -> mir::Program {
     let program = mir::Program {
@@ -12,7 +13,11 @@ pub fn lower(documents: &[cst::Tree<K>], code_map: &codemap::CodeMap) -> mir::Pr
         returns: Map::default(),
     };
 
-    let mut context = Context { program, code_map };
+    let mut context = Context {
+        program,
+        code_map,
+        variables: HashMap::new(),
+    };
 
     for function_body in documents
         .iter()
@@ -34,6 +39,7 @@ pub fn lower(documents: &[cst::Tree<K>], code_map: &codemap::CodeMap) -> mir::Pr
 struct Context<'src> {
     program: mir::Program,
     code_map: &'src codemap::CodeMap,
+    variables: HashMap<codemap::Pos, Vec<mir::Variable>>,
 }
 
 fn lower_block(block: ast::Block, c: &mut Context) -> Id<mir::BasicBlock> {
@@ -81,7 +87,17 @@ fn lower_statement(statement: ast::Statement, basic_block: Id<mir::BasicBlock>, 
         }
         ast::Statement::While(_) => todo!(),
         ast::Statement::Until(_) => todo!(),
-        ast::Statement::For(_) => todo!(),
+        ast::Statement::For(it) => {
+            let variable = c.program.variables.insert(mir::Variable);
+            let times = one(lower_expression(it.times().unwrap(), c));
+            let body = lower_block(it.body().unwrap(), c);
+            let op = c.program.ops.insert(mir::Op::For {
+                variable,
+                times,
+                body,
+            });
+            c.program.basic_blocks[basic_block].0.push(op);
+        }
         ast::Statement::Return(_) => todo!(),
         ast::Statement::Expression(it) => assert!(lower_expression(it, c).is_empty()),
     }

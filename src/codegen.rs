@@ -132,6 +132,17 @@ impl Compiler<'_> {
                 let _: sb3::InsertionPoint = self.target.insert_at(after);
                 None
             }
+            mir::Op::For {
+                variable,
+                times,
+                body,
+            } => {
+                let times = self.value(times);
+                let after = self.target.for_(self.variables[&variable].clone(), times);
+                self.basic_block(body, mir);
+                let _: sb3::InsertionPoint = self.target.insert_at(after);
+                None
+            }
             mir::Op::Forever(body) => {
                 self.target.forever();
                 self.basic_block(body, mir);

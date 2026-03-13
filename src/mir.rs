@@ -39,6 +39,11 @@ pub enum Op {
         times: Value,
         body: Id<BasicBlock>,
     },
+    For {
+        variable: Id<Variable>,
+        times: Value,
+        body: Id<BasicBlock>,
+    },
     Forever(Id<BasicBlock>),
     If {
         condition: Value,
@@ -72,6 +77,11 @@ impl Op {
                 times: arg,
                 body: _,
             }
+            | Self::For {
+                variable: _,
+                times: arg,
+                body: _,
+            }
             | Self::If {
                 condition: arg,
                 then: _,
@@ -100,6 +110,11 @@ impl Op {
                 source: Ref::List { index: arg, .. },
             }
             | Self::Repeat {
+                times: arg,
+                body: _,
+            }
+            | Self::For {
+                variable: _,
                 times: arg,
                 body: _,
             }
