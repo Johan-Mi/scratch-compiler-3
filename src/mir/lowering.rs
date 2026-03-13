@@ -39,7 +39,7 @@ pub fn lower(documents: &[cst::Tree<K>], code_map: &codemap::CodeMap) -> mir::Pr
 struct Context<'src> {
     program: mir::Program,
     code_map: &'src codemap::CodeMap,
-    variables: HashMap<codemap::Pos, Vec<mir::Variable>>,
+    variables: HashMap<codemap::Pos, Vec<Id<mir::Variable>>>,
 }
 
 fn lower_block(block: ast::Block, c: &mut Context) -> Id<mir::BasicBlock> {
@@ -89,6 +89,8 @@ fn lower_statement(statement: ast::Statement, basic_block: Id<mir::BasicBlock>, 
         ast::Statement::Until(_) => todo!(),
         ast::Statement::For(it) => {
             let variable = c.program.variables.insert(mir::Variable);
+            let pos = it.variable().unwrap().span().low();
+            assert!(c.variables.insert(pos, [variable].into()).is_none());
             let times = one(lower_expression(it.times().unwrap(), c));
             let body = lower_block(it.body().unwrap(), c);
             let op = c.program.ops.insert(mir::Op::For {
