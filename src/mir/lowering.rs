@@ -70,17 +70,16 @@ fn lower_statement(statement: ast::Statement, basic_block: Id<mir::BasicBlock>, 
         ast::Statement::If(it) => {
             let condition = one(lower_expression(it.condition().unwrap(), c));
             let then = lower_block(it.then().unwrap(), c);
-            let r#else = if let Some(else_clause) = it.else_clause() {
+            let r#else = c.program.basic_blocks.insert(mir::BasicBlock(Vec::new()));
+            if let Some(else_clause) = it.else_clause() {
                 if let Some(else_if) = else_clause.if_() {
-                    let else_block = c.program.basic_blocks.insert(mir::BasicBlock(Vec::new()));
-                    lower_statement(ast::Statement::If(else_if), else_block, c);
-                    else_block
+                    lower_statement(ast::Statement::If(else_if), r#else, c);
                 } else {
-                    lower_block(else_clause.block().unwrap(), c)
+                    for statement in else_clause.block().unwrap().statements() {
+                        lower_statement(statement, r#else, c);
+                    }
                 }
-            } else {
-                c.program.basic_blocks.insert(mir::BasicBlock(Vec::new()))
-            };
+            }
             let op = c.program.ops.insert(mir::Op::If {
                 condition,
                 then,
