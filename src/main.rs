@@ -65,7 +65,7 @@ fn real_main(code_map: &mut CodeMap, diagnostics: &mut Diagnostics) -> Result<()
         return Err(());
     }
 
-    let mut mir = mir::lower(&csts, code_map, &string_literals);
+    let mut mir = mir::lower(&csts, code_map);
     mir::dce::perform(&mut mir);
 
     codegen::compile(code_map, &string_literals, &csts, &mir, "project.sb3").map_err(|err| {
