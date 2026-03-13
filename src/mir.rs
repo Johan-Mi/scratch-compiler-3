@@ -125,7 +125,7 @@ pub enum Value {
     Op(Id<Op>),
     Returned { call: Id<Op>, id: Id<Return> },
     Num(f64),
-    String(&'static str),
+    String(codemap::Pos),
     Bool(bool),
 }
 

@@ -68,7 +68,7 @@ fn real_main(code_map: &mut CodeMap, diagnostics: &mut Diagnostics) -> Result<()
     let mut mir = mir::lower(&csts, code_map, &string_literals);
     mir::dce::perform(&mut mir);
 
-    codegen::compile(code_map, &csts, &mir, "project.sb3").map_err(|err| {
+    codegen::compile(code_map, &string_literals, &csts, &mir, "project.sb3").map_err(|err| {
         diagnostics.error("failed to create project file", []);
         diagnostics.note(err.to_string(), []);
     })

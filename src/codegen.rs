@@ -8,6 +8,7 @@ use std::{collections::HashMap, error::Error, fs::File};
 
 pub fn compile(
     code_map: &codemap::CodeMap,
+    string_literals: &HashMap<codemap::Pos, String>,
     documents: &[cst::Tree<crate::parser::K>],
     mir: &mir::Program,
     output_path: &str,
@@ -65,6 +66,7 @@ pub fn compile(
             variables,
             lists,
             returns,
+            string_literals,
         };
 
         let functions = &mir.basic_blocks; // TODO
@@ -81,6 +83,7 @@ struct Compiler<'a> {
     variables: HashMap<Id<mir::Variable>, sb3::VariableRef>,
     lists: HashMap<Id<mir::List>, sb3::ListRef>,
     returns: HashMap<Id<mir::Return>, sb3::VariableRef>,
+    string_literals: &'a HashMap<codemap::Pos, String>,
 }
 
 impl Compiler<'_> {
@@ -177,7 +180,7 @@ impl Compiler<'_> {
             mir::Value::Op(op) => self.ops.remove(&op).unwrap(),
             mir::Value::Returned { .. } => todo!(),
             mir::Value::Num(n) => n.into(),
-            mir::Value::String(s) => s.to_owned().into(),
+            mir::Value::String(s) => self.string_literals[&s].clone().into(),
             mir::Value::Bool(b) => b.to_string().into(),
         }
     }
