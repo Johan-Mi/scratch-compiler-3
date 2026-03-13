@@ -52,7 +52,21 @@ fn lower_block(block: ast::Block, c: &mut Context) -> Id<mir::BasicBlock> {
 
 fn lower_statement(statement: ast::Statement, basic_block: Id<mir::BasicBlock>, c: &mut Context) {
     match statement {
-        ast::Statement::Let(_) => todo!(),
+        ast::Statement::Let(it) => {
+            let values = lower_expression(it.value().unwrap(), c);
+            let variables = std::iter::repeat_with(|| c.program.variables.insert(mir::Variable))
+                .take(values.len())
+                .collect();
+            let stores = std::iter::zip(&variables, values).map(|(&variable, value)| {
+                c.program.ops.insert(mir::Op::Store {
+                    target: mir::Ref::Variable(variable),
+                    value,
+                })
+            });
+            c.program.basic_blocks[basic_block].0.extend(stores);
+            let pos = it.variable().unwrap().span().low();
+            assert!(c.variables.insert(pos, variables).is_none());
+        }
         ast::Statement::If(it) => {
             let condition = one(lower_expression(it.condition().unwrap(), c));
             let then = lower_block(it.then().unwrap(), c);
