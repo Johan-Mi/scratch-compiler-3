@@ -3,7 +3,11 @@ use crate::{mir, parser::K};
 use map::Id;
 use std::collections::HashMap;
 
-pub fn lower(documents: &[cst::Tree<K>], code_map: &codemap::CodeMap) -> mir::Program {
+pub fn lower(
+    documents: &[cst::Tree<K>],
+    code_map: &codemap::CodeMap,
+    resolved_variables: &HashMap<codemap::Pos, codemap::Pos>,
+) -> mir::Program {
     let function_asts = || {
         documents
             .iter()
@@ -26,6 +30,7 @@ pub fn lower(documents: &[cst::Tree<K>], code_map: &codemap::CodeMap) -> mir::Pr
     let mut context = Context {
         program,
         code_map,
+        resolved_variables,
         functions,
         variables: HashMap::new(),
     };
@@ -44,6 +49,7 @@ pub fn lower(documents: &[cst::Tree<K>], code_map: &codemap::CodeMap) -> mir::Pr
 struct Context<'src> {
     program: mir::Program,
     code_map: &'src codemap::CodeMap,
+    resolved_variables: &'src HashMap<codemap::Pos, codemap::Pos>,
     functions: HashMap<codemap::Pos, Id<mir::BasicBlock>>,
     variables: HashMap<codemap::Pos, Vec<Id<mir::Variable>>>,
 }
@@ -131,7 +137,23 @@ fn lower_expression(
 ) -> Vec<mir::Value> {
     match expression {
         ast::Expression::Parenthesized(it) => lower_expression(it.inner().unwrap(), basic_block, c),
-        ast::Expression::Variable(_) => todo!(),
+        ast::Expression::Variable(it) => {
+            let basic_block = &mut c.program.basic_blocks[basic_block].0;
+            let start = basic_block.len();
+            basic_block.extend(
+                c.variables[&c.resolved_variables[&it.syntax().span().low()]]
+                    .iter()
+                    .map(|&variable| {
+                        c.program.ops.insert(mir::Op::Load {
+                            source: mir::Ref::Variable(variable),
+                        })
+                    }),
+            );
+            basic_block[start..]
+                .iter()
+                .map(|&variable| mir::Value::Op(variable))
+                .collect()
+        }
         ast::Expression::FunctionCall(_) => lower_call(c),
         ast::Expression::BinaryOperation(_) => lower_call(c),
         ast::Expression::NamedArgument(_) => todo!(),
