@@ -1,17 +1,10 @@
 use crate::ast::{self, Node};
 use crate::{mir, parser::K};
-use map::{Id, Map};
+use map::Id;
 use std::collections::HashMap;
 
 pub fn lower(documents: &[cst::Tree<K>], code_map: &codemap::CodeMap) -> mir::Program {
-    let program = mir::Program {
-        parameters: Map::default(),
-        basic_blocks: Map::default(),
-        ops: Map::default(),
-        variables: Map::default(),
-        lists: Map::default(),
-        returns: Map::default(),
-    };
+    let program = mir::Program::default();
 
     let mut context = Context {
         program,

@@ -8,6 +8,7 @@ use crate::either::Either;
 use map::{Id, Map};
 use std::collections::{BTreeMap, HashMap};
 
+#[derive(Default)]
 pub struct Program {
     parameters: Map<Parameter>,
     pub basic_blocks: Map<BasicBlock>,
