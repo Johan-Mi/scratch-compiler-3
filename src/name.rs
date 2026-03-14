@@ -53,11 +53,6 @@ fn resolve_document(document: SyntaxNode, code_map: &CodeMap) -> impl Iterator<I
     })
 }
 
-pub struct Resolution {
-    pub usage: Pos,
-    pub definition: Pos,
-}
-
 struct Definition {
     identifier: Span,
     scope: Span,
