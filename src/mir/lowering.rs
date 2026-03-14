@@ -162,42 +162,9 @@ fn lower_expression(
             let file = c.code_map.find_file(span.low());
             [mir::Value::Num(file.source_slice(span).parse().unwrap())].into()
         }
-        ast::Expression::BinaryNumber(it) => {
-            let span = it.syntax().span();
-            let file = c.code_map.find_file(span.low());
-            let text = file.source_slice(span);
-            let (sign, text) = match text.as_bytes() {
-                [b'+', b'0', b'b' | b'B', ..] => (1.0, &text[3..]),
-                [b'-', b'0', b'b' | b'B', ..] => (-1.0, &text[3..]),
-                _ => (1.0, &text[2..]),
-            };
-            let number = u64::from_str_radix(text, 2).unwrap() as f64 * sign;
-            [mir::Value::Num(number)].into()
-        }
-        ast::Expression::OctalNumber(it) => {
-            let span = it.syntax().span();
-            let file = c.code_map.find_file(span.low());
-            let text = file.source_slice(span);
-            let (sign, text) = match text.as_bytes() {
-                [b'+', b'0', b'o' | b'O', ..] => (1.0, &text[3..]),
-                [b'-', b'0', b'o' | b'O', ..] => (-1.0, &text[3..]),
-                _ => (1.0, &text[2..]),
-            };
-            let number = u64::from_str_radix(text, 8).unwrap() as f64 * sign;
-            [mir::Value::Num(number)].into()
-        }
-        ast::Expression::HexadecimalNumber(it) => {
-            let span = it.syntax().span();
-            let file = c.code_map.find_file(span.low());
-            let text = file.source_slice(span);
-            let (sign, text) = match text.as_bytes() {
-                [b'+', b'0', b'x' | b'X', ..] => (1.0, &text[3..]),
-                [b'-', b'0', b'x' | b'X', ..] => (-1.0, &text[3..]),
-                _ => (1.0, &text[2..]),
-            };
-            let number = u64::from_str_radix(text, 16).unwrap() as f64 * sign;
-            [mir::Value::Num(number)].into()
-        }
+        ast::Expression::BinaryNumber(it) => float(2, b'b', it.syntax(), c.code_map),
+        ast::Expression::OctalNumber(it) => float(8, b'o', it.syntax(), c.code_map),
+        ast::Expression::HexadecimalNumber(it) => float(16, b'x', it.syntax(), c.code_map),
         ast::Expression::String(it) => [mir::Value::String(it.syntax().span().low())].into(),
         ast::Expression::KwFalse(_) => [mir::Value::Bool(false)].into(),
         ast::Expression::KwTrue(_) => [mir::Value::Bool(true)].into(),
@@ -209,6 +176,24 @@ fn lower_expression(
         ast::Expression::MethodCall(_) => lower_call(c),
         ast::Expression::FieldAccess(_) => todo!(),
     }
+}
+
+fn float(
+    radix: u32,
+    letter: u8,
+    node: crate::parser::SyntaxNode,
+    code_map: &codemap::CodeMap,
+) -> Vec<mir::Value> {
+    let span = node.span();
+    let file = code_map.find_file(span.low());
+    let text = file.source_slice(span);
+    let (sign, text) = match text.as_bytes() {
+        [b'+', b'0', l, ..] if l.eq_ignore_ascii_case(&letter) => (1.0, &text[3..]),
+        [b'-', b'0', l, ..] if l.eq_ignore_ascii_case(&letter) => (-1.0, &text[3..]),
+        _ => (1.0, &text[2..]),
+    };
+    let number = u64::from_str_radix(text, radix).unwrap() as f64 * sign;
+    [mir::Value::Num(number)].into()
 }
 
 fn lower_call(c: &mut Context) -> Vec<mir::Value> {
