@@ -4,24 +4,38 @@ use map::Id;
 use std::collections::HashMap;
 
 pub fn lower(documents: &[cst::Tree<K>], code_map: &codemap::CodeMap) -> mir::Program {
+    let function_asts = || {
+        documents
+            .iter()
+            .flat_map(|it| ast::Document::cast(it.root()).unwrap().functions())
+            .chain(
+                documents
+                    .iter()
+                    .flat_map(|it| ast::Document::cast(it.root()).unwrap().sprites())
+                    .flat_map(ast::Sprite::functions),
+            )
+    };
+
+    let mut program = mir::Program::default();
+    let functions = function_asts()
+        .map(|it| it.syntax().span().low())
+        .zip(std::iter::repeat_with(|| {
+            program.basic_blocks.insert(mir::BasicBlock(Vec::new()))
+        }))
+        .collect();
     let mut context = Context {
-        program: mir::Program::default(),
+        program,
         code_map,
+        functions,
         variables: HashMap::new(),
     };
 
-    for function_body in documents
-        .iter()
-        .flat_map(|it| ast::Document::cast(it.root()).unwrap().functions())
-        .chain(
-            documents
-                .iter()
-                .flat_map(|it| ast::Document::cast(it.root()).unwrap().sprites())
-                .flat_map(ast::Sprite::functions),
-        )
-        .filter_map(ast::Function::body)
-    {
-        lower_block(function_body, &mut context);
+    for function in function_asts() {
+        let body = function.body().unwrap();
+        let basic_block = context.functions[&function.syntax().span().low()];
+        for statement in body.statements() {
+            lower_statement(statement, basic_block, &mut context);
+        }
     }
 
     context.program
@@ -30,6 +44,7 @@ pub fn lower(documents: &[cst::Tree<K>], code_map: &codemap::CodeMap) -> mir::Pr
 struct Context<'src> {
     program: mir::Program,
     code_map: &'src codemap::CodeMap,
+    functions: HashMap<codemap::Pos, Id<mir::BasicBlock>>,
     variables: HashMap<codemap::Pos, Vec<Id<mir::Variable>>>,
 }
 
