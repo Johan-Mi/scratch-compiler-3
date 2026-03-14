@@ -59,7 +59,7 @@ fn lower_block(block: ast::Block, c: &mut Context) -> Id<mir::BasicBlock> {
 fn lower_statement(statement: ast::Statement, basic_block: Id<mir::BasicBlock>, c: &mut Context) {
     match statement {
         ast::Statement::Let(it) => {
-            let values = lower_expression(it.value().unwrap(), c);
+            let values = lower_expression(it.value().unwrap(), basic_block, c);
             let variables = std::iter::repeat_with(|| c.program.variables.insert(mir::Variable))
                 .take(values.len())
                 .collect();
@@ -74,7 +74,7 @@ fn lower_statement(statement: ast::Statement, basic_block: Id<mir::BasicBlock>, 
             assert!(c.variables.insert(pos, variables).is_none());
         }
         ast::Statement::If(it) => {
-            let condition = one(lower_expression(it.condition().unwrap(), c));
+            let condition = one(lower_expression(it.condition().unwrap(), basic_block, c));
             let then = lower_block(it.then().unwrap(), c);
             let r#else = c.program.basic_blocks.insert(mir::BasicBlock(Vec::new()));
             if let Some(else_clause) = it.else_clause() {
@@ -94,7 +94,7 @@ fn lower_statement(statement: ast::Statement, basic_block: Id<mir::BasicBlock>, 
             c.program.basic_blocks[basic_block].0.push(op);
         }
         ast::Statement::Repeat(it) => {
-            let times = one(lower_expression(it.times().unwrap(), c));
+            let times = one(lower_expression(it.times().unwrap(), basic_block, c));
             let body = lower_block(it.body().unwrap(), c);
             let op = c.program.ops.insert(mir::Op::Repeat { times, body });
             c.program.basic_blocks[basic_block].0.push(op);
@@ -110,7 +110,7 @@ fn lower_statement(statement: ast::Statement, basic_block: Id<mir::BasicBlock>, 
             let variable = c.program.variables.insert(mir::Variable);
             let pos = it.variable().unwrap().span().low();
             assert!(c.variables.insert(pos, [variable].into()).is_none());
-            let times = one(lower_expression(it.times().unwrap(), c));
+            let times = one(lower_expression(it.times().unwrap(), basic_block, c));
             let body = lower_block(it.body().unwrap(), c);
             let op = c.program.ops.insert(mir::Op::For {
                 variable,
@@ -120,13 +120,17 @@ fn lower_statement(statement: ast::Statement, basic_block: Id<mir::BasicBlock>, 
             c.program.basic_blocks[basic_block].0.push(op);
         }
         ast::Statement::Return(_) => todo!(),
-        ast::Statement::Expression(it) => assert!(lower_expression(it, c).is_empty()),
+        ast::Statement::Expression(it) => assert!(lower_expression(it, basic_block, c).is_empty()),
     }
 }
 
-fn lower_expression(expression: ast::Expression, c: &mut Context) -> Vec<mir::Value> {
+fn lower_expression(
+    expression: ast::Expression,
+    basic_block: Id<mir::BasicBlock>,
+    c: &mut Context,
+) -> Vec<mir::Value> {
     match expression {
-        ast::Expression::Parenthesized(it) => lower_expression(it.inner().unwrap(), c),
+        ast::Expression::Parenthesized(it) => lower_expression(it.inner().unwrap(), basic_block, c),
         ast::Expression::Variable(_) => todo!(),
         ast::Expression::FunctionCall(_) => lower_call(c),
         ast::Expression::BinaryOperation(_) => lower_call(c),
@@ -177,7 +181,9 @@ fn lower_expression(expression: ast::Expression, c: &mut Context) -> Vec<mir::Va
         ast::Expression::KwTrue(_) => [mir::Value::Bool(true)].into(),
         ast::Expression::Lvalue(_) => todo!(),
         ast::Expression::ListLiteral(_) => todo!(),
-        ast::Expression::TypeAscription(it) => lower_expression(it.inner().unwrap(), c),
+        ast::Expression::TypeAscription(it) => {
+            lower_expression(it.inner().unwrap(), basic_block, c)
+        }
         ast::Expression::MethodCall(_) => lower_call(c),
         ast::Expression::FieldAccess(_) => todo!(),
     }
