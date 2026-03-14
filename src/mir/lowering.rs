@@ -4,10 +4,8 @@ use map::Id;
 use std::collections::HashMap;
 
 pub fn lower(documents: &[cst::Tree<K>], code_map: &codemap::CodeMap) -> mir::Program {
-    let program = mir::Program::default();
-
     let mut context = Context {
-        program,
+        program: mir::Program::default(),
         code_map,
         variables: HashMap::new(),
     };
