@@ -70,7 +70,7 @@ pub fn check(
     resolved_variables: &HashMap<Pos, Pos>,
     diagnostics: &mut Diagnostics,
 ) {
-    let type_expressions: HashMap<Span, Type> = documents
+    let type_expressions: HashMap<Pos, Type> = documents
         .iter()
         .flat_map(|it| it.root().pre_order())
         .filter_map(|it| {
@@ -79,7 +79,7 @@ pub fn check(
         })
         .filter_map(|it| {
             Some((
-                it.syntax().span(),
+                it.syntax().span().low(),
                 evaluate(it, documents, code_map, diagnostics)?,
             ))
         })
@@ -137,7 +137,7 @@ pub fn check(
 struct Checker<'src> {
     resolved_variables: &'src HashMap<Pos, Pos>,
     variable_types: HashMap<Pos, Type<'src>>,
-    type_expressions: HashMap<Span, Type<'src>>,
+    type_expressions: HashMap<Pos, Type<'src>>,
     documents: &'src [cst::Tree<K>],
     code_map: &'src CodeMap,
     diagnostics: &'src mut Diagnostics,
@@ -344,7 +344,10 @@ fn of<'src>(
             }
         }
         ast::Expression::TypeAscription(it) => {
-            let ascribed_ty = c.type_expressions.get(&it.ty()?.syntax().span()).copied();
+            let ascribed_ty = c
+                .type_expressions
+                .get(&it.ty()?.syntax().span().low())
+                .copied();
             let inner = it.inner()?;
             if let Some(actual) = of(inner, ascribed_ty, c)
                 && let Some(ascribed) = ascribed_ty
@@ -403,7 +406,7 @@ fn of_field_access<'src>(it: ast::FieldAccess<'src>, c: &mut Checker<'src>) -> O
         return None;
     };
     c.type_expressions
-        .get(&field.ty()?.syntax().span())
+        .get(&field.ty()?.syntax().span().low())
         .copied()
 }
 
@@ -415,7 +418,7 @@ fn return_ty<'src>(
         let Some(ty) = it.return_ty() else {
             return Some(Base::Unit.into());
         };
-        c.type_expressions.get(&ty.syntax().span()).copied()
+        c.type_expressions.get(&ty.syntax().span().low()).copied()
     } else {
         let it = ast::Struct::cast(function_like.syntax()).unwrap();
         Some(Base::Struct(it).into())
@@ -531,7 +534,7 @@ fn resolve_call<'src>(
                     .parameters()
                     .into_iter()
                     .flat_map(ast::Parameters::iter)
-                    .map(|it| c.type_expressions.get(&it.ty()?.syntax().span()).copied())
+                    .map(|it| Some(*c.type_expressions.get(&it.ty()?.syntax().span().low())?))
                     .zip(argument_types.iter().copied())
                     .filter_map(|(a, b)| a.zip(b))
                     .all(|(a, b)| a == b)
