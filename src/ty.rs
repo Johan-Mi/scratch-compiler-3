@@ -64,9 +64,12 @@ impl<'src> Type<'src> {
     }
 }
 
-pub fn check(documents: &[cst::Tree<K>], code_map: &CodeMap, diagnostics: &mut Diagnostics) {
-    let resolved_variables = crate::name::resolve(documents, code_map);
-
+pub fn check(
+    documents: &[cst::Tree<K>],
+    code_map: &CodeMap,
+    resolved_variables: &HashMap<Pos, Pos>,
+    diagnostics: &mut Diagnostics,
+) {
     let type_expressions: HashMap<Span, Type> = documents
         .iter()
         .flat_map(|it| it.root().pre_order())
@@ -132,7 +135,7 @@ pub fn check(documents: &[cst::Tree<K>], code_map: &CodeMap, diagnostics: &mut D
 }
 
 struct Checker<'src> {
-    resolved_variables: HashMap<Pos, Pos>,
+    resolved_variables: &'src HashMap<Pos, Pos>,
     variable_types: HashMap<Pos, Type<'src>>,
     type_expressions: HashMap<Span, Type<'src>>,
     documents: &'src [cst::Tree<K>],

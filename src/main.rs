@@ -59,7 +59,8 @@ fn real_main(code_map: &mut CodeMap, diagnostics: &mut Diagnostics) -> Result<()
         }
     }
 
-    ty::check(&csts, code_map, diagnostics);
+    let resolved_variables = crate::name::resolve(&csts, code_map);
+    ty::check(&csts, code_map, &resolved_variables, diagnostics);
 
     if diagnostics.have_errors() {
         return Err(());
