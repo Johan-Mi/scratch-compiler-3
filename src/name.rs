@@ -1,8 +1,16 @@
 use crate::ast::{self, Node};
 use crate::parser::{K, SyntaxNode};
 use codemap::{CodeMap, Pos, Span};
+use std::collections::HashMap;
 
-pub fn resolve(document: SyntaxNode, code_map: &CodeMap) -> impl Iterator<Item = Resolution> {
+pub fn resolve(documents: &[cst::Tree<K>], code_map: &CodeMap) -> HashMap<Pos, Pos> {
+    documents
+        .iter()
+        .flat_map(|it| crate::name::resolve_document(it.root(), code_map))
+        .collect()
+}
+
+fn resolve_document(document: SyntaxNode, code_map: &CodeMap) -> impl Iterator<Item = (Pos, Pos)> {
     let file = code_map.find_file(document.span().low());
 
     let lets = document
@@ -41,7 +49,7 @@ pub fn resolve(document: SyntaxNode, code_map: &CodeMap) -> impl Iterator<Item =
             .filter(|it| it.scope.contains(usage) && file.source_slice(it.identifier) == text);
         let definition = possible.min_by_key(|it| it.scope.len())?.identifier.low();
         let usage = usage.low();
-        Some(Resolution { usage, definition })
+        Some((usage, definition))
     })
 }
 

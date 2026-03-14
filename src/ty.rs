@@ -65,11 +65,7 @@ impl<'src> Type<'src> {
 }
 
 pub fn check(documents: &[cst::Tree<K>], code_map: &CodeMap, diagnostics: &mut Diagnostics) {
-    let variable_definitions = documents
-        .iter()
-        .flat_map(|it| crate::name::resolve(it.root(), code_map))
-        .map(|it| (it.usage, it.definition))
-        .collect();
+    let resolved_variables = crate::name::resolve(documents, code_map);
 
     let type_expressions: HashMap<Span, Type> = documents
         .iter()
@@ -87,7 +83,7 @@ pub fn check(documents: &[cst::Tree<K>], code_map: &CodeMap, diagnostics: &mut D
         .collect();
 
     let mut c = Checker {
-        variable_definitions,
+        resolved_variables,
         variable_types: HashMap::new(),
         type_expressions,
         documents,
@@ -136,7 +132,7 @@ pub fn check(documents: &[cst::Tree<K>], code_map: &CodeMap, diagnostics: &mut D
 }
 
 struct Checker<'src> {
-    variable_definitions: HashMap<Pos, Pos>,
+    resolved_variables: HashMap<Pos, Pos>,
     variable_types: HashMap<Pos, Type<'src>>,
     type_expressions: HashMap<Span, Type<'src>>,
     documents: &'src [cst::Tree<K>],
@@ -260,7 +256,7 @@ fn of<'src>(
     match expression {
         ast::Expression::Parenthesized(it) => of(it.inner()?, ascribed, c),
         ast::Expression::Variable(it) => {
-            let definition = c.variable_definitions.get(&it.syntax().span().low())?;
+            let definition = c.resolved_variables.get(&it.syntax().span().low())?;
             c.variable_types.get(definition).copied()
         }
         ast::Expression::FunctionCall(it) => {
