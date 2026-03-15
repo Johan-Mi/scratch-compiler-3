@@ -6,7 +6,6 @@ pub use lowering::lower;
 
 use crate::either::Either;
 use map::{Id, Map};
-use std::collections::BTreeMap;
 
 #[derive(Default)]
 pub struct Program {
@@ -55,7 +54,7 @@ pub enum Op {
 
     Call {
         function: Id<BasicBlock>,
-        arguments: BTreeMap<Id<Parameter>, Value>,
+        arguments: Vec<(Id<Parameter>, Value)>,
     },
 
     Add([Value; 2]),
@@ -94,7 +93,7 @@ impl Op {
             Self::Call {
                 function: _,
                 arguments,
-            } => Right(Left(arguments.values())),
+            } => Right(Left(arguments.iter().map(|(_, it)| it))),
         }
     }
 
@@ -130,7 +129,7 @@ impl Op {
             Self::Call {
                 function: _,
                 arguments,
-            } => Right(Left(arguments.values_mut())),
+            } => Right(Left(arguments.iter_mut().map(|(_, it)| it))),
         }
     }
 }

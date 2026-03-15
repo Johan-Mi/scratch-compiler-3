@@ -174,7 +174,7 @@ impl Compiler<'_> {
                 function,
                 ref arguments,
             } => {
-                let arguments = arguments.values().map(|&it| self.value(it)).collect();
+                let arguments = arguments.iter().map(|&(_, it)| self.value(it)).collect();
                 self.target.use_custom_block(todo!(), arguments);
                 None
             }

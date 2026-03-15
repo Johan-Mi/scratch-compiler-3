@@ -23,7 +23,7 @@ fn parameters(program: &mut Program) {
 
     for op in program.ops.values_mut() {
         if let Op::Call { arguments, .. } = op {
-            arguments.retain(|it, _| used_parameters.contains(it));
+            arguments.retain(|(it, _)| used_parameters.contains(it));
         }
     }
 }
