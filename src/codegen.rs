@@ -162,9 +162,9 @@ impl Compiler<'_> {
                 None
             }
             mir::Op::Return(ref returns) => {
-                for (id, &value) in returns {
+                for &(id, value) in returns {
                     let value = self.value(value);
-                    let variable = self.returns[id].clone();
+                    let variable = self.returns[&id].clone();
                     self.target.put(block::set_variable(variable, value));
                 }
                 self.target.put(block::stop_this_script());

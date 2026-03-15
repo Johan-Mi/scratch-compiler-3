@@ -6,7 +6,7 @@ pub use lowering::lower;
 
 use crate::either::Either;
 use map::{Id, Map};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 
 #[derive(Default)]
 pub struct Program {
@@ -51,7 +51,7 @@ pub enum Op {
         then: Id<BasicBlock>,
         r#else: Id<BasicBlock>,
     },
-    Return(HashMap<Id<Return>, Value>),
+    Return(Vec<(Id<Return>, Value)>),
 
     Call {
         function: Id<BasicBlock>,
@@ -90,7 +90,7 @@ impl Op {
             } => Left(Left(std::slice::from_ref(arg).iter())),
             Self::Load { .. } | Self::Forever(_) => Left(Left(std::slice::Iter::default())),
             Self::Add(args) => Left(Left(args.iter())),
-            Self::Return(args) => Left(Right(args.values())),
+            Self::Return(args) => Left(Right(args.iter().map(|(_, it)| it))),
             Self::Call {
                 function: _,
                 arguments,
@@ -126,7 +126,7 @@ impl Op {
             } => Left(Left(std::slice::from_mut(arg).iter_mut())),
             Self::Load { .. } | Self::Forever(_) => Left(Left(std::slice::IterMut::default())),
             Self::Add(args) => Left(Left(args.iter_mut())),
-            Self::Return(args) => Left(Right(args.values_mut())),
+            Self::Return(args) => Left(Right(args.iter_mut().map(|(_, it)| it))),
             Self::Call {
                 function: _,
                 arguments,

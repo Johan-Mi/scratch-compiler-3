@@ -41,7 +41,7 @@ fn returns(program: &mut Program) {
 
     for op in program.ops.values_mut() {
         if let Op::Return(values) = op {
-            values.retain(|it, _| used_returns.contains(it));
+            values.retain(|(it, _)| used_returns.contains(it));
         }
     }
 
