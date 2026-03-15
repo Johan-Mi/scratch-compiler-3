@@ -1,3 +1,5 @@
+mod layout;
+
 use crate::ast::{self, Node};
 use crate::diagnostics::{Diagnostics, primary};
 use crate::parser::K;
