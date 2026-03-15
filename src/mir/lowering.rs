@@ -143,11 +143,8 @@ fn lower_expression(
             basic_block.extend(
                 c.variables[&c.resolved_variables[&it.syntax().span().low()]]
                     .iter()
-                    .map(|&variable| {
-                        c.program.ops.insert(mir::Op::Load {
-                            source: mir::Ref::Variable(variable),
-                        })
-                    }),
+                    .map(|&variable| mir::Ref::Variable(variable))
+                    .map(|source| c.program.ops.insert(mir::Op::Load { source })),
             );
             basic_block[start..]
                 .iter()
