@@ -189,6 +189,10 @@ fn float(
         [b'-', b'0', l, ..] if l.eq_ignore_ascii_case(&letter) => (-1.0, &text[3..]),
         _ => (1.0, &text[2..]),
     };
+    #[expect(
+        clippy::cast_precision_loss,
+        reason = "These are float literals. `u64` is only used as an implementation detail."
+    )]
     let number = u64::from_str_radix(text, radix).unwrap() as f64 * sign;
     [mir::Value::Num(number)].into()
 }
