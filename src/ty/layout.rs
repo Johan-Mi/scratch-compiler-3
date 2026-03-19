@@ -22,7 +22,7 @@ fn of(
 }
 
 fn scc<'src>(
-    documents: &'src [cst::Tree<crate::parser::K>],
+    ast: ast::Program<'src>,
     type_expressions: &HashMap<codemap::Pos, Type<'src>>,
 ) -> Vec<Vec<ast::Struct<'src>>> {
     struct Tarjan<'a, 'src> {
@@ -71,9 +71,8 @@ fn scc<'src>(
         stack: Vec::new(),
         low: HashMap::new(),
     };
-    documents
-        .iter()
-        .flat_map(|it| ast::Document::cast(it.root()).unwrap().structs())
+    ast.documents()
+        .flat_map(ast::Document::structs)
         .for_each(|it| tarjan.visit(it));
     tarjan.result
 }
