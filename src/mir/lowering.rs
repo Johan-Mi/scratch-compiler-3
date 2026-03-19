@@ -1,23 +1,19 @@
 use crate::ast::{self, Node};
-use crate::{mir, parser::K};
+use crate::mir;
 use map::Id;
 use std::collections::HashMap;
 
 pub fn lower(
-    documents: &[cst::Tree<K>],
+    ast: ast::Program,
     code_map: &codemap::CodeMap,
     resolved_variables: &HashMap<codemap::Pos, codemap::Pos>,
 ) -> mir::Program {
     let function_asts = || {
-        documents
-            .iter()
-            .flat_map(|it| ast::Document::cast(it.root()).unwrap().functions())
-            .chain(
-                documents
-                    .iter()
-                    .flat_map(|it| ast::Document::cast(it.root()).unwrap().sprites())
-                    .flat_map(ast::Sprite::functions),
-            )
+        ast.documents().flat_map(ast::Document::functions).chain(
+            ast.documents()
+                .flat_map(ast::Document::sprites)
+                .flat_map(ast::Sprite::functions),
+        )
     };
 
     let mut program = mir::Program::default();

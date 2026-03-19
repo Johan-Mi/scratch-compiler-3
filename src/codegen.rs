@@ -1,7 +1,4 @@
-use crate::{
-    ast::{self, Node as _},
-    mir,
-};
+use crate::{ast, mir};
 use map::Id;
 use sb3_builder::{self as sb3, block};
 use std::{collections::HashMap, error::Error, fs::File};
@@ -9,15 +6,15 @@ use std::{collections::HashMap, error::Error, fs::File};
 pub fn compile(
     code_map: &codemap::CodeMap,
     string_literals: &HashMap<codemap::Pos, String>,
-    documents: &[cst::Tree<crate::parser::K>],
+    ast: ast::Program,
     mir: &mir::Program,
     output_path: &str,
 ) -> Result<(), Box<dyn Error>> {
     let mut project = sb3::Project::default();
     let output_file = File::create(output_path)?;
-    for sprite in documents
-        .iter()
-        .flat_map(|it| ast::Document::cast(it.root()).unwrap().sprites())
+    for sprite in ast
+        .documents()
+        .flat_map(ast::Document::sprites)
         .filter_map(ast::Sprite::name)
     {
         let span = sprite.span();

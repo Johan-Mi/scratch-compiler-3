@@ -3,10 +3,9 @@ use crate::parser::{K, SyntaxNode};
 use codemap::{CodeMap, Pos, Span};
 use std::collections::HashMap;
 
-pub fn resolve(documents: &[cst::Tree<K>], code_map: &CodeMap) -> HashMap<Pos, Pos> {
-    documents
-        .iter()
-        .flat_map(|it| crate::name::resolve_document(it.root(), code_map))
+pub fn resolve(ast: ast::Program, code_map: &CodeMap) -> HashMap<Pos, Pos> {
+    ast.documents()
+        .flat_map(|it| crate::name::resolve_document(it.syntax(), code_map))
         .collect()
 }
 

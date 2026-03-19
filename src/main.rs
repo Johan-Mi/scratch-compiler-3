@@ -9,6 +9,7 @@ mod name;
 mod parser;
 mod ty;
 
+use crate::ast::Node as _;
 use codemap::CodeMap;
 use diagnostics::Diagnostics;
 use std::{collections::HashMap, process::ExitCode};
@@ -32,44 +33,45 @@ fn real_main(code_map: &mut CodeMap, diagnostics: &mut Diagnostics) -> Result<()
     }
 
     let mut string_literals = HashMap::new();
+    let mut builder = cst::Builder::default();
 
     let builtins = include_str!("builtins.sc3");
     let builtins = code_map.add_file("<builtins>".to_owned(), builtins.to_owned());
-    let builtins = parser::parse(&builtins, &mut string_literals, diagnostics);
+    parser::parse(&builtins, &mut builder, &mut string_literals, diagnostics);
 
-    let csts = std::iter::once(Ok(builtins))
-        .chain(args.map(|source_path| {
-            let source_code = std::fs::read_to_string(&source_path).map_err(|err| {
-                diagnostics.error("failed to read source code", []);
-                diagnostics.note(err.to_string(), []);
-            })?;
-            let source_file = code_map.add_file(source_path, source_code);
-            Ok(parser::parse(
-                &source_file,
-                &mut string_literals,
-                diagnostics,
-            ))
-        }))
-        .collect::<Result<Vec<_>, _>>()?;
+    for source_path in args {
+        let source_code = std::fs::read_to_string(&source_path).map_err(|err| {
+            diagnostics.error("failed to read source code", []);
+            diagnostics.note(err.to_string(), []);
+        })?;
+        let source_file = code_map.add_file(source_path, source_code);
+        parser::parse(
+            &source_file,
+            &mut builder,
+            &mut string_literals,
+            diagnostics,
+        );
+    }
+
+    let cst = builder.build();
+    let ast = ast::Program::cast(cst.root()).unwrap();
 
     #[cfg(debug_assertions)]
     if std::env::var("DUMP_CST").is_ok() {
-        for cst in &csts {
-            debug::print_cst(cst.root(), 0);
-        }
+        debug::print_cst(ast.syntax(), 0);
     }
 
-    let resolved_variables = crate::name::resolve(&csts, code_map);
-    ty::check(&csts, code_map, &resolved_variables, diagnostics);
+    let resolved_variables = crate::name::resolve(ast, code_map);
+    ty::check(ast, code_map, &resolved_variables, diagnostics);
 
     if diagnostics.have_errors() {
         return Err(());
     }
 
-    let mut mir = mir::lower(&csts, code_map, &resolved_variables);
+    let mut mir = mir::lower(ast, code_map, &resolved_variables);
     mir::dce::perform(&mut mir);
 
-    codegen::compile(code_map, &string_literals, &csts, &mir, "project.sb3").map_err(|err| {
+    codegen::compile(code_map, &string_literals, ast, &mir, "project.sb3").map_err(|err| {
         diagnostics.error("failed to create project file", []);
         diagnostics.note(err.to_string(), []);
     })

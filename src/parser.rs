@@ -6,9 +6,10 @@ use std::collections::HashMap;
 
 pub fn parse(
     file: &codemap::File,
+    builder: &mut cst::Builder<K>,
     string_literals: &mut HashMap<codemap::Pos, String>,
     diagnostics: &mut Diagnostics,
-) -> cst::Tree<K> {
+) {
     let source_code = file.source();
     let tokens = &K::lexer(source_code)
         .spanned()
@@ -23,12 +24,12 @@ pub fn parse(
         .collect::<Vec<_>>();
     let len = file.span.len();
     Parser {
-        builder: cst::Builder::default(),
+        builder,
         tokens,
         eof_span: file.span.subspan(len, len),
         diagnostics,
     }
-    .parse()
+    .parse();
 }
 
 fn parse_string_literal(text: &str, span: Span, diagnostics: &mut Diagnostics) -> Option<String> {
@@ -80,6 +81,7 @@ pub enum K {
     #[regex(r"(\p{Whitespace}|#.*)+")]
     Trivia,
 
+    Program,
     Document,
     Struct,
     Sprite,
@@ -226,7 +228,7 @@ impl K {
 pub type SyntaxNode<'src> = cst::Node<'src, K>;
 
 struct Parser<'src> {
-    builder: cst::Builder<K>,
+    builder: &'src mut cst::Builder<K>,
     tokens: &'src [(K, Span)],
     eof_span: Span,
     diagnostics: &'src mut Diagnostics,
@@ -780,13 +782,12 @@ impl Parser<'_> {
         }
     }
 
-    fn parse(mut self) -> cst::Tree<K> {
+    fn parse(mut self) {
         self.builder.start_node(K::Document, self.eof_span);
         while !self.at(K::Eof) {
             self.parse_top_level_item();
         }
         self.builder.finish_node();
-        self.builder.build()
     }
 }
 

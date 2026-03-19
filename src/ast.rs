@@ -25,6 +25,14 @@ macro_rules! node {
     };
 }
 
+node!(Program);
+
+impl<'src> Program<'src> {
+    pub fn documents(self) -> impl Iterator<Item = Document<'src>> {
+        children(self.syntax)
+    }
+}
+
 node!(Document);
 
 impl<'src> Document<'src> {

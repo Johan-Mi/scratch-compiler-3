@@ -67,14 +67,14 @@ impl<'src> Type<'src> {
 }
 
 pub fn check(
-    documents: &[cst::Tree<K>],
+    ast: ast::Program,
     code_map: &CodeMap,
     resolved_variables: &HashMap<Pos, Pos>,
     diagnostics: &mut Diagnostics,
 ) {
-    let type_expressions: HashMap<Pos, Type> = documents
-        .iter()
-        .flat_map(|it| it.root().pre_order())
+    let type_expressions: HashMap<Pos, Type> = ast
+        .syntax()
+        .pre_order()
         .filter_map(|it| {
             None.or_else(|| Node::cast(it).map(ast::Parameter::ty))
                 .or_else(|| Node::cast(it).map(ast::TypeAscription::ty))?
@@ -82,7 +82,7 @@ pub fn check(
         .filter_map(|it| {
             Some((
                 it.syntax().span().low(),
-                evaluate(it, documents, code_map, diagnostics)?,
+                evaluate(it, ast, code_map, diagnostics)?,
             ))
         })
         .collect();
@@ -91,15 +91,15 @@ pub fn check(
         resolved_variables,
         variable_types: HashMap::new(),
         type_expressions,
-        documents,
+        ast,
         code_map,
         diagnostics,
         return_ty: None,
     };
 
-    for (variable, value) in documents
-        .iter()
-        .flat_map(|it| it.root().pre_order())
+    for (variable, value) in ast
+        .syntax()
+        .pre_order()
         .filter(|it| matches!(it.kind(), K::Document | K::Sprite))
         .flat_map(cst::Node::children)
         .filter_map(ast::Let::cast)
@@ -110,11 +110,7 @@ pub fn check(
         }
     }
 
-    for function in documents
-        .iter()
-        .flat_map(|it| it.root().pre_order())
-        .filter_map(ast::Function::cast)
-    {
+    for function in ast.syntax().pre_order().filter_map(ast::Function::cast) {
         if let Some(body) = function.body() {
             c.return_ty = return_ty(function.into(), &c);
             if let Some(return_ty) = c.return_ty
@@ -140,7 +136,7 @@ struct Checker<'src> {
     resolved_variables: &'src HashMap<Pos, Pos>,
     variable_types: HashMap<Pos, Type<'src>>,
     type_expressions: HashMap<Pos, Type<'src>>,
-    documents: &'src [cst::Tree<K>],
+    ast: ast::Program<'src>,
     code_map: &'src CodeMap,
     diagnostics: &'src mut Diagnostics,
     return_ty: Option<Type<'src>>,
@@ -429,7 +425,7 @@ fn return_ty<'src>(
 
 fn evaluate<'src>(
     expression: ast::TypeExpression,
-    documents: &'src [cst::Tree<K>],
+    ast: ast::Program<'src>,
     code_map: &CodeMap,
     diagnostics: &mut Diagnostics,
 ) -> Option<Type<'src>> {
@@ -446,17 +442,13 @@ fn evaluate<'src>(
         "String" => Base::String,
         "Bool" => Base::Bool,
         _ => Base::Struct(
-            documents
-                .iter()
+            ast.documents()
                 .find_map(|document| {
-                    let file = code_map.find_file(document.root().span().low());
-                    ast::Document::cast(document.root())
-                        .unwrap()
-                        .structs()
-                        .find(|it| {
-                            it.name()
-                                .is_some_and(|it| file.source_slice(it.span()) == variable)
-                        })
+                    let file = code_map.find_file(document.syntax().span().low());
+                    document.structs().find(|it| {
+                        it.name()
+                            .is_some_and(|it| file.source_slice(it.span()) == variable)
+                    })
                 })
                 .or_else(|| {
                     diagnostics.error("undefined type variable", [primary(span, "")]);
@@ -476,20 +468,17 @@ fn resolve_call<'src>(
     let name_text = file.source_slice(name);
 
     let all_in_scope = {
-        let global_functions = c
-            .documents
-            .iter()
-            .flat_map(|it| ast::Document::cast(it.root()).unwrap().functions());
+        let global_functions = c.ast.documents().flat_map(ast::Document::functions);
         let sprite_functions = c
-            .documents
-            .iter()
-            .flat_map(|it| ast::Document::cast(it.root()).unwrap().sprites())
+            .ast
+            .documents()
+            .flat_map(ast::Document::sprites)
             .filter(|it| it.syntax().span().contains(name))
             .flat_map(ast::Sprite::functions);
         let structs = c
-            .documents
-            .iter()
-            .flat_map(|it| ast::Document::cast(it.root()).unwrap().structs())
+            .ast
+            .documents()
+            .flat_map(ast::Document::structs)
             .map(ast::FunctionLike::from);
         global_functions
             .chain(sprite_functions)
