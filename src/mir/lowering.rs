@@ -170,7 +170,13 @@ fn lower_expression(
             lower_expression(it.inner().unwrap(), basic_block, c)
         }
         ast::Expression::MethodCall(_) => lower_call(c),
-        ast::Expression::FieldAccess(_) => todo!(),
+        ast::Expression::FieldAccess(it) => {
+            let values = lower_expression(it.aggregate(), basic_block, c);
+            let ty: ast::Struct = todo!();
+            let field_index: usize = todo!();
+            let range = c.layouts[&ty.syntax().span().low()][field_index];
+            values.drain(range).collect()
+        }
     }
 }
 
