@@ -1,12 +1,13 @@
 use crate::ast::{self, Node};
 use crate::mir;
 use map::Id;
-use std::collections::HashMap;
+use std::{collections::HashMap, ops::Range};
 
 pub fn lower(
     ast: ast::Program,
     code_map: &codemap::CodeMap,
     resolved_variables: &HashMap<codemap::Pos, codemap::Pos>,
+    layouts: &HashMap<codemap::Pos, Vec<Range<usize>>>,
 ) -> mir::Program {
     let function_asts = || {
         ast.documents().flat_map(ast::Document::functions).chain(
@@ -27,6 +28,7 @@ pub fn lower(
         program,
         code_map,
         resolved_variables,
+        layouts,
         functions,
         variables: HashMap::new(),
     };
@@ -46,6 +48,7 @@ struct Context<'src> {
     program: mir::Program,
     code_map: &'src codemap::CodeMap,
     resolved_variables: &'src HashMap<codemap::Pos, codemap::Pos>,
+    layouts: &'src HashMap<codemap::Pos, Vec<Range<usize>>>,
     functions: HashMap<codemap::Pos, Id<mir::BasicBlock>>,
     variables: HashMap<codemap::Pos, Vec<Id<mir::Variable>>>,
 }
