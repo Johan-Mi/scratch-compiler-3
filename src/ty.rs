@@ -1,4 +1,4 @@
-mod layout;
+pub mod layout;
 
 use crate::ast::{self, Node};
 use crate::diagnostics::{Diagnostics, primary};
@@ -7,7 +7,7 @@ use codemap::{CodeMap, Pos, Span};
 use std::{collections::HashMap, fmt};
 
 #[derive(Clone, Copy, PartialEq)]
-struct Type<'src> {
+pub struct Type<'src> {
     shape: Shape,
     base: Base<'src>,
 }
@@ -66,12 +66,12 @@ impl<'src> Type<'src> {
     }
 }
 
-pub fn check(
-    ast: ast::Program,
+pub fn check<'src>(
+    ast: ast::Program<'src>,
     code_map: &CodeMap,
     resolved_variables: &HashMap<Pos, Pos>,
     diagnostics: &mut Diagnostics,
-) {
+) -> HashMap<Pos, Type<'src>> {
     let type_expressions: HashMap<Pos, Type> = ast
         .syntax()
         .pre_order()
@@ -130,25 +130,27 @@ pub fn check(
             }
         }
     }
+
+    c.type_expressions
 }
 
-struct Checker<'src> {
-    resolved_variables: &'src HashMap<Pos, Pos>,
+struct Checker<'a, 'src> {
+    resolved_variables: &'a HashMap<Pos, Pos>,
     variable_types: HashMap<Pos, Type<'src>>,
     type_expressions: HashMap<Pos, Type<'src>>,
     ast: ast::Program<'src>,
-    code_map: &'src CodeMap,
-    diagnostics: &'src mut Diagnostics,
+    code_map: &'a CodeMap,
+    diagnostics: &'a mut Diagnostics,
     return_ty: Option<Type<'src>>,
 }
 
-fn check_block<'src>(block: ast::Block<'src>, c: &mut Checker<'src>) {
+fn check_block<'src>(block: ast::Block<'src>, c: &mut Checker<'_, 'src>) {
     for statement in block.statements() {
         check_statement(statement, c);
     }
 }
 
-fn check_statement<'src>(statement: ast::Statement<'src>, c: &mut Checker<'src>) {
+fn check_statement<'src>(statement: ast::Statement<'src>, c: &mut Checker<'_, 'src>) {
     match statement {
         ast::Statement::Let(it) => {
             if let Some(value) = it.value()
@@ -252,7 +254,7 @@ fn check_statement<'src>(statement: ast::Statement<'src>, c: &mut Checker<'src>)
 fn of<'src>(
     expression: ast::Expression<'src>,
     ascribed: Option<Type<'src>>,
-    c: &mut Checker<'src>,
+    c: &mut Checker<'_, 'src>,
 ) -> Option<Type<'src>> {
     match expression {
         ast::Expression::Parenthesized(it) => of(it.inner()?, ascribed, c),
@@ -374,7 +376,10 @@ fn of<'src>(
     }
 }
 
-fn of_field_access<'src>(it: ast::FieldAccess<'src>, c: &mut Checker<'src>) -> Option<Type<'src>> {
+fn of_field_access<'src>(
+    it: ast::FieldAccess<'src>,
+    c: &mut Checker<'_, 'src>,
+) -> Option<Type<'src>> {
     let aggregate_ty = of(it.aggregate(), None, c)?;
     let name = it.field().span();
     let name = c.code_map.find_file(name.low()).source_slice(name);
@@ -410,7 +415,7 @@ fn of_field_access<'src>(it: ast::FieldAccess<'src>, c: &mut Checker<'src>) -> O
 
 fn return_ty<'src>(
     function_like: ast::FunctionLike<'src>,
-    c: &Checker<'src>,
+    c: &Checker<'_, 'src>,
 ) -> Option<Type<'src>> {
     if let Some(it) = ast::Function::cast(function_like.syntax()) {
         let Some(ty) = it.return_ty() else {
@@ -462,7 +467,7 @@ fn evaluate<'src>(
 fn resolve_call<'src>(
     name: Span,
     arguments: &mut dyn Iterator<Item = ast::Expression<'src>>,
-    c: &mut Checker<'src>,
+    c: &mut Checker<'_, 'src>,
 ) -> Option<ast::FunctionLike<'src>> {
     let file = c.code_map.find_file(name.low());
     let name_text = file.source_slice(name);
@@ -560,7 +565,7 @@ fn resolve_call<'src>(
     }
 }
 
-fn expect<'src>(expression: ast::Expression<'src>, expected_ty: Type, c: &mut Checker<'src>) {
+fn expect<'src>(expression: ast::Expression<'src>, expected_ty: Type, c: &mut Checker<'_, 'src>) {
     if let Some(ty) = of(expression, None, c)
         && ty != expected_ty
     {
