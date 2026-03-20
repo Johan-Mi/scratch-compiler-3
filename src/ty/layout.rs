@@ -1,24 +1,62 @@
 use super::{Base, Shape, Type};
 use crate::ast::{self, Node};
+use crate::diagnostics::{Diagnostics, primary};
 use std::collections::{HashMap, hash_map::Entry};
 use std::ops::Range;
 
-fn of(
-    r#struct: ast::Struct,
+pub fn s(
+    ast: ast::Program,
     type_expressions: &HashMap<codemap::Pos, Type>,
-) -> impl Iterator<Item = Range<usize>> {
-    r#struct
-        .parameters()
-        .unwrap()
-        .iter()
-        .map(|field| type_expressions[&field.ty().unwrap().syntax().span().low()])
-        .inspect(|ty| assert!(matches!(ty.shape, Shape::Flat)))
-        .map(|ty| match ty.base {
-            Base::Unit => 0,
-            Base::Num | Base::String | Base::Bool => 1,
-            Base::Struct(it) => of(it, type_expressions).last().map_or(0, |it| it.end),
-        })
-        .scan(0, |start, size| Some(*start..(*start += size, *start).1))
+    diagnostics: &mut Diagnostics,
+) -> HashMap<codemap::Pos, Vec<Range<usize>>> {
+    let mut layouts = HashMap::<_, Vec<Range<_>>>::new();
+    for component in scc(ast, type_expressions) {
+        let [it] = *component else {
+            let labels = component
+                .iter()
+                .map(|it| primary(it.name().unwrap().span(), ""));
+            diagnostics.error(
+                "mutually recursive structs would be infinitely large",
+                labels.collect::<Vec<_>>(),
+            );
+            continue;
+        };
+
+        if it
+            .parameters()
+            .unwrap()
+            .iter()
+            .map(|field| type_expressions[&field.ty().unwrap().syntax().span().low()])
+            .any(|ty| ty.base == Base::Struct(it))
+        {
+            diagnostics.error(
+                "recursive struct would be infinitely large",
+                [primary(it.name().unwrap().span(), "")],
+            );
+            continue;
+        }
+
+        let layout = it
+            .parameters()
+            .unwrap()
+            .iter()
+            .map(|field| type_expressions[&field.ty().unwrap().syntax().span().low()])
+            .inspect(|ty| assert!(matches!(ty.shape, Shape::Flat)))
+            .map(|ty| match ty.base {
+                Base::Unit => 0,
+                Base::Num | Base::String | Base::Bool => 1,
+                Base::Struct(it) => layouts
+                    // Recursive structs default to size 0, which is fine since they emit errors,
+                    // thereby preventing us from ever using any layouts.
+                    .get(&it.syntax().span().low())
+                    .and_then(|it| it.last())
+                    .map_or(0, |it| it.end),
+            })
+            .scan(0, |start, size| Some(*start..(*start += size, *start).1))
+            .collect();
+        assert!(layouts.insert(it.syntax().span().low(), layout).is_none());
+    }
+    layouts
 }
 
 fn scc<'src>(
