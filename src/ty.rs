@@ -39,7 +39,7 @@ impl<'src> From<Base<'src>> for Type<'src> {
 
 impl PartialEq<Base<'_>> for Type<'_> {
     fn eq(&self, other: &Base) -> bool {
-        self.shape == Shape::Flat && self.base == *other
+        *self == Type::from(*other)
     }
 }
 
