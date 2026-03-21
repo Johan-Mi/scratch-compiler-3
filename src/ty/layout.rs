@@ -51,6 +51,7 @@ pub fn s(
                     .get(&it.syntax().span().low())
                     .and_then(|it| it.last())
                     .map_or(0, |it| it.end),
+                Base::Generic(_) => todo!(),
             })
             .scan(0, |start, size| Some(*start..(*start += size, *start).1))
             .collect();

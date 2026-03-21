@@ -26,7 +26,11 @@ enum Base<'src> {
     String,
     Bool,
     Struct(ast::Struct<'src>),
+    Generic(Generic),
 }
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+struct Generic;
 
 impl<'src> From<Base<'src>> for Type<'src> {
     fn from(value: Base<'src>) -> Self {
@@ -61,6 +65,7 @@ impl<'src> Type<'src> {
                     let name = c.code_map.find_file(name.low()).source_slice(name);
                     f.write_str(name)
                 }
+                Base::Generic(_) => todo!(),
             }
         })
     }
@@ -566,6 +571,7 @@ fn can_call(
     code_map: &CodeMap,
 ) -> bool {
     let file = code_map.find_file(it.syntax().span().low());
+    let mut constraints = Constraints::new();
     it.parameters()
         .into_iter()
         .flat_map(ast::Parameters::iter)
@@ -578,11 +584,18 @@ fn can_call(
             .map(|it| Some(*type_expressions.get(&it.ty()?.syntax().span().low())?))
             .zip(argument_types.iter().copied())
             .filter_map(|(a, b)| a.zip(b))
-            .all(|(pattern, ty)| pattern_match(pattern, ty))
+            .all(|(pattern, ty)| pattern_match(pattern, ty, &mut constraints))
 }
 
-fn pattern_match(pattern: Type, ty: Type) -> bool {
-    pattern == ty
+type Constraints<'src> = HashMap<Generic, Base<'src>>;
+
+fn pattern_match<'src>(pattern: Type, ty: Type<'src>, constraints: &mut Constraints<'src>) -> bool {
+    pattern.shape == ty.shape
+        && match pattern.base {
+            Base::Generic(_) if ty.shape != Shape::Flat => return false,
+            Base::Generic(it) => *constraints.entry(it).or_insert(ty.base),
+            base => base,
+        } == ty.base
 }
 
 fn expect<'src>(expression: ast::Expression<'src>, expected_ty: Type, c: &mut Checker<'_, 'src>) {
