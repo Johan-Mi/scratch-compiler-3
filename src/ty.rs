@@ -520,20 +520,13 @@ fn resolve_call<'src>(
         .iter()
         .copied()
         .filter(|it| {
-            let file = c.code_map.find_file(it.syntax().span().low());
-            it.parameters()
-                .into_iter()
-                .flat_map(ast::Parameters::iter)
-                .map(|it| Some(file.source_slice(it.external_name().span())))
-                .eq(labels.iter().copied())
-                && it
-                    .parameters()
-                    .into_iter()
-                    .flat_map(ast::Parameters::iter)
-                    .map(|it| Some(*c.type_expressions.get(&it.ty()?.syntax().span().low())?))
-                    .zip(argument_types.iter().copied())
-                    .filter_map(|(a, b)| a.zip(b))
-                    .all(|(a, b)| a == b)
+            can_call(
+                it,
+                &labels,
+                &argument_types,
+                &c.type_expressions,
+                c.code_map,
+            )
         })
         .collect();
     match *viable_overloads {
@@ -563,6 +556,29 @@ fn resolve_call<'src>(
             None
         }
     }
+}
+
+fn can_call(
+    it: &ast::FunctionLike,
+    labels: &[Option<&str>],
+    argument_types: &[Option<Type>],
+    type_expressions: &HashMap<Pos, Type>,
+    code_map: &CodeMap,
+) -> bool {
+    let file = code_map.find_file(it.syntax().span().low());
+    it.parameters()
+        .into_iter()
+        .flat_map(ast::Parameters::iter)
+        .map(|it| Some(file.source_slice(it.external_name().span())))
+        .eq(labels.iter().copied())
+        && it
+            .parameters()
+            .into_iter()
+            .flat_map(ast::Parameters::iter)
+            .map(|it| Some(*type_expressions.get(&it.ty()?.syntax().span().low())?))
+            .zip(argument_types.iter().copied())
+            .filter_map(|(a, b)| a.zip(b))
+            .all(|(a, b)| a == b)
 }
 
 fn expect<'src>(expression: ast::Expression<'src>, expected_ty: Type, c: &mut Checker<'_, 'src>) {
