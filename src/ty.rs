@@ -102,18 +102,17 @@ pub fn check<'src>(
         return_ty: None,
     };
 
-    for (variable, value) in ast
-        .syntax()
+    ast.syntax()
         .pre_order()
         .filter(|it| matches!(it.kind(), K::Document | K::Sprite))
         .flat_map(cst::Node::children)
         .filter_map(ast::Let::cast)
         .filter_map(|it| Some((it.variable()?.span().low(), it.value()?)))
-    {
-        if let Some(ty) = of(value, None, &mut c) {
-            assert!(c.variable_types.insert(variable, ty).is_none());
-        }
-    }
+        .for_each(|(variable, value)| {
+            if let Some(ty) = of(value, None, &mut c) {
+                assert!(c.variable_types.insert(variable, ty).is_none());
+            }
+        });
 
     for function in ast.syntax().pre_order().filter_map(ast::Function::cast) {
         if let Some(body) = function.body() {
