@@ -578,7 +578,11 @@ fn can_call(
             .map(|it| Some(*type_expressions.get(&it.ty()?.syntax().span().low())?))
             .zip(argument_types.iter().copied())
             .filter_map(|(a, b)| a.zip(b))
-            .all(|(a, b)| a == b)
+            .all(|(pattern, ty)| pattern_match(pattern, ty))
+}
+
+fn pattern_match(pattern: Type, ty: Type) -> bool {
+    pattern == ty
 }
 
 fn expect<'src>(expression: ast::Expression<'src>, expected_ty: Type, c: &mut Checker<'_, 'src>) {
