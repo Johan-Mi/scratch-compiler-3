@@ -591,7 +591,6 @@ type Constraints<'src> = HashMap<Generic, Base<'src>>;
 fn pattern_match<'src>(pattern: Type, ty: Type<'src>, constraints: &mut Constraints<'src>) -> bool {
     pattern.shape == ty.shape
         && match pattern.base {
-            Base::Generic(_) if ty.shape != Shape::Flat => return false,
             Base::Generic(it) => *constraints.entry(it).or_insert(ty.base),
             base => base,
         } == ty.base
