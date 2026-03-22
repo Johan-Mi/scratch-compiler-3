@@ -75,15 +75,9 @@ pub fn check<'src>(
     let type_expressions: HashMap<Pos, Type> = ast
         .syntax()
         .pre_order()
+        .filter_map(ast::TypeExpression::cast)
         .filter_map(|it| {
-            None.or_else(|| Node::cast(it).map(ast::Parameter::ty))
-                .or_else(|| Node::cast(it).map(ast::TypeAscription::ty))?
-        })
-        .filter_map(|it| {
-            Some((
-                it.syntax().span().low(),
-                evaluate(it, ast, code_map, diagnostics)?,
-            ))
+            Some(it.syntax().span().low()).zip(evaluate(it, ast, code_map, diagnostics))
         })
         .collect();
 
