@@ -88,7 +88,6 @@ pub enum K {
     CostumeList,
     Costume,
     Function,
-    Generics,
     Parameters,
     Parameter,
     Block,
@@ -687,9 +686,6 @@ impl Parser<'_> {
             self.error();
         }
         let _: bool = self.eat(K::String);
-        if self.at(K::Lbracket) {
-            self.parse_generics();
-        }
         if self.at(K::Lparen) {
             self.parse_parameters();
         }
@@ -698,18 +694,6 @@ impl Parser<'_> {
         }
         self.parse_block();
         self.builder.finish_node_at(checkpoint, K::Function);
-    }
-
-    fn parse_generics(&mut self) {
-        self.start_node(K::Generics);
-        self.bump(); // K::Lbracket
-        while !self.at(K::Eof) && !self.eat(K::Rbracket) {
-            if !self.eat(K::Identifier) {
-                self.error();
-            }
-            let _: bool = self.eat(K::Comma);
-        }
-        self.builder.finish_node();
     }
 
     fn parse_costume_list(&mut self) {

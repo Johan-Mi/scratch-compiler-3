@@ -124,10 +124,6 @@ impl<'src> Function<'src> {
         token(self.syntax, K::String)
     }
 
-    pub fn generics(self) -> Option<Generics<'src>> {
-        child(self.syntax)
-    }
-
     pub fn parameters(self) -> Option<Parameters<'src>> {
         child(self.syntax)
     }
@@ -138,16 +134,6 @@ impl<'src> Function<'src> {
 
     pub fn body(self) -> Option<Block<'src>> {
         child(self.syntax)
-    }
-}
-
-node!(Generics);
-
-impl<'src> Generics<'src> {
-    pub fn iter(self) -> impl Iterator<Item = SyntaxNode<'src>> {
-        self.syntax
-            .children()
-            .filter(|it| it.kind() == K::Identifier)
     }
 }
 
