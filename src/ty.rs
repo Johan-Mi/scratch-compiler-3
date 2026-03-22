@@ -26,11 +26,8 @@ enum Base<'src> {
     String,
     Bool,
     Struct(ast::Struct<'src>),
-    Generic(Generic),
+    Generic(&'src str),
 }
-
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
-struct Generic;
 
 impl<'src> From<Base<'src>> for Type<'src> {
     fn from(value: Base<'src>) -> Self {
@@ -73,7 +70,7 @@ impl<'src> Type<'src> {
 
 pub fn check<'src>(
     ast: ast::Program<'src>,
-    code_map: &CodeMap,
+    code_map: &'src CodeMap,
     resolved_variables: &HashMap<Pos, Pos>,
     diagnostics: &mut Diagnostics,
 ) -> HashMap<Pos, Type<'src>> {
@@ -435,7 +432,7 @@ fn return_ty<'src>(
 fn evaluate<'src>(
     expression: ast::TypeExpression,
     ast: ast::Program<'src>,
-    code_map: &CodeMap,
+    code_map: &'src CodeMap,
     diagnostics: &mut Diagnostics,
 ) -> Option<Type<'src>> {
     let span = expression.variable()?.span();
@@ -445,7 +442,12 @@ fn evaluate<'src>(
         Some(K::Star) => Shape::Ref,
         _ => Shape::Flat,
     };
+    let is_generic = expression
+        .syntax()
+        .children()
+        .any(|it| it.kind() == K::Percent);
     let base = match variable {
+        _ if is_generic => Base::Generic(variable),
         "Unit" => Base::Unit,
         "Num" => Base::Num,
         "String" => Base::String,
@@ -586,9 +588,13 @@ fn can_call(
             .all(|(pattern, ty)| pattern_match(pattern, ty, &mut constraints))
 }
 
-type Constraints<'src> = HashMap<Generic, Base<'src>>;
+type Constraints<'src> = HashMap<&'src str, Base<'src>>;
 
-fn pattern_match<'src>(pattern: Type, ty: Type<'src>, constraints: &mut Constraints<'src>) -> bool {
+fn pattern_match<'src>(
+    pattern: Type<'src>,
+    ty: Type<'src>,
+    constraints: &mut Constraints<'src>,
+) -> bool {
     pattern.shape == ty.shape
         && match pattern.base {
             Base::Generic(it) => *constraints.entry(it).or_insert(ty.base),
