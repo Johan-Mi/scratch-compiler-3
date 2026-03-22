@@ -31,10 +31,8 @@ enum Base<'src> {
 
 impl<'src> From<Base<'src>> for Type<'src> {
     fn from(value: Base<'src>) -> Self {
-        Self {
-            shape: Shape::Flat,
-            base: value,
-        }
+        let shape = Shape::Flat;
+        Self { shape, base: value }
     }
 }
 
