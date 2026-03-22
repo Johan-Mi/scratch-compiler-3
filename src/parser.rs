@@ -422,12 +422,13 @@ impl Parser<'_> {
                 self.start_node(K::TypeExpression);
                 self.bump();
             }
-            K::Identifier => self.start_node(K::TypeExpression),
+            K::Percent | K::Identifier => self.start_node(K::TypeExpression),
             _ => {
                 self.error();
                 return;
             }
         }
+        let _: bool = self.eat(K::Percent);
         if !self.eat(K::Identifier) {
             self.error();
         }
