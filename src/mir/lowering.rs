@@ -154,8 +154,10 @@ fn lower_expression(
                 .map(|&variable| mir::Value::Op(variable))
                 .collect()
         }
-        ast::Expression::FunctionCall(_) => lower_call(c),
-        ast::Expression::BinaryOperation(_) => lower_call(c),
+        ast::Expression::FunctionCall(it) => lower_call(c, &mut it.args().iter()),
+        ast::Expression::BinaryOperation(it) => {
+            lower_call(c, &mut [it.lhs().unwrap(), it.rhs().unwrap()].into_iter())
+        }
         ast::Expression::NamedArgument(_) => todo!(),
         ast::Expression::DecimalNumber(it) => {
             let span = it.syntax().span();
@@ -173,7 +175,10 @@ fn lower_expression(
         ast::Expression::TypeAscription(it) => {
             lower_expression(it.inner().unwrap(), basic_block, c)
         }
-        ast::Expression::MethodCall(_) => lower_call(c),
+        ast::Expression::MethodCall(it) => lower_call(
+            c,
+            &mut std::iter::once(it.caller()).chain(it.arguments().iter()),
+        ),
         ast::Expression::FieldAccess(it) => {
             let mut values = lower_expression(it.aggregate(), basic_block, c);
             let ty = c.expression_types[&it.syntax().span()];
@@ -220,7 +225,10 @@ fn float(
     [mir::Value::Num(number)].into()
 }
 
-fn lower_call(c: &mut Context) -> Vec<mir::Value> {
+fn lower_call(
+    c: &mut Context,
+    arguments: &mut dyn Iterator<Item = ast::Expression>,
+) -> Vec<mir::Value> {
     todo!()
 }
 
