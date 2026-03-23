@@ -62,7 +62,8 @@ fn real_main(code_map: &mut CodeMap, diagnostics: &mut Diagnostics) -> Result<()
     }
 
     let resolved_variables = crate::name::resolve(ast, code_map);
-    let type_expressions = ty::check(ast, code_map, &resolved_variables, diagnostics);
+    let (type_expressions, expression_types) =
+        ty::check(ast, code_map, &resolved_variables, diagnostics);
 
     if diagnostics.have_errors() {
         return Err(());
@@ -74,7 +75,13 @@ fn real_main(code_map: &mut CodeMap, diagnostics: &mut Diagnostics) -> Result<()
         return Err(());
     }
 
-    let mut mir = mir::lower(ast, code_map, &resolved_variables, &layouts);
+    let mut mir = mir::lower(
+        ast,
+        code_map,
+        &resolved_variables,
+        &expression_types,
+        &layouts,
+    );
     mir::dce::perform(&mut mir);
 
     codegen::compile(code_map, &string_literals, ast, &mir, "project.sb3").map_err(|err| {

@@ -71,7 +71,7 @@ pub fn check<'src>(
     code_map: &'src CodeMap,
     resolved_variables: &HashMap<Pos, Pos>,
     diagnostics: &mut Diagnostics,
-) -> HashMap<Pos, Type<'src>> {
+) -> (HashMap<Pos, Type<'src>>, HashMap<Span, Type<'src>>) {
     let type_expressions: HashMap<Pos, Type> = ast
         .syntax()
         .pre_order()
@@ -85,6 +85,7 @@ pub fn check<'src>(
         resolved_variables,
         variable_types: HashMap::new(),
         type_expressions,
+        expression_types: HashMap::new(),
         ast,
         code_map,
         diagnostics,
@@ -124,13 +125,14 @@ pub fn check<'src>(
         }
     }
 
-    c.type_expressions
+    (c.type_expressions, c.expression_types)
 }
 
 struct Checker<'a, 'src> {
     resolved_variables: &'a HashMap<Pos, Pos>,
     variable_types: HashMap<Pos, Type<'src>>,
     type_expressions: HashMap<Pos, Type<'src>>,
+    expression_types: HashMap<Span, Type<'src>>,
     ast: ast::Program<'src>,
     code_map: &'a CodeMap,
     diagnostics: &'a mut Diagnostics,
