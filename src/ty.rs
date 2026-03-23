@@ -251,6 +251,17 @@ fn of<'src>(
     ascribed: Option<Type<'src>>,
     c: &mut Checker<'_, 'src>,
 ) -> Option<Type<'src>> {
+    let it = of_actually(expression, ascribed, c);
+    c.expression_types
+        .extend(Some(expression.syntax().span()).zip(it));
+    it
+}
+
+fn of_actually<'src>(
+    expression: ast::Expression<'src>,
+    ascribed: Option<Type<'src>>,
+    c: &mut Checker<'_, 'src>,
+) -> Option<Type<'src>> {
     match expression {
         ast::Expression::Parenthesized(it) => of(it.inner()?, ascribed, c),
         ast::Expression::Variable(it) => {
