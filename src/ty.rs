@@ -8,19 +8,19 @@ use std::{collections::HashMap, fmt};
 
 #[derive(Clone, Copy, PartialEq)]
 pub struct Type<'src> {
-    shape: Shape,
-    base: Base<'src>,
+    pub shape: Shape,
+    pub base: Base<'src>,
 }
 
 #[derive(Clone, Copy, PartialEq)]
-enum Shape {
+pub enum Shape {
     Flat,
     List,
     Ref,
 }
 
 #[derive(Clone, Copy, PartialEq)]
-enum Base<'src> {
+pub enum Base<'src> {
     Unit,
     Num,
     String,

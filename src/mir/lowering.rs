@@ -1,5 +1,6 @@
 use crate::ast::{self, Node};
-use crate::{mir, ty::Type};
+use crate::mir;
+use crate::ty::{self, Type};
 use map::Id;
 use std::{collections::HashMap, ops::Range};
 
@@ -174,10 +175,24 @@ fn lower_expression(
         }
         ast::Expression::MethodCall(_) => lower_call(c),
         ast::Expression::FieldAccess(it) => {
-            let values = lower_expression(it.aggregate(), basic_block, c);
-            let ty: ast::Struct = todo!();
-            let field_index: usize = todo!();
-            let range = c.layouts[&ty.syntax().span().low()][field_index];
+            let mut values = lower_expression(it.aggregate(), basic_block, c);
+            let ty = c.expression_types[&it.syntax().span()];
+            assert!(matches!(ty.shape, ty::Shape::Flat));
+            let ty::Base::Struct(ty) = ty.base else {
+                unreachable!();
+            };
+            let field_name = c
+                .code_map
+                .find_file(it.field().span().low())
+                .source_slice(it.field().span());
+            let file = c.code_map.find_file(ty.syntax().span().low());
+            let field_index: usize = ty
+                .parameters()
+                .unwrap()
+                .iter()
+                .position(|field| file.source_slice(field.internal_name().span()) == field_name)
+                .unwrap();
+            let range = c.layouts[&ty.syntax().span().low()][field_index].clone();
             values.drain(range).collect()
         }
     }
