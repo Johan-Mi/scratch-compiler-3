@@ -267,15 +267,10 @@ fn of_actually<'src>(
             let definition = c.resolved_variables.get(&it.syntax().span().low())?;
             c.variable_types.get(definition).copied()
         }
-        ast::Expression::FunctionCall(it) => {
-            return_ty(resolve_call(it.name().span(), &mut it.args().iter(), c)?, c)
-        }
-        ast::Expression::BinaryOperation(it) => return_ty(
-            resolve_call(
-                it.operator().span(),
-                &mut [it.lhs()?, it.rhs()?].into_iter(),
-                c,
-            )?,
+        ast::Expression::FunctionCall(it) => of_call(it.name().span(), &mut it.args().iter(), c),
+        ast::Expression::BinaryOperation(it) => of_call(
+            it.operator().span(),
+            &mut [it.lhs()?, it.rhs()?].into_iter(),
             c,
         ),
         ast::Expression::NamedArgument(it) => of(it.value()?, ascribed, c),
@@ -369,12 +364,9 @@ fn of_actually<'src>(
             }
             ascribed_ty
         }
-        ast::Expression::MethodCall(it) => return_ty(
-            resolve_call(
-                it.name().span(),
-                &mut std::iter::once(it.caller()).chain(it.arguments().iter()),
-                c,
-            )?,
+        ast::Expression::MethodCall(it) => of_call(
+            it.name().span(),
+            &mut std::iter::once(it.caller()).chain(it.arguments().iter()),
             c,
         ),
         ast::Expression::FieldAccess(it) => of_field_access(it, c),
@@ -472,6 +464,14 @@ fn evaluate<'src>(
         ),
     };
     Some(Type { shape, base })
+}
+
+fn of_call<'src>(
+    name: Span,
+    arguments: &mut dyn Iterator<Item = ast::Expression<'src>>,
+    c: &mut Checker<'_, 'src>,
+) -> Option<Type<'src>> {
+    return_ty(resolve_call(name, arguments, c)?, c)
 }
 
 fn resolve_call<'src>(
