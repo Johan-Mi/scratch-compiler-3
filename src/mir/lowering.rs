@@ -236,6 +236,13 @@ fn lower_call(
     let arguments: Vec<_> = arguments
         .flat_map(|it| lower_expression(it, basic_block, c))
         .collect();
+
+    let function_like: ast::FunctionLike = todo!();
+    let Some(function) = ast::Function::cast(function_like.syntax()) else {
+        assert!(ast::Struct::cast(function_like.syntax()).is_some());
+        return arguments;
+    };
+
     todo!()
 }
 
