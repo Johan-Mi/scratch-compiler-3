@@ -50,18 +50,17 @@ impl<'src> Type<'src> {
                 Shape::List => f.write_str("[]")?,
                 Shape::Ref => f.write_str("*")?,
             }
-            match self.base {
-                Base::Unit => f.write_str("Unit"),
-                Base::Num => f.write_str("Num"),
-                Base::String => f.write_str("String"),
-                Base::Bool => f.write_str("Bool"),
+            f.write_str(match self.base {
+                Base::Unit => "Unit",
+                Base::Num => "Num",
+                Base::String => "String",
+                Base::Bool => "Bool",
                 Base::Struct(s) => {
                     let name = s.name().unwrap().span();
-                    let name = c.code_map.find_file(name.low()).source_slice(name);
-                    f.write_str(name)
+                    c.code_map.find_file(name.low()).source_slice(name)
                 }
                 Base::Generic(_) => todo!(),
-            }
+            })
         })
     }
 }
