@@ -243,7 +243,23 @@ fn lower_call(
         return arguments;
     };
 
-    todo!()
+    if function.kw_inline().is_some() {
+        todo!("lower inline functions to MIR");
+    }
+
+    let call = c.program.ops.insert(mir::Op::Call {
+        function: c.functions[&function.syntax().span().low()],
+        arguments: std::iter::zip(
+            todo!() as &mut dyn Iterator<Item = Id<mir::Parameter>>,
+            arguments,
+        )
+        .collect(),
+    });
+    c.program.basic_blocks[basic_block].0.push(call);
+
+    (todo!() as &mut dyn Iterator<Item = Id<mir::Return>>)
+        .map(|id| mir::Value::Returned { call, id })
+        .collect()
 }
 
 fn one(values: Vec<mir::Value>) -> mir::Value {
