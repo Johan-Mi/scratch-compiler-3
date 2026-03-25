@@ -46,15 +46,21 @@ pub fn compile(
             .collect();
 
         let returns = mir
-            .returns
+            .functions
             .iter()
-            .map(|(it, _)| it)
-            .zip(std::iter::repeat_with(|| {
-                target.add_variable(sb3::Variable {
-                    name: String::new(), // TODO
-                    value: sb3::Constant::Number(0.0),
-                })
-            }))
+            .map(|(&function, it)| {
+                (
+                    function,
+                    std::iter::repeat_with(|| {
+                        target.add_variable(sb3::Variable {
+                            name: String::new(), // TODO
+                            value: sb3::Constant::Number(0.0),
+                        })
+                    })
+                    .take(it.return_value_count)
+                    .collect(),
+                )
+            })
             .collect();
 
         let mut compiler = Compiler {
@@ -79,7 +85,7 @@ struct Compiler<'a> {
     ops: HashMap<Id<mir::Op>, sb3::Operand>,
     variables: HashMap<Id<mir::Variable>, sb3::VariableRef>,
     lists: HashMap<Id<mir::List>, sb3::ListRef>,
-    returns: HashMap<Id<mir::Return>, sb3::VariableRef>,
+    returns: HashMap<Id<mir::BasicBlock>, Vec<sb3::VariableRef>>,
     string_literals: &'a HashMap<codemap::Pos, String>,
 }
 
@@ -158,10 +164,12 @@ impl Compiler<'_> {
                 let _: sb3::InsertionPoint = self.target.insert_at(after);
                 None
             }
-            mir::Op::Return(ref returns) => {
-                for &(id, value) in returns {
+            mir::Op::Return {
+                function,
+                ref values,
+            } => {
+                for (variable, &value) in self.returns[&function].clone().into_iter().zip(values) {
                     let value = self.value(value);
-                    let variable = self.returns[&id].clone();
                     self.target.put(block::set_variable(variable, value));
                 }
                 self.target.put(block::stop_this_script());
@@ -171,7 +179,7 @@ impl Compiler<'_> {
                 function,
                 ref arguments,
             } => {
-                let arguments = arguments.iter().map(|&(_, it)| self.value(it)).collect();
+                let arguments = arguments.iter().map(|&it| self.value(it)).collect();
                 self.target.use_custom_block(todo!(), arguments);
                 None
             }
@@ -184,7 +192,7 @@ impl Compiler<'_> {
 
     fn value(&mut self, value: mir::Value) -> sb3::Operand {
         match value {
-            mir::Value::FunctionParameter(_) => todo!(),
+            mir::Value::FunctionParameter { .. } => todo!(),
             mir::Value::Op(op) => self.ops.remove(&op).unwrap(),
             mir::Value::Returned { .. } => todo!(),
             mir::Value::Num(n) => n.into(),

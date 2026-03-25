@@ -5,23 +5,20 @@ pub use lowering::lower;
 
 use crate::either::Either;
 use map::{Id, Map};
+use std::collections::HashMap;
 
 #[derive(Default)]
 pub struct Program {
-    parameters: Map<Parameter>,
+    pub functions: HashMap<Id<BasicBlock>, Function>,
     pub basic_blocks: Map<BasicBlock>,
     pub ops: Map<Op>,
     pub variables: Map<Variable>,
     pub lists: Map<List>,
-    pub returns: Map<Return>,
 }
 
-#[derive(Clone, Copy)]
-pub struct Parameter {
-    owner: Id<BasicBlock>,
+pub struct Function {
+    pub return_value_count: usize,
 }
-
-pub struct Return;
 
 pub struct BasicBlock(pub Vec<Id<Op>>);
 
@@ -49,11 +46,14 @@ pub enum Op {
         then: Id<BasicBlock>,
         r#else: Id<BasicBlock>,
     },
-    Return(Vec<(Id<Return>, Value)>),
+    Return {
+        function: Id<BasicBlock>,
+        values: Vec<Value>,
+    },
 
     Call {
         function: Id<BasicBlock>,
-        arguments: Vec<(Id<Parameter>, Value)>,
+        arguments: Vec<Value>,
     },
 
     Add([Value; 2]),
@@ -67,7 +67,7 @@ impl Op {
             Self::Store {
                 target: Ref::List { index, .. },
                 value,
-            } => Right(Right([index, value].into_iter())),
+            } => Right([index, value].into_iter()),
             Self::Store { value: arg, .. }
             | Self::Load {
                 source: Ref::List { index: arg, .. },
@@ -85,14 +85,17 @@ impl Op {
                 condition: arg,
                 then: _,
                 r#else: _,
-            } => Left(Left(std::slice::from_ref(arg).iter())),
-            Self::Load { .. } | Self::Forever(_) => Left(Left(std::slice::Iter::default())),
-            Self::Add(args) => Left(Left(args.iter())),
-            Self::Return(args) => Left(Right(args.iter().map(|(_, it)| it))),
+            } => Left(std::slice::from_ref(arg).iter()),
+            Self::Load { .. } | Self::Forever(_) => Left(std::slice::Iter::default()),
+            Self::Add(args) => Left(args.iter()),
+            Self::Return {
+                function: _,
+                values,
+            } => Left(values.iter()),
             Self::Call {
                 function: _,
                 arguments,
-            } => Right(Left(arguments.iter().map(|(_, it)| it))),
+            } => Left(arguments.iter()),
         }
     }
 
@@ -103,7 +106,7 @@ impl Op {
             Self::Store {
                 target: Ref::List { index, .. },
                 value,
-            } => Right(Right([index, value].into_iter())),
+            } => Right([index, value].into_iter()),
             Self::Store { value: arg, .. }
             | Self::Load {
                 source: Ref::List { index: arg, .. },
@@ -121,23 +124,26 @@ impl Op {
                 condition: arg,
                 then: _,
                 r#else: _,
-            } => Left(Left(std::slice::from_mut(arg).iter_mut())),
-            Self::Load { .. } | Self::Forever(_) => Left(Left(std::slice::IterMut::default())),
-            Self::Add(args) => Left(Left(args.iter_mut())),
-            Self::Return(args) => Left(Right(args.iter_mut().map(|(_, it)| it))),
+            } => Left(std::slice::from_mut(arg).iter_mut()),
+            Self::Load { .. } | Self::Forever(_) => Left(std::slice::IterMut::default()),
+            Self::Add(args) => Left(args.iter_mut()),
+            Self::Return {
+                function: _,
+                values,
+            } => Left(values.iter_mut()),
             Self::Call {
                 function: _,
                 arguments,
-            } => Right(Left(arguments.iter_mut().map(|(_, it)| it))),
+            } => Left(arguments.iter_mut()),
         }
     }
 }
 
 #[derive(Clone, Copy)]
 pub enum Value {
-    FunctionParameter(Id<Parameter>),
+    FunctionParameter { index: usize },
     Op(Id<Op>),
-    Returned { call: Id<Op>, id: Id<Return> },
+    Returned { call: Id<Op>, index: usize },
     Num(f64),
     String(codemap::Pos),
     Bool(bool),

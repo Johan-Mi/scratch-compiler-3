@@ -249,16 +249,12 @@ fn lower_call(
 
     let call = c.program.ops.insert(mir::Op::Call {
         function: c.functions[&function.syntax().span().low()],
-        arguments: std::iter::zip(
-            todo!() as &mut dyn Iterator<Item = Id<mir::Parameter>>,
-            arguments,
-        )
-        .collect(),
+        arguments,
     });
     c.program.basic_blocks[basic_block].0.push(call);
 
-    (todo!() as &mut dyn Iterator<Item = Id<mir::Return>>)
-        .map(|id| mir::Value::Returned { call, id })
+    (0..todo!())
+        .map(|index| mir::Value::Returned { call, index })
         .collect()
 }
 
