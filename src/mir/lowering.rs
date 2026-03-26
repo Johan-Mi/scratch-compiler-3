@@ -9,6 +9,7 @@ pub fn lower(
     code_map: &codemap::CodeMap,
     resolved_variables: &HashMap<codemap::Pos, codemap::Pos>,
     expression_types: &HashMap<codemap::Span, Type>,
+    resolved_calls: &HashMap<codemap::Span, ast::FunctionLike>,
     layouts: &HashMap<codemap::Pos, Vec<Range<usize>>>,
 ) -> mir::Program {
     let function_asts = || {
@@ -31,6 +32,7 @@ pub fn lower(
         code_map,
         resolved_variables,
         expression_types,
+        resolved_calls,
         layouts,
         functions,
         variables: HashMap::new(),
@@ -52,6 +54,7 @@ struct Context<'src> {
     code_map: &'src codemap::CodeMap,
     resolved_variables: &'src HashMap<codemap::Pos, codemap::Pos>,
     expression_types: &'src HashMap<codemap::Span, Type<'src>>,
+    resolved_calls: &'src HashMap<codemap::Span, ast::FunctionLike<'src>>,
     layouts: &'src HashMap<codemap::Pos, Vec<Range<usize>>>,
     functions: HashMap<codemap::Pos, Id<mir::BasicBlock>>,
     variables: HashMap<codemap::Pos, Vec<Id<mir::Variable>>>,
@@ -154,8 +157,11 @@ fn lower_expression(
                 .map(|&variable| mir::Value::Op(variable))
                 .collect()
         }
-        ast::Expression::FunctionCall(it) => lower_call(&mut it.args().iter(), basic_block, c),
+        ast::Expression::FunctionCall(it) => {
+            lower_call(it.name().span(), &mut it.args().iter(), basic_block, c)
+        }
         ast::Expression::BinaryOperation(it) => lower_call(
+            it.operator().span(),
             &mut [it.lhs().unwrap(), it.rhs().unwrap()].into_iter(),
             basic_block,
             c,
@@ -178,6 +184,7 @@ fn lower_expression(
             lower_expression(it.inner().unwrap(), basic_block, c)
         }
         ast::Expression::MethodCall(it) => lower_call(
+            it.name().span(),
             &mut std::iter::once(it.caller()).chain(it.arguments().iter()),
             basic_block,
             c,
@@ -229,6 +236,7 @@ fn float(
 }
 
 fn lower_call(
+    name: codemap::Span,
     arguments: &mut dyn Iterator<Item = ast::Expression>,
     basic_block: Id<mir::BasicBlock>,
     c: &mut Context,
@@ -237,7 +245,7 @@ fn lower_call(
         .flat_map(|it| lower_expression(it, basic_block, c))
         .collect();
 
-    let function_like: ast::FunctionLike = todo!();
+    let function_like: ast::FunctionLike = c.resolved_calls[&name];
     let Some(function) = ast::Function::cast(function_like.syntax()) else {
         assert!(ast::Struct::cast(function_like.syntax()).is_some());
         return arguments;

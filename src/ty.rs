@@ -70,7 +70,11 @@ pub fn check<'src>(
     code_map: &'src CodeMap,
     resolved_variables: &HashMap<Pos, Pos>,
     diagnostics: &mut Diagnostics,
-) -> (HashMap<Pos, Type<'src>>, HashMap<Span, Type<'src>>) {
+) -> (
+    HashMap<Pos, Type<'src>>,
+    HashMap<Span, Type<'src>>,
+    HashMap<Span, ast::FunctionLike<'src>>,
+) {
     let type_expressions: HashMap<Pos, Type> = ast
         .syntax()
         .pre_order()
@@ -125,7 +129,7 @@ pub fn check<'src>(
         }
     }
 
-    (c.type_expressions, c.expression_types)
+    (c.type_expressions, c.expression_types, c.resolved_calls)
 }
 
 struct Checker<'a, 'src> {
