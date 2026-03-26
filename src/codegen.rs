@@ -12,14 +12,17 @@ pub fn compile(
 ) -> Result<(), Box<dyn Error>> {
     let mut project = sb3::Project::default();
     let output_file = File::create(output_path)?;
-    for sprite in ast
-        .documents()
-        .flat_map(ast::Document::sprites)
-        .filter_map(ast::Sprite::name)
-    {
-        let span = sprite.span();
+    for sprite in ast.documents().flat_map(ast::Document::sprites) {
+        let name = sprite.name().unwrap();
+        let span = name.span();
         let file = code_map.find_file(span.low());
         let mut target = project.add_sprite(file.source_slice(span).to_owned());
+
+        for costume in sprite.costume_lists().flat_map(ast::CostumeList::iter) {
+            let name = string_literals[&costume.name().unwrap().span().low()].clone();
+            let path = string_literals[&costume.path().unwrap().span().low()].as_ref();
+            target.add_costume(sb3::Costume::from_file(name, path)?);
+        }
 
         let variables = mir
             .variables
