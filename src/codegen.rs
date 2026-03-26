@@ -75,9 +75,8 @@ pub fn compile(
             string_literals,
         };
 
-        let functions = &mir.basic_blocks; // TODO
-        for function in functions.values() {
-            compiler.function(function, mir);
+        for &function in mir.functions.keys() {
+            compiler.function(&mir.basic_blocks[function], mir);
         }
     }
     project.finish(output_file)
