@@ -255,13 +255,14 @@ fn lower_call(
         todo!("lower inline functions to MIR");
     }
 
+    let function = c.functions[&function.syntax().span().low()];
     let call = c.program.ops.insert(mir::Op::Call {
-        function: c.functions[&function.syntax().span().low()],
+        function,
         arguments,
     });
     c.program.basic_blocks[basic_block].0.push(call);
 
-    (0..todo!())
+    (0..c.program.functions[&function].return_value_count)
         .map(|index| mir::Value::Returned { call, index })
         .collect()
 }
