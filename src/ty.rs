@@ -85,6 +85,7 @@ pub fn check<'src>(
         variable_types: HashMap::new(),
         type_expressions,
         expression_types: HashMap::new(),
+        resolved_calls: HashMap::new(),
         ast,
         code_map,
         diagnostics,
@@ -132,6 +133,7 @@ struct Checker<'a, 'src> {
     variable_types: HashMap<Pos, Type<'src>>,
     type_expressions: HashMap<Pos, Type<'src>>,
     expression_types: HashMap<Span, Type<'src>>,
+    resolved_calls: HashMap<Span, ast::FunctionLike<'src>>,
     ast: ast::Program<'src>,
     code_map: &'a CodeMap,
     diagnostics: &'a mut Diagnostics,
@@ -471,7 +473,9 @@ fn of_call<'src>(
     arguments: &mut dyn Iterator<Item = ast::Expression<'src>>,
     c: &mut Checker<'_, 'src>,
 ) -> Option<Type<'src>> {
-    return_ty(resolve_call(name, arguments, c)?, c)
+    let function_like = resolve_call(name, arguments, c)?;
+    assert!(c.resolved_calls.insert(name, function_like).is_none());
+    return_ty(function_like, c)
 }
 
 fn resolve_call<'src>(
