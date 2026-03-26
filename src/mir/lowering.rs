@@ -71,7 +71,7 @@ fn lower_block(block: ast::Block, c: &mut Context) -> Id<mir::BasicBlock> {
 fn lower_statement(statement: ast::Statement, basic_block: Id<mir::BasicBlock>, c: &mut Context) {
     match statement {
         ast::Statement::Let(it) => {
-            let values = lower_expression(it.value().unwrap(), basic_block, c);
+            let values = lower_expression(it.value().unwrap(), basic_block, c).values();
             let variables = std::iter::repeat_with(|| c.program.variables.insert(mir::Variable))
                 .take(values.len())
                 .collect();
@@ -86,7 +86,7 @@ fn lower_statement(statement: ast::Statement, basic_block: Id<mir::BasicBlock>, 
             assert!(c.variables.insert(pos, variables).is_none());
         }
         ast::Statement::If(it) => {
-            let condition = one(lower_expression(it.condition().unwrap(), basic_block, c));
+            let condition = one(lower_expression(it.condition().unwrap(), basic_block, c).values());
             let then = lower_block(it.then().unwrap(), c);
             let r#else = c.program.basic_blocks.insert(mir::BasicBlock(Vec::new()));
             if let Some(else_clause) = it.else_clause() {
@@ -106,7 +106,7 @@ fn lower_statement(statement: ast::Statement, basic_block: Id<mir::BasicBlock>, 
             c.program.basic_blocks[basic_block].0.push(op);
         }
         ast::Statement::Repeat(it) => {
-            let times = one(lower_expression(it.times().unwrap(), basic_block, c));
+            let times = one(lower_expression(it.times().unwrap(), basic_block, c).values());
             let body = lower_block(it.body().unwrap(), c);
             let op = c.program.ops.insert(mir::Op::Repeat { times, body });
             c.program.basic_blocks[basic_block].0.push(op);
@@ -122,7 +122,7 @@ fn lower_statement(statement: ast::Statement, basic_block: Id<mir::BasicBlock>, 
             let variable = c.program.variables.insert(mir::Variable);
             let pos = it.variable().unwrap().span().low();
             assert!(c.variables.insert(pos, [variable].into()).is_none());
-            let times = one(lower_expression(it.times().unwrap(), basic_block, c));
+            let times = one(lower_expression(it.times().unwrap(), basic_block, c).values());
             let body = lower_block(it.body().unwrap(), c);
             let op = c.program.ops.insert(mir::Op::For {
                 variable,
@@ -132,7 +132,9 @@ fn lower_statement(statement: ast::Statement, basic_block: Id<mir::BasicBlock>, 
             c.program.basic_blocks[basic_block].0.push(op);
         }
         ast::Statement::Return(_) => todo!(),
-        ast::Statement::Expression(it) => assert!(lower_expression(it, basic_block, c).is_empty()),
+        ast::Statement::Expression(it) => {
+            assert!(lower_expression(it, basic_block, c).values().is_empty());
+        }
     }
 }
 
@@ -140,7 +142,7 @@ fn lower_expression(
     expression: ast::Expression,
     basic_block: Id<mir::BasicBlock>,
     c: &mut Context,
-) -> Vec<mir::Value> {
+) -> Bundle {
     match expression {
         ast::Expression::Parenthesized(it) => lower_expression(it.inner().unwrap(), basic_block, c),
         ast::Expression::Variable(it) => {
@@ -155,7 +157,8 @@ fn lower_expression(
             basic_block[start..]
                 .iter()
                 .map(|&variable| mir::Value::Op(variable))
-                .collect()
+                .collect::<Vec<_>>()
+                .into()
         }
         ast::Expression::FunctionCall(it) => {
             lower_call(it.name().span(), &mut it.args().iter(), basic_block, c)
@@ -170,14 +173,16 @@ fn lower_expression(
         ast::Expression::DecimalNumber(it) => {
             let span = it.syntax().span();
             let file = c.code_map.find_file(span.low());
-            [mir::Value::Num(file.source_slice(span).parse().unwrap())].into()
+            Vec::from([mir::Value::Num(file.source_slice(span).parse().unwrap())]).into()
         }
         ast::Expression::BinaryNumber(it) => float(2, b'b', it.syntax(), c.code_map),
         ast::Expression::OctalNumber(it) => float(8, b'o', it.syntax(), c.code_map),
         ast::Expression::HexadecimalNumber(it) => float(16, b'x', it.syntax(), c.code_map),
-        ast::Expression::String(it) => [mir::Value::String(it.syntax().span().low())].into(),
-        ast::Expression::KwFalse(_) => [mir::Value::Bool(false)].into(),
-        ast::Expression::KwTrue(_) => [mir::Value::Bool(true)].into(),
+        ast::Expression::String(it) => {
+            Vec::from([mir::Value::String(it.syntax().span().low())]).into()
+        }
+        ast::Expression::KwFalse(_) => Vec::from([mir::Value::Bool(false)]).into(),
+        ast::Expression::KwTrue(_) => Vec::from([mir::Value::Bool(true)]).into(),
         ast::Expression::Lvalue(_) => todo!(),
         ast::Expression::ListLiteral(_) => todo!(),
         ast::Expression::TypeAscription(it) => {
@@ -190,7 +195,7 @@ fn lower_expression(
             c,
         ),
         ast::Expression::FieldAccess(it) => {
-            let mut values = lower_expression(it.aggregate(), basic_block, c);
+            let mut values = lower_expression(it.aggregate(), basic_block, c).values();
             let ty = c.expression_types[&it.syntax().span()];
             assert!(matches!(ty.shape, ty::Shape::Flat));
             let ty::Base::Struct(ty) = ty.base else {
@@ -208,7 +213,7 @@ fn lower_expression(
                 .position(|field| file.source_slice(field.internal_name().span()) == field_name)
                 .unwrap();
             let range = c.layouts[&ty.syntax().span().low()][field_index].clone();
-            values.drain(range).collect()
+            values.drain(range).collect::<Vec<_>>().into()
         }
     }
 }
@@ -218,7 +223,7 @@ fn float(
     letter: u8,
     node: crate::parser::SyntaxNode,
     code_map: &codemap::CodeMap,
-) -> Vec<mir::Value> {
+) -> Bundle {
     let span = node.span();
     let file = code_map.find_file(span.low());
     let text = file.source_slice(span);
@@ -232,7 +237,7 @@ fn float(
         reason = "These are float literals. `u64` is only used as an implementation detail."
     )]
     let number = u64::from_str_radix(text, radix).unwrap() as f64 * sign;
-    [mir::Value::Num(number)].into()
+    Vec::from([mir::Value::Num(number)]).into()
 }
 
 fn lower_call(
@@ -240,15 +245,15 @@ fn lower_call(
     arguments: &mut dyn Iterator<Item = ast::Expression>,
     basic_block: Id<mir::BasicBlock>,
     c: &mut Context,
-) -> Vec<mir::Value> {
+) -> Bundle {
     let arguments: Vec<_> = arguments
-        .flat_map(|it| lower_expression(it, basic_block, c))
+        .flat_map(|it| lower_expression(it, basic_block, c).values())
         .collect();
 
     let function_like: ast::FunctionLike = c.resolved_calls[&name];
     let Some(function) = ast::Function::cast(function_like.syntax()) else {
         assert!(ast::Struct::cast(function_like.syntax()).is_some());
-        return arguments;
+        return arguments.into();
     };
 
     if function.kw_inline().is_some() {
@@ -264,7 +269,26 @@ fn lower_call(
 
     (0..c.program.functions[&function].return_value_count)
         .map(|index| mir::Value::Returned { call, index })
-        .collect()
+        .collect::<Vec<_>>()
+        .into()
+}
+
+enum Bundle {
+    Values(Vec<mir::Value>),
+}
+
+impl From<Vec<mir::Value>> for Bundle {
+    fn from(v: Vec<mir::Value>) -> Self {
+        Self::Values(v)
+    }
+}
+
+impl Bundle {
+    fn values(self) -> Vec<mir::Value> {
+        match self {
+            Self::Values(it) => it,
+        }
+    }
 }
 
 fn one(values: Vec<mir::Value>) -> mir::Value {
