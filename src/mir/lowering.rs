@@ -275,6 +275,8 @@ fn lower_call(
 
 enum Bundle {
     Values(Vec<mir::Value>),
+    Lists(Vec<Id<mir::List>>),
+    Refs(Vec<mir::Ref>),
 }
 
 impl From<Vec<mir::Value>> for Bundle {
@@ -287,6 +289,7 @@ impl Bundle {
     fn values(self) -> Vec<mir::Value> {
         match self {
             Self::Values(it) => it,
+            _ => unreachable!(),
         }
     }
 }
