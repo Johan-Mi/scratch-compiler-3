@@ -194,7 +194,31 @@ fn lower_expression(
         ast::Expression::KwFalse(_) => Vec::from([mir::Value::Bool(false)]).into(),
         ast::Expression::KwTrue(_) => Vec::from([mir::Value::Bool(true)]).into(),
         ast::Expression::Lvalue(_) => todo!(),
-        ast::Expression::ListLiteral(_) => todo!(),
+        ast::Expression::ListLiteral(it) => {
+            let ty: ast::Struct = todo!();
+            let layout = &c.layouts[&ty.syntax().span().low()];
+            let size = layout.last().map_or(0, |it| it.end);
+
+            let lists = std::iter::repeat_with(|| c.program.lists.insert(mir::List))
+                .take(size)
+                .collect::<Vec<_>>();
+            c.program.basic_blocks[basic_block].0.extend(
+                lists
+                    .iter()
+                    .map(|&it| c.program.ops.insert(mir::Op::DeleteAll(it))),
+            );
+            for item in it.iter() {
+                let values = lower_expression(item, basic_block, c).values();
+                c.program.basic_blocks[basic_block].0.extend(
+                    lists
+                        .iter()
+                        .zip(values)
+                        .map(|(&list, value)| c.program.ops.insert(mir::Op::Push { list, value })),
+                );
+            }
+
+            Bundle::Lists(lists)
+        }
         ast::Expression::TypeAscription(it) => {
             lower_expression(it.inner().unwrap(), basic_block, c)
         }
