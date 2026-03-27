@@ -56,6 +56,12 @@ pub enum Op {
         arguments: Vec<Value>,
     },
 
+    DeleteAll(Id<List>),
+    Push {
+        list: Id<List>,
+        value: Value,
+    },
+
     Add([Value; 2]),
 }
 
@@ -85,8 +91,14 @@ impl Op {
                 condition: arg,
                 then: _,
                 r#else: _,
+            }
+            | Self::Push {
+                list: _,
+                value: arg,
             } => Left(std::slice::from_ref(arg).iter()),
-            Self::Load { .. } | Self::Forever(_) => Left(std::slice::Iter::default()),
+            Self::Load { .. } | Self::Forever(_) | Self::DeleteAll(_) => {
+                Left(std::slice::Iter::default())
+            }
             Self::Add(args) => Left(args.iter()),
             Self::Return {
                 function: _,
@@ -124,8 +136,14 @@ impl Op {
                 condition: arg,
                 then: _,
                 r#else: _,
+            }
+            | Self::Push {
+                list: _,
+                value: arg,
             } => Left(std::slice::from_mut(arg).iter_mut()),
-            Self::Load { .. } | Self::Forever(_) => Left(std::slice::IterMut::default()),
+            Self::Load { .. } | Self::Forever(_) | Self::DeleteAll(_) => {
+                Left(std::slice::IterMut::default())
+            }
             Self::Add(args) => Left(args.iter_mut()),
             Self::Return {
                 function: _,

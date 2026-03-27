@@ -185,6 +185,8 @@ impl Compiler<'_> {
                 self.target.use_custom_block(todo!(), arguments);
                 None
             }
+            mir::Op::DeleteAll(_) => todo!(),
+            mir::Op::Push { .. } => todo!(),
             mir::Op::Add(args) => {
                 let [lhs, rhs] = args.map(|it| self.value(it));
                 Some(self.target.add(lhs, rhs))
