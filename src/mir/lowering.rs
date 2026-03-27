@@ -36,11 +36,13 @@ pub fn lower(
         layouts,
         functions,
         variables: HashMap::new(),
+        current_function: None,
     };
 
     for function in function_asts() {
         let body = function.body().unwrap();
         let basic_block = context.functions[&function.syntax().span().low()];
+        context.current_function = Some(basic_block);
         for statement in body.statements() {
             lower_statement(statement, basic_block, &mut context);
         }
@@ -58,6 +60,7 @@ struct Context<'src> {
     layouts: &'src HashMap<codemap::Pos, Vec<Range<usize>>>,
     functions: HashMap<codemap::Pos, Id<mir::BasicBlock>>,
     variables: HashMap<codemap::Pos, Vec<Id<mir::Variable>>>,
+    current_function: Option<Id<mir::BasicBlock>>,
 }
 
 fn lower_block(block: ast::Block, c: &mut Context) -> Id<mir::BasicBlock> {
@@ -134,7 +137,7 @@ fn lower_statement(statement: ast::Statement, basic_block: Id<mir::BasicBlock>, 
         ast::Statement::Return(it) => {
             let values = lower_expression(it.expression().unwrap(), basic_block, c).values();
             let op = c.program.ops.insert(mir::Op::Return {
-                function: todo!(),
+                function: c.current_function.unwrap(),
                 values,
             });
             c.program.basic_blocks[basic_block].0.push(op);
