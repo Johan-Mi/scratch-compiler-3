@@ -74,6 +74,7 @@ pub fn check<'src>(
     HashMap<Pos, Type<'src>>,
     HashMap<Span, Type<'src>>,
     HashMap<Span, ast::FunctionLike<'src>>,
+    HashMap<Pos, Type<'src>>,
 ) {
     let type_expressions: HashMap<Pos, Type> = ast
         .syntax()
@@ -108,16 +109,23 @@ pub fn check<'src>(
             }
         });
 
+    let mut return_types = HashMap::new();
+
     for function in ast.syntax().pre_order().filter_map(ast::Function::cast) {
         if let Some(body) = function.body() {
             c.return_ty = return_ty(function.into(), &c);
-            if let Some(return_ty) = c.return_ty
-                && matches!(return_ty.shape, Shape::List | Shape::Ref)
-            {
-                c.diagnostics.error(
-                    format!("type `{}` cannot be used at runtime", return_ty.display(&c)),
-                    [primary(function.return_ty().unwrap().syntax().span(), "")],
+            if let Some(return_ty) = c.return_ty {
+                assert!(
+                    return_types
+                        .insert(function.syntax().span().low(), return_ty)
+                        .is_none()
                 );
+                if matches!(return_ty.shape, Shape::List | Shape::Ref) {
+                    c.diagnostics.error(
+                        format!("type `{}` cannot be used at runtime", return_ty.display(&c)),
+                        [primary(function.return_ty().unwrap().syntax().span(), "")],
+                    );
+                }
             }
             check_block(body, &mut c);
             if c.return_ty.is_some_and(|it| it != Base::Unit) && !body.diverges() {
@@ -129,7 +137,12 @@ pub fn check<'src>(
         }
     }
 
-    (c.type_expressions, c.expression_types, c.resolved_calls)
+    (
+        c.type_expressions,
+        c.expression_types,
+        c.resolved_calls,
+        return_types,
+    )
 }
 
 struct Checker<'a, 'src> {

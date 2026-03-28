@@ -62,7 +62,7 @@ fn real_main(code_map: &mut CodeMap, diagnostics: &mut Diagnostics) -> Result<()
     }
 
     let resolved_variables = crate::name::resolve(ast, code_map);
-    let (type_expressions, expression_types, resolved_calls) =
+    let (type_expressions, expression_types, resolved_calls, return_types) =
         ty::check(ast, code_map, &resolved_variables, diagnostics);
 
     if diagnostics.have_errors() {
@@ -81,6 +81,7 @@ fn real_main(code_map: &mut CodeMap, diagnostics: &mut Diagnostics) -> Result<()
         &resolved_variables,
         &expression_types,
         &resolved_calls,
+        &return_types,
         &layouts,
     );
 

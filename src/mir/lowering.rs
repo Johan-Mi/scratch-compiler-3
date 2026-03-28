@@ -10,6 +10,7 @@ pub fn lower(
     resolved_variables: &HashMap<codemap::Pos, codemap::Pos>,
     expression_types: &HashMap<codemap::Span, Type>,
     resolved_calls: &HashMap<codemap::Span, ast::FunctionLike>,
+    return_types: &HashMap<codemap::Pos, Type>,
     layouts: &HashMap<codemap::Pos, Vec<Range<usize>>>,
 ) -> mir::Program {
     let function_asts = || {
@@ -41,7 +42,16 @@ pub fn lower(
 
     for function in function_asts() {
         let body = function.body().unwrap();
-        let basic_block = context.functions[&function.syntax().span().low()];
+        let pos = function.syntax().span().low();
+        let basic_block = context.functions[&pos];
+        let return_value_count = crate::ty::layout::size(return_types[&pos].base, layouts);
+        assert!(
+            context
+                .program
+                .functions
+                .insert(basic_block, mir::Function { return_value_count })
+                .is_none()
+        );
         context.current_function = Some(basic_block);
         for statement in body.statements() {
             lower_statement(statement, basic_block, &mut context);
