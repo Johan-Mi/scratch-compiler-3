@@ -195,9 +195,8 @@ fn lower_expression(
         ast::Expression::KwTrue(_) => Vec::from([mir::Value::Bool(true)]).into(),
         ast::Expression::Lvalue(_) => todo!(),
         ast::Expression::ListLiteral(it) => {
-            let ty: ast::Struct = todo!();
-            let layout = &c.layouts[&ty.syntax().span().low()];
-            let size = layout.last().map_or(0, |it| it.end);
+            let base = c.expression_types[&it.syntax().span()].base;
+            let size = crate::ty::layout::size(base, c.layouts);
 
             let lists = std::iter::repeat_with(|| c.program.lists.insert(mir::List))
                 .take(size)

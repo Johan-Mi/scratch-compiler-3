@@ -50,7 +50,7 @@ pub fn s(
     layouts
 }
 
-fn size(base: Base, layouts: &HashMap<codemap::Pos, Vec<Range<usize>>>) -> usize {
+pub fn size(base: Base, layouts: &HashMap<codemap::Pos, Vec<Range<usize>>>) -> usize {
     match base {
         Base::Unit => 0,
         Base::Num | Base::String | Base::Bool => 1,
