@@ -209,9 +209,7 @@ fn lower_expression(
             for item in it.iter() {
                 let values = lower_expression(item, basic_block, c).values();
                 c.program.basic_blocks[basic_block].0.extend(
-                    lists
-                        .iter()
-                        .zip(values)
+                    std::iter::zip(&lists, values)
                         .map(|(&list, value)| c.program.ops.insert(mir::Op::Push { list, value })),
                 );
             }
