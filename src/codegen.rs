@@ -190,7 +190,12 @@ impl Compiler<'_> {
                     .put(block::delete_all_of_list(self.lists[&list].clone()));
                 None
             }
-            mir::Op::Push { .. } => todo!(),
+            mir::Op::Push { list, value } => {
+                let value = self.value(value);
+                self.target
+                    .put(block::append(self.lists[&list].clone(), value));
+                None
+            }
             mir::Op::Add(args) => {
                 let [lhs, rhs] = args.map(|it| self.value(it));
                 Some(self.target.add(lhs, rhs))
