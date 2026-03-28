@@ -42,22 +42,26 @@ pub fn s(
             .iter()
             .map(|field| type_expressions[&field.ty().unwrap().syntax().span().low()])
             .inspect(|ty| assert!(matches!(ty.shape, Shape::Flat)))
-            .map(|ty| match ty.base {
-                Base::Unit => 0,
-                Base::Num | Base::String | Base::Bool => 1,
-                Base::Struct(it) => layouts
-                    // Recursive structs default to size 0, which is fine since they emit errors,
-                    // thereby preventing us from ever using any layouts.
-                    .get(&it.syntax().span().low())
-                    .and_then(|it| it.last())
-                    .map_or(0, |it| it.end),
-                Base::Generic(_) => todo!(),
-            })
+            .map(|ty| size(ty.base, &layouts))
             .scan(0, |start, size| Some(*start..(*start += size, *start).1))
             .collect();
         assert!(layouts.insert(it.syntax().span().low(), layout).is_none());
     }
     layouts
+}
+
+fn size(base: Base, layouts: &HashMap<codemap::Pos, Vec<Range<usize>>>) -> usize {
+    match base {
+        Base::Unit => 0,
+        Base::Num | Base::String | Base::Bool => 1,
+        Base::Struct(it) => layouts
+            // Recursive structs default to size 0, which is fine since they emit errors,
+            // thereby preventing us from ever using any layouts.
+            .get(&it.syntax().span().low())
+            .and_then(|it| it.last())
+            .map_or(0, |it| it.end),
+        Base::Generic(_) => todo!(),
+    }
 }
 
 fn scc<'src>(
