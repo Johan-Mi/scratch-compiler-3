@@ -193,7 +193,7 @@ fn lower_expression(
         }
         ast::Expression::KwFalse(_) => Vec::from([mir::Value::Bool(false)]).into(),
         ast::Expression::KwTrue(_) => Vec::from([mir::Value::Bool(true)]).into(),
-        ast::Expression::Lvalue(_) => todo!(),
+        ast::Expression::Lvalue(it) => lower_lvalue(it.inner().unwrap(), c),
         ast::Expression::ListLiteral(it) => {
             let base = c.expression_types[&it.syntax().span()].base;
             let size = crate::ty::layout::size(base, c.layouts);
@@ -269,6 +269,10 @@ fn float(
     )]
     let number = u64::from_str_radix(text, radix).unwrap() as f64 * sign;
     Vec::from([mir::Value::Num(number)]).into()
+}
+
+fn lower_lvalue(expression: ast::Expression, c: &mut Context) -> Bundle {
+    todo!()
 }
 
 fn lower_call(
