@@ -179,7 +179,7 @@ fn lower_expression(
             basic_block,
             c,
         ),
-        ast::Expression::NamedArgument(_) => todo!(),
+        ast::Expression::NamedArgument(it) => lower_expression(it.value().unwrap(), basic_block, c),
         ast::Expression::DecimalNumber(it) => {
             let span = it.syntax().span();
             let file = c.code_map.find_file(span.low());
