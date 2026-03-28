@@ -62,28 +62,19 @@ fn real_main(code_map: &mut CodeMap, diagnostics: &mut Diagnostics) -> Result<()
     }
 
     let resolved_variables = crate::name::resolve(ast, code_map);
-    let (type_expressions, expression_types, resolved_calls, return_types) =
-        ty::check(ast, code_map, &resolved_variables, diagnostics);
+    let typing = ty::check(ast, code_map, &resolved_variables, diagnostics);
 
     if diagnostics.have_errors() {
         return Err(());
     }
 
-    let layouts = ty::layout::s(ast, &type_expressions, diagnostics);
+    let layouts = ty::layout::s(ast, &typing.type_expressions, diagnostics);
 
     if diagnostics.have_errors() {
         return Err(());
     }
 
-    let mir = mir::lower(
-        ast,
-        code_map,
-        &resolved_variables,
-        &expression_types,
-        &resolved_calls,
-        &return_types,
-        &layouts,
-    );
+    let mir = mir::lower(ast, code_map, &resolved_variables, &typing, &layouts);
 
     codegen::compile(code_map, &string_literals, ast, &mir, "project.sb3").map_err(|err| {
         diagnostics.error("failed to create project file", []);

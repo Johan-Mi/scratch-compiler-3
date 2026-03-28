@@ -65,17 +65,19 @@ impl<'src> Type<'src> {
     }
 }
 
+pub struct Ping<'src> {
+    pub type_expressions: HashMap<Pos, Type<'src>>,
+    pub expression_types: HashMap<Span, Type<'src>>,
+    pub resolved_calls: HashMap<Span, ast::FunctionLike<'src>>,
+    pub return_types: HashMap<Pos, Type<'src>>,
+}
+
 pub fn check<'src>(
     ast: ast::Program<'src>,
     code_map: &'src CodeMap,
     resolved_variables: &HashMap<Pos, Pos>,
     diagnostics: &mut Diagnostics,
-) -> (
-    HashMap<Pos, Type<'src>>,
-    HashMap<Span, Type<'src>>,
-    HashMap<Span, ast::FunctionLike<'src>>,
-    HashMap<Pos, Type<'src>>,
-) {
+) -> Ping<'src> {
     let type_expressions: HashMap<Pos, Type> = ast
         .syntax()
         .pre_order()
@@ -137,12 +139,12 @@ pub fn check<'src>(
         }
     }
 
-    (
-        c.type_expressions,
-        c.expression_types,
-        c.resolved_calls,
+    Ping {
+        type_expressions: c.type_expressions,
+        expression_types: c.expression_types,
+        resolved_calls: c.resolved_calls,
         return_types,
-    )
+    }
 }
 
 struct Checker<'a, 'src> {

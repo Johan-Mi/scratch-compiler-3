@@ -8,9 +8,7 @@ pub fn lower(
     ast: ast::Program,
     code_map: &codemap::CodeMap,
     resolved_variables: &HashMap<codemap::Pos, codemap::Pos>,
-    expression_types: &HashMap<codemap::Span, Type>,
-    resolved_calls: &HashMap<codemap::Span, ast::FunctionLike>,
-    return_types: &HashMap<codemap::Pos, Type>,
+    typing: &ty::Ping,
     layouts: &HashMap<codemap::Pos, Vec<Range<usize>>>,
 ) -> mir::Program {
     let function_asts = || {
@@ -32,8 +30,8 @@ pub fn lower(
         program,
         code_map,
         resolved_variables,
-        expression_types,
-        resolved_calls,
+        expression_types: &typing.expression_types,
+        resolved_calls: &typing.resolved_calls,
         layouts,
         functions,
         variables: HashMap::new(),
@@ -44,7 +42,7 @@ pub fn lower(
         let body = function.body().unwrap();
         let pos = function.syntax().span().low();
         let basic_block = context.functions[&pos];
-        let return_value_count = crate::ty::layout::size(return_types[&pos].base, layouts);
+        let return_value_count = ty::layout::size(typing.return_types[&pos].base, layouts);
         assert!(
             context
                 .program
@@ -206,7 +204,7 @@ fn lower_expression(
         ast::Expression::Lvalue(it) => lower_lvalue(it.inner().unwrap(), c),
         ast::Expression::ListLiteral(it) => {
             let base = c.expression_types[&it.syntax().span()].base;
-            let size = crate::ty::layout::size(base, c.layouts);
+            let size = ty::layout::size(base, c.layouts);
 
             let lists = std::iter::repeat_with(|| c.program.lists.insert(mir::List))
                 .take(size)
