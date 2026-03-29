@@ -59,7 +59,7 @@ impl<'src> Type<'src> {
                     let name = s.name().unwrap().span();
                     c.code_map.find_file(name.low()).source_slice(name)
                 }
-                Base::Generic(_) => todo!(),
+                Base::Generic(name) => return write!(f, "%{name}"),
             })
         })
     }
