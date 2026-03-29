@@ -24,26 +24,22 @@ pub fn spill(program: &mut Program) {
     let mut variable = None;
     let mut prev_def = None;
     for (def, user) in uses {
-        if prev_def != Some(def) {
-            variable = None;
-        }
+        variable = variable.filter(|_| prev_def == Some(def));
         prev_def = Some(def);
         let variable = *variable.get_or_insert_with(|| {
             let basic_block = &mut program.basic_blocks[defs[&def]];
             let index = basic_block.0.iter().position(|&it| it == def).unwrap();
             let variable = program.variables.insert(Variable);
-            let store = program.ops.insert(Op::Store {
-                target: Ref::Variable(variable),
-                value: Value::Op(def),
-            });
+            let target = Ref::Variable(variable);
+            let value = Value::Op(def);
+            let store = program.ops.insert(Op::Store { target, value });
             basic_block.0.insert(index + 1, store);
             variable
         });
         let basic_block = &mut program.basic_blocks[defs[&user]];
         let index = basic_block.0.iter().position(|&it| it == user).unwrap();
-        let load = program.ops.insert(Op::Load {
-            source: Ref::Variable(variable),
-        });
+        let source = Ref::Variable(variable);
+        let load = program.ops.insert(Op::Load { source });
         let arg = program.ops[user]
             .args_mut()
             .find(|&&mut it| matches!(it, Value::Op(op) if op == def))
