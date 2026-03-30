@@ -280,7 +280,46 @@ fn float(
 }
 
 fn lower_lvalue(expression: ast::Expression, c: &mut Context) -> Bundle {
-    todo!()
+    match expression {
+        ast::Expression::Parenthesized(_)
+        | ast::Expression::FunctionCall(_)
+        | ast::Expression::BinaryOperation(_)
+        | ast::Expression::NamedArgument(_)
+        | ast::Expression::DecimalNumber(_)
+        | ast::Expression::BinaryNumber(_)
+        | ast::Expression::OctalNumber(_)
+        | ast::Expression::HexadecimalNumber(_)
+        | ast::Expression::String(_)
+        | ast::Expression::KwFalse(_)
+        | ast::Expression::KwTrue(_)
+        | ast::Expression::Lvalue(_)
+        | ast::Expression::ListLiteral(_)
+        | ast::Expression::TypeAscription(_)
+        | ast::Expression::MethodCall(_) => todo!(),
+
+        ast::Expression::Variable(_) => todo!(),
+        ast::Expression::FieldAccess(it) => {
+            let mut refs = lower_lvalue(it.aggregate(), c).refs();
+            let ty = c.expression_types[&it.syntax().span()];
+            assert!(matches!(ty.shape, ty::Shape::Flat));
+            let ty::Base::Struct(ty) = ty.base else {
+                unreachable!();
+            };
+            let field_name = c
+                .code_map
+                .find_file(it.field().span().low())
+                .source_slice(it.field().span());
+            let file = c.code_map.find_file(ty.syntax().span().low());
+            let field_index: usize = ty
+                .parameters()
+                .unwrap()
+                .iter()
+                .position(|field| file.source_slice(field.internal_name().span()) == field_name)
+                .unwrap();
+            let range = c.layouts[&ty.syntax().span().low()][field_index].clone();
+            Bundle::Refs(refs.drain(range).collect())
+        }
+    }
 }
 
 fn lower_call(
@@ -332,6 +371,13 @@ impl Bundle {
     fn values(self) -> Vec<mir::Value> {
         match self {
             Self::Values(it) => it,
+            _ => unreachable!(),
+        }
+    }
+
+    fn refs(self) -> Vec<mir::Ref> {
+        match self {
+            Self::Refs(it) => it,
             _ => unreachable!(),
         }
     }
