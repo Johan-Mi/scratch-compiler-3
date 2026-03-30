@@ -40,9 +40,9 @@ pub fn compile(
             .lists
             .iter()
             .map(|(it, _)| it)
-            .zip(std::iter::repeat_with(|| {
+            .zip((0..).map(|index: usize| {
                 target.add_list(sb3::List {
-                    name: String::new(), // TODO
+                    name: format!("l{index}"),
                     items: Vec::new(),
                 })
             }))
