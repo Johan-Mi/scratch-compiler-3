@@ -297,7 +297,12 @@ fn lower_lvalue(expression: ast::Expression, c: &mut Context) -> Bundle {
         | ast::Expression::TypeAscription(_)
         | ast::Expression::MethodCall(_) => todo!(),
 
-        ast::Expression::Variable(_) => todo!(),
+        ast::Expression::Variable(it) => Bundle::Refs(
+            c.variables[&it.syntax().span().low()]
+                .iter()
+                .map(|&it| mir::Ref::Variable(it))
+                .collect(),
+        ),
         ast::Expression::FieldAccess(it) => {
             let mut refs = lower_lvalue(it.aggregate(), c).refs();
             let ty = c.expression_types[&it.syntax().span()];
