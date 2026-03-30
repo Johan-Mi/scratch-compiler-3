@@ -1,4 +1,4 @@
-use super::{BasicBlock, Literal, Op, Program, Ref, Value, Variable};
+use super::{BasicBlock, Constant, Op, Program, Ref, Value, Variable};
 use map::Id;
 use std::collections::HashMap;
 
@@ -30,7 +30,7 @@ pub fn spill(program: &mut Program) {
             let basic_block = &mut program.basic_blocks[defs[&def]];
             let index = basic_block.0.iter().position(|&it| it == def).unwrap();
             let variable = program.variables.insert(Variable {
-                value: Literal::Num(0.0), // TODO
+                value: Constant::Num(0.0), // TODO
             });
             let target = Ref::Variable(variable);
             let value = Value::Op(def);

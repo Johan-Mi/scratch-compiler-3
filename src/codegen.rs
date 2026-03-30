@@ -209,9 +209,11 @@ impl Compiler<'_> {
             mir::Value::FunctionParameter { .. } => todo!(),
             mir::Value::Op(op) => self.ops.remove(&op).unwrap(),
             mir::Value::Returned { .. } => todo!(),
-            mir::Value::Literal(mir::Literal::Num(n)) => n.into(),
-            mir::Value::Literal(mir::Literal::String(s)) => self.string_literals[&s].clone().into(),
-            mir::Value::Literal(mir::Literal::Bool(b)) => b.to_string().into(),
+            mir::Value::Constant(mir::Constant::Num(n)) => n.into(),
+            mir::Value::Constant(mir::Constant::String(s)) => {
+                self.string_literals[&s].clone().into()
+            }
+            mir::Value::Constant(mir::Constant::Bool(b)) => b.to_string().into(),
         }
     }
 }

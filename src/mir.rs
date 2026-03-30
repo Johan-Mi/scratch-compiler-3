@@ -162,11 +162,11 @@ pub enum Value {
     FunctionParameter { index: usize },
     Op(Id<Op>),
     Returned { call: Id<Op>, index: usize },
-    Literal(Literal),
+    Constant(Constant),
 }
 
 #[derive(Clone, Copy)]
-pub enum Literal {
+pub enum Constant {
     Num(f64),
     String(codemap::Pos),
     Bool(bool),
@@ -179,7 +179,7 @@ pub enum Ref {
 }
 
 pub struct Variable {
-    value: Literal,
+    value: Constant,
 }
 
 pub struct List;

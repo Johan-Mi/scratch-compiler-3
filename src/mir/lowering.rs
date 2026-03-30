@@ -85,7 +85,7 @@ fn lower_statement(statement: ast::Statement, basic_block: Id<mir::BasicBlock>, 
             let values = lower_expression(it.value().unwrap(), basic_block, c).values();
             let variables = std::iter::repeat_with(|| {
                 c.program.variables.insert(mir::Variable {
-                    value: mir::Literal::Num(0.0), // TODO
+                    value: mir::Constant::Num(0.0), // TODO
                 })
             })
             .take(values.len())
@@ -134,7 +134,7 @@ fn lower_statement(statement: ast::Statement, basic_block: Id<mir::BasicBlock>, 
         ast::Statement::While(_) => todo!(),
         ast::Statement::Until(_) => todo!(),
         ast::Statement::For(it) => {
-            let value = mir::Literal::Num(0.0);
+            let value = mir::Constant::Num(0.0);
             let variable = c.program.variables.insert(mir::Variable { value });
             let pos = it.variable().unwrap().span().low();
             assert!(c.variables.insert(pos, [variable].into()).is_none());
@@ -197,20 +197,20 @@ fn lower_expression(
             let span = it.syntax().span();
             let file = c.code_map.find_file(span.low());
             let number = file.source_slice(span).parse().unwrap();
-            Vec::from([mir::Value::Literal(mir::Literal::Num(number))]).into()
+            Vec::from([mir::Value::Constant(mir::Constant::Num(number))]).into()
         }
         ast::Expression::BinaryNumber(it) => float(2, b'b', it.syntax(), c.code_map),
         ast::Expression::OctalNumber(it) => float(8, b'o', it.syntax(), c.code_map),
         ast::Expression::HexadecimalNumber(it) => float(16, b'x', it.syntax(), c.code_map),
-        ast::Expression::String(it) => Vec::from([mir::Value::Literal(mir::Literal::String(
+        ast::Expression::String(it) => Vec::from([mir::Value::Constant(mir::Constant::String(
             it.syntax().span().low(),
         ))])
         .into(),
         ast::Expression::KwFalse(_) => {
-            Vec::from([mir::Value::Literal(mir::Literal::Bool(false))]).into()
+            Vec::from([mir::Value::Constant(mir::Constant::Bool(false))]).into()
         }
         ast::Expression::KwTrue(_) => {
-            Vec::from([mir::Value::Literal(mir::Literal::Bool(true))]).into()
+            Vec::from([mir::Value::Constant(mir::Constant::Bool(true))]).into()
         }
         ast::Expression::Lvalue(it) => lower_lvalue(it.inner().unwrap(), c),
         ast::Expression::ListLiteral(it) => {
@@ -287,7 +287,7 @@ fn float(
         reason = "These are float literals. `u64` is only used as an implementation detail."
     )]
     let number = u64::from_str_radix(text, radix).unwrap() as f64 * sign;
-    Vec::from([mir::Value::Literal(mir::Literal::Num(number))]).into()
+    Vec::from([mir::Value::Constant(mir::Constant::Num(number))]).into()
 }
 
 fn lower_lvalue(expression: ast::Expression, c: &mut Context) -> Bundle {
