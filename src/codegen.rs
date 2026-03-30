@@ -27,13 +27,14 @@ pub fn compile(
         let variables = mir
             .variables
             .iter()
-            .map(|(it, _)| it)
-            .zip((0..).map(|index: usize| {
-                target.add_variable(sb3::Variable {
+            .enumerate()
+            .map(|(index, (id, value))| {
+                let variable = target.add_variable(sb3::Variable {
                     name: format!("v{index}"),
-                    value: sb3::Constant::Number(0.0),
-                })
-            }))
+                    value: todo!(),
+                });
+                (id, variable)
+            })
             .collect();
 
         let lists = mir

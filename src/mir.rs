@@ -178,6 +178,8 @@ pub enum Ref {
     List { list: Id<List>, index: Value },
 }
 
-pub struct Variable;
+pub struct Variable {
+    value: Literal,
+}
 
 pub struct List;

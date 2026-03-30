@@ -83,9 +83,13 @@ fn lower_statement(statement: ast::Statement, basic_block: Id<mir::BasicBlock>, 
     match statement {
         ast::Statement::Let(it) => {
             let values = lower_expression(it.value().unwrap(), basic_block, c).values();
-            let variables = std::iter::repeat_with(|| c.program.variables.insert(mir::Variable))
-                .take(values.len())
-                .collect();
+            let variables = std::iter::repeat_with(|| {
+                c.program.variables.insert(mir::Variable {
+                    value: mir::Literal::Num(0.0), // TODO
+                })
+            })
+            .take(values.len())
+            .collect();
             let stores = std::iter::zip(&variables, values).map(|(&variable, value)| {
                 c.program.ops.insert(mir::Op::Store {
                     target: mir::Ref::Variable(variable),
@@ -130,7 +134,8 @@ fn lower_statement(statement: ast::Statement, basic_block: Id<mir::BasicBlock>, 
         ast::Statement::While(_) => todo!(),
         ast::Statement::Until(_) => todo!(),
         ast::Statement::For(it) => {
-            let variable = c.program.variables.insert(mir::Variable);
+            let value = mir::Literal::Num(0.0);
+            let variable = c.program.variables.insert(mir::Variable { value });
             let pos = it.variable().unwrap().span().low();
             assert!(c.variables.insert(pos, [variable].into()).is_none());
             let times = one(lower_expression(it.times().unwrap(), basic_block, c).values());
