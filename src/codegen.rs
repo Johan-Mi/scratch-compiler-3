@@ -28,9 +28,9 @@ pub fn compile(
             .variables
             .iter()
             .map(|(it, _)| it)
-            .zip(std::iter::repeat_with(|| {
+            .zip((0..).map(|index: usize| {
                 target.add_variable(sb3::Variable {
-                    name: String::new(), // TODO
+                    name: format!("v{index}"),
                     value: sb3::Constant::Number(0.0),
                 })
             }))
