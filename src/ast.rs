@@ -94,11 +94,8 @@ impl<'src> CostumeList<'src> {
 node!(Costume);
 
 impl<'src> Costume<'src> {
-    pub fn name(self) -> Option<SyntaxNode<'src>> {
-        self.syntax
-            .children()
-            .take_while(|it| it.kind() != K::Colon)
-            .find(|it| it.kind() == K::String)
+    pub fn name(self) -> SyntaxNode<'src> {
+        token(self.syntax, K::String).unwrap()
     }
 
     pub fn path(self) -> Option<SyntaxNode<'src>> {

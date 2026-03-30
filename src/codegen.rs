@@ -19,7 +19,7 @@ pub fn compile(
         let mut target = project.add_sprite(file.source_slice(span).to_owned());
 
         for costume in sprite.costume_lists().flat_map(ast::CostumeList::iter) {
-            let name = string_literals[&costume.name().unwrap().span().low()].clone();
+            let name = string_literals[&costume.name().span().low()].clone();
             let path = string_literals[&costume.path().unwrap().span().low()].as_ref();
             target.add_costume(sb3::Costume::from_file(name, path)?);
         }
