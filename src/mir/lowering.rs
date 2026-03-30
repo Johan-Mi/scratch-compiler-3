@@ -191,16 +191,22 @@ fn lower_expression(
         ast::Expression::DecimalNumber(it) => {
             let span = it.syntax().span();
             let file = c.code_map.find_file(span.low());
-            Vec::from([mir::Value::Num(file.source_slice(span).parse().unwrap())]).into()
+            let number = file.source_slice(span).parse().unwrap();
+            Vec::from([mir::Value::Literal(mir::Literal::Num(number))]).into()
         }
         ast::Expression::BinaryNumber(it) => float(2, b'b', it.syntax(), c.code_map),
         ast::Expression::OctalNumber(it) => float(8, b'o', it.syntax(), c.code_map),
         ast::Expression::HexadecimalNumber(it) => float(16, b'x', it.syntax(), c.code_map),
-        ast::Expression::String(it) => {
-            Vec::from([mir::Value::String(it.syntax().span().low())]).into()
+        ast::Expression::String(it) => Vec::from([mir::Value::Literal(mir::Literal::String(
+            it.syntax().span().low(),
+        ))])
+        .into(),
+        ast::Expression::KwFalse(_) => {
+            Vec::from([mir::Value::Literal(mir::Literal::Bool(false))]).into()
         }
-        ast::Expression::KwFalse(_) => Vec::from([mir::Value::Bool(false)]).into(),
-        ast::Expression::KwTrue(_) => Vec::from([mir::Value::Bool(true)]).into(),
+        ast::Expression::KwTrue(_) => {
+            Vec::from([mir::Value::Literal(mir::Literal::Bool(true))]).into()
+        }
         ast::Expression::Lvalue(it) => lower_lvalue(it.inner().unwrap(), c),
         ast::Expression::ListLiteral(it) => {
             let base = c.expression_types[&it.syntax().span()].base;
@@ -276,7 +282,7 @@ fn float(
         reason = "These are float literals. `u64` is only used as an implementation detail."
     )]
     let number = u64::from_str_radix(text, radix).unwrap() as f64 * sign;
-    Vec::from([mir::Value::Num(number)]).into()
+    Vec::from([mir::Value::Literal(mir::Literal::Num(number))]).into()
 }
 
 fn lower_lvalue(expression: ast::Expression, c: &mut Context) -> Bundle {

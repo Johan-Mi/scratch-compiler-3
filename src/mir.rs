@@ -162,6 +162,11 @@ pub enum Value {
     FunctionParameter { index: usize },
     Op(Id<Op>),
     Returned { call: Id<Op>, index: usize },
+    Literal(Literal),
+}
+
+#[derive(Clone, Copy)]
+pub enum Literal {
     Num(f64),
     String(codemap::Pos),
     Bool(bool),
