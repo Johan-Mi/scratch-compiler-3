@@ -496,24 +496,12 @@ impl<'src> ListLiteral<'src> {
 node!(TypeAscription);
 
 impl<'src> TypeAscription<'src> {
-    pub fn operator(self) -> SyntaxNode<'src> {
-        token(self.syntax, K::KwAs).unwrap()
-    }
-
     pub fn inner(self) -> Option<Expression<'src>> {
-        let operator = self.operator().span().low();
-        self.syntax
-            .children()
-            .take_while(|child| child.span().high() <= operator)
-            .find_map(Node::cast)
+        child(self.syntax)
     }
 
     pub fn ty(self) -> Option<TypeExpression<'src>> {
-        let operator = self.operator().span().high();
-        self.syntax
-            .children()
-            .skip_while(|child| child.span().low() < operator)
-            .find_map(Node::cast)
+        child(self.syntax)
     }
 }
 
