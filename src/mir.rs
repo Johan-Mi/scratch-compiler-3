@@ -182,4 +182,7 @@ pub struct Variable {
     value: Constant,
 }
 
-pub struct List;
+#[derive(Default)]
+pub struct List {
+    items: Vec<Constant>,
+}

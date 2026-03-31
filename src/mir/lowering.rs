@@ -217,7 +217,7 @@ fn lower_expression(
             let base = c.expression_types[&it.syntax().span()].base;
             let size = ty::layout::size(base, c.layouts);
 
-            let lists = std::iter::repeat_with(|| c.program.lists.insert(mir::List))
+            let lists = std::iter::repeat_with(|| c.program.lists.insert(mir::List::default()))
                 .take(size)
                 .collect::<Vec<_>>();
             c.program.basic_blocks[basic_block].0.extend(

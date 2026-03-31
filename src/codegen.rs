@@ -40,13 +40,14 @@ pub fn compile(
         let lists = mir
             .lists
             .iter()
-            .map(|(it, _)| it)
-            .zip((0..).map(|index: usize| {
-                target.add_list(sb3::List {
+            .enumerate()
+            .map(|(index, (id, value))| {
+                let list = target.add_list(sb3::List {
                     name: format!("l{index}"),
-                    items: Vec::new(),
-                })
-            }))
+                    items: todo!(),
+                });
+                (id, list)
+            })
             .collect();
 
         let returns = mir
