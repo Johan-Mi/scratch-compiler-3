@@ -55,18 +55,14 @@ pub fn compile(
         let returns = mir
             .functions
             .iter()
-            .map(|(&function, it)| {
-                (
-                    function,
-                    std::iter::repeat_with(|| {
-                        target.add_variable(sb3::Variable {
-                            name: String::new(), // TODO
-                            value: sb3::Constant::Number(0.0),
-                        })
-                    })
-                    .take(it.return_value_count)
-                    .collect(),
-                )
+            .enumerate()
+            .map(|(big, (&function, it))| {
+                let variables = (0..it.return_value_count).map(|little| {
+                    let name = format!("r{big}.{little}");
+                    let value = sb3::Constant::Number(0.0);
+                    target.add_variable(sb3::Variable { name, value })
+                });
+                (function, variables.collect())
             })
             .collect();
 
