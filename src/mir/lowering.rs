@@ -262,7 +262,7 @@ fn lower_expression(
                 .iter()
                 .position(|field| file.source_slice(field.internal_name().span()) == field_name)
                 .unwrap();
-            let range = c.layouts[&ty.syntax().span().low()][field_index].clone();
+            let range = copy_range(&c.layouts[&ty.syntax().span().low()][field_index]);
             values.drain(range).collect::<Vec<_>>().into()
         }
     }
@@ -332,7 +332,7 @@ fn lower_lvalue(expression: ast::Expression, c: &mut Context) -> Bundle {
                 .iter()
                 .position(|field| file.source_slice(field.internal_name().span()) == field_name)
                 .unwrap();
-            let range = c.layouts[&ty.syntax().span().low()][field_index].clone();
+            let range = copy_range(&c.layouts[&ty.syntax().span().low()][field_index]);
             Bundle::Refs(refs.drain(range).collect())
         }
     }
@@ -401,4 +401,8 @@ impl Bundle {
 
 fn one(values: Vec<mir::Value>) -> mir::Value {
     <[_; 1]>::try_from(values).unwrap_or_else(|_| unreachable!())[0]
+}
+
+const fn copy_range(range: &Range<usize>) -> Range<usize> {
+    range.start..range.end
 }
