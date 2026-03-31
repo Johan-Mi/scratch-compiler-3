@@ -110,21 +110,20 @@ impl Compiler<'_> {
     fn op(&mut self, op: &mir::Op, mir: &mir::Program) -> Option<sb3::Operand> {
         match *op {
             mir::Op::Load { source } => Some(match source {
-                mir::Ref::Variable(variable) => self.variables[&variable].clone().into(),
+                mir::Ref::Variable(variable) => self.variables[&variable].into(),
                 mir::Ref::List { list, index } => {
                     let index = self.value(index);
-                    self.target
-                        .item_num_of_list(self.lists[&list].clone(), index)
+                    self.target.item_num_of_list(self.lists[&list], index)
                 }
             }),
             mir::Op::Store { target, value } => {
                 let value = self.value(value);
                 let block = match target {
                     mir::Ref::Variable(variable) => {
-                        block::set_variable(self.variables[&variable].clone(), value)
+                        block::set_variable(self.variables[&variable], value)
                     }
                     mir::Ref::List { list, index } => {
-                        block::replace(self.lists[&list].clone(), self.value(index), value)
+                        block::replace(self.lists[&list], self.value(index), value)
                     }
                 };
                 self.target.put(block);
@@ -143,7 +142,7 @@ impl Compiler<'_> {
                 body,
             } => {
                 let times = self.value(times);
-                let after = self.target.for_(self.variables[&variable].clone(), times);
+                let after = self.target.for_(self.variables[&variable], times);
                 self.basic_block(body, mir);
                 let _: sb3::InsertionPoint = self.target.insert_at(after);
                 None
@@ -170,6 +169,7 @@ impl Compiler<'_> {
                 function,
                 ref values,
             } => {
+                // TODO: Don't clone this
                 for (variable, &value) in self.returns[&function].clone().into_iter().zip(values) {
                     let value = self.value(value);
                     self.target.put(block::set_variable(variable, value));
@@ -187,13 +187,12 @@ impl Compiler<'_> {
             }
             mir::Op::DeleteAll(list) => {
                 self.target
-                    .put(block::delete_all_of_list(self.lists[&list].clone()));
+                    .put(block::delete_all_of_list(self.lists[&list]));
                 None
             }
             mir::Op::Push { list, value } => {
                 let value = self.value(value);
-                self.target
-                    .put(block::append(self.lists[&list].clone(), value));
+                self.target.put(block::append(self.lists[&list], value));
                 None
             }
             mir::Op::Add(args) => {
