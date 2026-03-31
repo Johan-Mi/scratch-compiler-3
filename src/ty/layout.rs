@@ -60,7 +60,7 @@ pub fn size(base: Base, layouts: &HashMap<codemap::Pos, Vec<Range<usize>>>) -> u
             .get(&it.syntax().span().low())
             .and_then(|it| it.last())
             .map_or(0, |it| it.end),
-        Base::Generic(_) => todo!(),
+        Base::Generic(_) => unreachable!(),
     }
 }
 
