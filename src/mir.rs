@@ -179,10 +179,10 @@ pub enum Ref {
 }
 
 pub struct Variable {
-    value: Constant,
+    pub value: Constant,
 }
 
 #[derive(Default)]
 pub struct List {
-    items: Vec<Constant>,
+    pub items: Vec<Constant>,
 }

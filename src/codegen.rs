@@ -24,16 +24,20 @@ pub fn compile(
             target.add_costume(sb3::Costume::from_file(name, path)?);
         }
 
+        let constant = |it: mir::Constant| match it {
+            mir::Constant::Num(n) => sb3::Constant::Number(n),
+            mir::Constant::String(s) => sb3_builder::Constant::String(string_literals[&s].clone()),
+            mir::Constant::Bool(b) => sb3::Constant::String(b.to_string()),
+        };
+
         let variables = mir
             .variables
             .iter()
             .enumerate()
-            .map(|(index, (id, value))| {
-                let variable = target.add_variable(sb3::Variable {
-                    name: format!("v{index}"),
-                    value: todo!(),
-                });
-                (id, variable)
+            .map(|(index, (id, &mir::Variable { value }))| {
+                let name = format!("v{index}");
+                let value = constant(value);
+                (id, target.add_variable(sb3::Variable { name, value }))
             })
             .collect();
 
@@ -41,12 +45,10 @@ pub fn compile(
             .lists
             .iter()
             .enumerate()
-            .map(|(index, (id, value))| {
-                let list = target.add_list(sb3::List {
-                    name: format!("l{index}"),
-                    items: todo!(),
-                });
-                (id, list)
+            .map(|(index, (id, mir::List { items }))| {
+                let name = format!("l{index}");
+                let items = items.iter().map(|&it| constant(it)).collect();
+                (id, target.add_list(sb3::List { name, items }))
             })
             .collect();
 
