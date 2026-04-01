@@ -114,21 +114,21 @@ pub fn check<'src>(
     let mut return_types = HashMap::new();
 
     for function in ast.syntax().pre_order().filter_map(ast::Function::cast) {
-        if let Some(body) = function.body() {
-            c.return_ty = return_ty(function.into(), &c);
-            if let Some(return_ty) = c.return_ty {
-                assert!(
-                    return_types
-                        .insert(function.syntax().span().low(), return_ty)
-                        .is_none()
+        c.return_ty = return_ty(function.into(), &c);
+        if let Some(return_ty) = c.return_ty {
+            assert!(
+                return_types
+                    .insert(function.syntax().span().low(), return_ty)
+                    .is_none()
+            );
+            if matches!(return_ty.shape, Shape::List | Shape::Ref) {
+                c.diagnostics.error(
+                    format!("type `{}` cannot be used at runtime", return_ty.display(&c)),
+                    [primary(function.return_ty().unwrap().syntax().span(), "")],
                 );
-                if matches!(return_ty.shape, Shape::List | Shape::Ref) {
-                    c.diagnostics.error(
-                        format!("type `{}` cannot be used at runtime", return_ty.display(&c)),
-                        [primary(function.return_ty().unwrap().syntax().span(), "")],
-                    );
-                }
             }
+        }
+        if let Some(body) = function.body() {
             check_block(body, &mut c);
             if c.return_ty.is_some_and(|it| it != Base::Unit) && !body.diverges() {
                 c.diagnostics.error(
