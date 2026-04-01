@@ -538,14 +538,11 @@ fn resolve_call<'src>(
 
     let (labels, argument_types): (Vec<_>, Vec<_>) = arguments
         .map(|it| {
-            (
-                if let ast::Expression::NamedArgument(it) = it {
-                    Some(file.source_slice(it.name().span()))
-                } else {
-                    None
-                },
-                of(it, None, c),
-            )
+            let label = match it {
+                ast::Expression::NamedArgument(it) => Some(file.source_slice(it.name().span())),
+                _ => None,
+            };
+            (label, of(it, None, c))
         })
         .collect();
 
