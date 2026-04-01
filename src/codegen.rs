@@ -26,8 +26,8 @@ pub fn compile(
 
         let constant = |it: mir::Constant| match it {
             mir::Constant::Num(n) => sb3::Constant::Number(n),
-            mir::Constant::String(s) => sb3_builder::Constant::String(string_literals[&s].clone()),
-            mir::Constant::Bool(b) => sb3::Constant::String(b.to_string()),
+            mir::Constant::String(s) => sb3_builder::Constant::String(&string_literals[&s]),
+            mir::Constant::Bool(b) => sb3::Constant::String(if b { "true" } else { "false" }),
         };
 
         let variables = mir
@@ -84,14 +84,14 @@ pub fn compile(
 
 struct Compiler<'src, 'project> {
     target: sb3::Target<'src, 'project>,
-    ops: HashMap<Id<mir::Op>, sb3::Operand>,
+    ops: HashMap<Id<mir::Op>, sb3::Operand<'src>>,
     variables: HashMap<Id<mir::Variable>, sb3::VariableRef>,
     lists: HashMap<Id<mir::List>, sb3::ListRef>,
     returns: &'project HashMap<Id<mir::BasicBlock>, Vec<sb3::VariableRef>>,
     string_literals: &'src HashMap<codemap::Pos, String>,
 }
 
-impl Compiler<'_, '_> {
+impl<'src> Compiler<'src, '_> {
     fn function(&mut self, body: &mir::BasicBlock, mir: &mir::Program) {
         self.target.start_script(block::when_flag_clicked()); // TODO
         for &op in &body.0 {
@@ -107,7 +107,7 @@ impl Compiler<'_, '_> {
         }
     }
 
-    fn op(&mut self, op: &mir::Op, mir: &mir::Program) -> Option<sb3::Operand> {
+    fn op(&mut self, op: &mir::Op, mir: &mir::Program) -> Option<sb3::Operand<'src>> {
         match *op {
             mir::Op::Load { source } => Some(match source {
                 mir::Ref::Variable(variable) => self.variables[&variable].into(),
@@ -201,16 +201,14 @@ impl Compiler<'_, '_> {
         }
     }
 
-    fn value(&mut self, value: mir::Value) -> sb3::Operand {
+    fn value(&mut self, value: mir::Value) -> sb3::Operand<'src> {
         match value {
             mir::Value::FunctionParameter { .. } => todo!(),
             mir::Value::Op(op) => self.ops.remove(&op).unwrap(),
             mir::Value::Returned { .. } => todo!(),
             mir::Value::Constant(mir::Constant::Num(n)) => n.into(),
-            mir::Value::Constant(mir::Constant::String(s)) => {
-                self.string_literals[&s].clone().into()
-            }
-            mir::Value::Constant(mir::Constant::Bool(b)) => b.to_string().into(),
+            mir::Value::Constant(mir::Constant::String(s)) => (&*self.string_literals[&s]).into(),
+            mir::Value::Constant(mir::Constant::Bool(b)) => if b { "true" } else { "false" }.into(),
         }
     }
 }
