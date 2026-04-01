@@ -16,7 +16,7 @@ pub fn compile(
         let name = sprite.name().unwrap();
         let span = name.span();
         let file = code_map.find_file(span.low());
-        let mut target = project.add_sprite(file.source_slice(span).to_owned());
+        let mut target = project.add_sprite(file.source_slice(span));
 
         for costume in sprite.costume_lists().flat_map(ast::CostumeList::iter) {
             let name = string_literals[&costume.name().span().low()].clone();
@@ -82,16 +82,16 @@ pub fn compile(
     project.finish(output_file)
 }
 
-struct Compiler<'a> {
-    target: sb3::Target<'a>,
+struct Compiler<'src, 'project> {
+    target: sb3::Target<'src, 'project>,
     ops: HashMap<Id<mir::Op>, sb3::Operand>,
     variables: HashMap<Id<mir::Variable>, sb3::VariableRef>,
     lists: HashMap<Id<mir::List>, sb3::ListRef>,
     returns: HashMap<Id<mir::BasicBlock>, Vec<sb3::VariableRef>>,
-    string_literals: &'a HashMap<codemap::Pos, String>,
+    string_literals: &'src HashMap<codemap::Pos, String>,
 }
 
-impl Compiler<'_> {
+impl Compiler<'_, '_> {
     fn function(&mut self, body: &mir::BasicBlock, mir: &mir::Program) {
         self.target.start_script(block::when_flag_clicked()); // TODO
         for &op in &body.0 {

@@ -166,8 +166,8 @@ dependencies = [
 
 [[package]]
 name = "sb3-builder"
-version = "0.1.1"
-source = "git+https://github.com/Johan-Mi/sb3-builder#9f40853c4008a1b7f0004582318f3dd4545ec6c7"
+version = "0.2.0"
+source = "git+https://github.com/Johan-Mi/sb3-builder#b2a171a7dd7148da7d52f3c36eb5a4326086f502"
 dependencies = [
  "flate2",
  "md5",
