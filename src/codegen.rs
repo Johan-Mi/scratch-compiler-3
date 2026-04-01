@@ -71,7 +71,7 @@ pub fn compile(
             ops: HashMap::new(),
             variables,
             lists,
-            returns,
+            returns: &returns,
             string_literals,
         };
 
@@ -87,7 +87,7 @@ struct Compiler<'src, 'project> {
     ops: HashMap<Id<mir::Op>, sb3::Operand>,
     variables: HashMap<Id<mir::Variable>, sb3::VariableRef>,
     lists: HashMap<Id<mir::List>, sb3::ListRef>,
-    returns: HashMap<Id<mir::BasicBlock>, Vec<sb3::VariableRef>>,
+    returns: &'project HashMap<Id<mir::BasicBlock>, Vec<sb3::VariableRef>>,
     string_literals: &'src HashMap<codemap::Pos, String>,
 }
 
@@ -169,8 +169,7 @@ impl Compiler<'_, '_> {
                 function,
                 ref values,
             } => {
-                // TODO: Don't clone this
-                for (variable, &value) in self.returns[&function].clone().into_iter().zip(values) {
+                for (&variable, &value) in self.returns[&function].iter().zip(values) {
                     let value = self.value(value);
                     self.target.put(block::set_variable(variable, value));
                 }
