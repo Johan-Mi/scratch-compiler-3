@@ -16,9 +16,27 @@ pub struct Program<'src> {
     pub lists: Map<List>,
 }
 
-pub struct Function<'src> {
-    pub name: &'src str,
-    pub return_value_count: usize,
+#[derive(Clone, Copy)]
+pub enum Function<'src> {
+    WhenFlagClicked,
+    WhenKeyPressed,
+    WhenCloned,
+    WhenReceived,
+    Normal {
+        name: &'src str,
+        return_value_count: usize,
+    },
+}
+
+impl Function<'_> {
+    pub const fn return_value_count(self) -> Option<usize> {
+        match self {
+            Self::Normal {
+                return_value_count, ..
+            } => Some(return_value_count),
+            _ => None,
+        }
+    }
 }
 
 pub struct BasicBlock(pub Vec<Id<Op>>);

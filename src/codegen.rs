@@ -55,9 +55,10 @@ pub fn compile(
         let returns = mir
             .functions
             .iter()
+            .filter_map(|(big, it)| Some(big).zip(it.return_value_count()))
             .enumerate()
-            .map(|(big, (&function, it))| {
-                let variables = (0..it.return_value_count).map(|little| {
+            .map(|(big, (&function, return_value_count))| {
+                let variables = (0..return_value_count).map(|little| {
                     let name = format!("r{big}.{little}");
                     let value = sb3::Constant::Number(0.0);
                     target.add_variable(sb3::Variable { name, value })
@@ -75,8 +76,8 @@ pub fn compile(
             string_literals,
         };
 
-        for (&body, function) in &mir.functions {
-            compiler.function(function.name, &mir.basic_blocks[body], mir);
+        for (&body, &it) in &mir.functions {
+            compiler.function(it, &mir.basic_blocks[body], mir);
         }
     }
     project.finish(output_file)
@@ -92,13 +93,18 @@ struct Compiler<'src, 'project> {
 }
 
 impl<'src> Compiler<'src, '_> {
-    fn function(&mut self, name: &str, body: &mir::BasicBlock, mir: &mir::Program) {
-        match name {
-            "when-flag-clicked" => self.target.start_script(block::when_flag_clicked()),
-            "when-key-pressed" => self.target.start_script(block::when_key_pressed(todo!())),
-            "when-cloned" => self.target.start_script(block::when_cloned()),
-            "when-received" => self.target.start_script(block::when_received(todo!())),
-            _ => {
+    fn function(&mut self, it: mir::Function, body: &mir::BasicBlock, mir: &mir::Program) {
+        match it {
+            mir::Function::WhenFlagClicked => self.target.start_script(block::when_flag_clicked()),
+            mir::Function::WhenKeyPressed => {
+                self.target.start_script(block::when_key_pressed(todo!()))
+            }
+            mir::Function::WhenCloned => self.target.start_script(block::when_cloned()),
+            mir::Function::WhenReceived => self.target.start_script(block::when_received(todo!())),
+            mir::Function::Normal {
+                name,
+                return_value_count,
+            } => {
                 let parameters = todo!();
                 let (custom_block, point) =
                     self.target.add_custom_block(name.to_owned(), parameters);

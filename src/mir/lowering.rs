@@ -44,10 +44,15 @@ pub fn lower<'src>(
         let basic_block = context.functions[&pos];
         let file = code_map.find_file(pos);
         let name = file.source_slice(function.name().unwrap().span());
-        let return_value_count = ty::layout::size(typing.return_types[&pos].base, layouts);
-        let function = mir::Function {
-            name,
-            return_value_count,
+        let function = match name {
+            "when-flag-clicked" => mir::Function::WhenFlagClicked,
+            "when-key-pressed" => mir::Function::WhenKeyPressed,
+            "when-cloned" => mir::Function::WhenCloned,
+            "when-received" => mir::Function::WhenReceived,
+            _ => mir::Function::Normal {
+                name,
+                return_value_count: ty::layout::size(typing.return_types[&pos].base, layouts),
+            },
         };
         assert!(
             context
@@ -370,7 +375,9 @@ fn lower_call(
     });
     c.program.basic_blocks[basic_block].0.push(call);
 
-    (0..c.program.functions[&function].return_value_count)
+    (0..c.program.functions[&function]
+        .return_value_count()
+        .unwrap_or_default())
         .map(|index| mir::Value::Returned { call, index })
         .collect::<Vec<_>>()
         .into()
