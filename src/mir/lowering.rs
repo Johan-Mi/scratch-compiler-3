@@ -306,7 +306,7 @@ fn lower_lvalue(expression: ast::Expression, c: &mut Context) -> Bundle {
         | ast::Expression::Lvalue(_)
         | ast::Expression::ListLiteral(_)
         | ast::Expression::TypeAscription(_)
-        | ast::Expression::MethodCall(_) => todo!(),
+        | ast::Expression::MethodCall(_) => unreachable!(),
 
         ast::Expression::Variable(it) => Bundle::Refs(
             c.variables[&it.syntax().span().low()]
