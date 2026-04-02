@@ -46,9 +46,13 @@ pub fn lower<'src>(
         let name = file.source_slice(function.name().unwrap().span());
         let function = match name {
             "when-flag-clicked" => mir::Function::WhenFlagClicked,
-            "when-key-pressed" => mir::Function::WhenKeyPressed { key: todo!() },
+            "when-key-pressed" => mir::Function::WhenKeyPressed {
+                key: function.tag().unwrap().span().low(),
+            },
             "when-cloned" => mir::Function::WhenCloned,
-            "when-received" => mir::Function::WhenReceived { message: todo!() },
+            "when-received" => mir::Function::WhenReceived {
+                message: function.tag().unwrap().span().low(),
+            },
             _ => mir::Function::Normal {
                 name,
                 return_value_count: ty::layout::size(typing.return_types[&pos].base, layouts),
