@@ -19,9 +19,13 @@ pub struct Program<'src> {
 #[derive(Clone, Copy)]
 pub enum Function<'src> {
     WhenFlagClicked,
-    WhenKeyPressed,
+    WhenKeyPressed {
+        key: codemap::Pos,
+    },
     WhenCloned,
-    WhenReceived,
+    WhenReceived {
+        message: codemap::Pos,
+    },
     Normal {
         name: &'src str,
         return_value_count: usize,

@@ -96,11 +96,15 @@ impl<'src> Compiler<'src, '_> {
     fn function(&mut self, it: mir::Function, body: &mir::BasicBlock, mir: &mir::Program) {
         match it {
             mir::Function::WhenFlagClicked => self.target.start_script(block::when_flag_clicked()),
-            mir::Function::WhenKeyPressed => {
-                self.target.start_script(block::when_key_pressed(todo!()))
+            mir::Function::WhenKeyPressed { key } => {
+                let key = &self.string_literals[&key];
+                self.target.start_script(block::when_key_pressed(key))
             }
             mir::Function::WhenCloned => self.target.start_script(block::when_cloned()),
-            mir::Function::WhenReceived => self.target.start_script(block::when_received(todo!())),
+            mir::Function::WhenReceived { message } => {
+                let message = &self.string_literals[&message];
+                self.target.start_script(block::when_received(message))
+            }
             mir::Function::Normal {
                 name,
                 return_value_count,

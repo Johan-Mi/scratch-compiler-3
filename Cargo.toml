@@ -19,4 +19,4 @@ cst = { git = "https://github.com/Johan-Mi/cst", version = "1.1.1" }
 logos = { version = "0.15.0", default-features = false }
 logos-derive = "0.15.0"
 map = { git = "https://github.com/Johan-Mi/map", version = "0.1.0" }
-sb3-builder = { git = "https://github.com/Johan-Mi/sb3-builder", version = "0.5.0" }
+sb3-builder = { git = "https://github.com/Johan-Mi/sb3-builder", version = "0.6.0" }
