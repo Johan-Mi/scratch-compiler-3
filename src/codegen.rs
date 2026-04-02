@@ -75,8 +75,8 @@ pub fn compile(
             string_literals,
         };
 
-        for &function in mir.functions.keys() {
-            compiler.function(&mir.basic_blocks[function], mir);
+        for (&body, function) in &mir.functions {
+            compiler.function(function.name, &mir.basic_blocks[body], mir);
         }
     }
     project.finish(output_file)
@@ -92,7 +92,7 @@ struct Compiler<'src, 'project> {
 }
 
 impl<'src> Compiler<'src, '_> {
-    fn function(&mut self, body: &mir::BasicBlock, mir: &mir::Program) {
+    fn function(&mut self, name: &str, body: &mir::BasicBlock, mir: &mir::Program) {
         self.target.start_script(block::when_flag_clicked()); // TODO
         for &op in &body.0 {
             let res = self.op(&mir.ops[op], mir);

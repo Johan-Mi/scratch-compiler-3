@@ -4,13 +4,13 @@ use crate::ty::{self, Type};
 use map::Id;
 use std::{collections::HashMap, ops::Range};
 
-pub fn lower(
+pub fn lower<'src>(
     ast: ast::Program,
-    code_map: &codemap::CodeMap,
+    code_map: &'src codemap::CodeMap,
     resolved_variables: &HashMap<codemap::Pos, codemap::Pos>,
     typing: &ty::Ping,
     layouts: &HashMap<codemap::Pos, Vec<Range<usize>>>,
-) -> mir::Program {
+) -> mir::Program<'src> {
     let function_asts = || {
         ast.documents().flat_map(ast::Document::functions).chain(
             ast.documents()
@@ -42,12 +42,18 @@ pub fn lower(
         let body = function.body().unwrap();
         let pos = function.syntax().span().low();
         let basic_block = context.functions[&pos];
+        let file = code_map.find_file(pos);
+        let name = file.source_slice(function.name().unwrap().span());
         let return_value_count = ty::layout::size(typing.return_types[&pos].base, layouts);
+        let function = mir::Function {
+            name,
+            return_value_count,
+        };
         assert!(
             context
                 .program
                 .functions
-                .insert(basic_block, mir::Function { return_value_count })
+                .insert(basic_block, function)
                 .is_none()
         );
         context.current_function = Some(basic_block);
@@ -59,13 +65,13 @@ pub fn lower(
     context.program
 }
 
-struct Context<'src> {
-    program: mir::Program,
-    code_map: &'src codemap::CodeMap,
-    resolved_variables: &'src HashMap<codemap::Pos, codemap::Pos>,
-    expression_types: &'src HashMap<codemap::Span, Type<'src>>,
-    resolved_calls: &'src HashMap<codemap::Span, ast::FunctionLike<'src>>,
-    layouts: &'src HashMap<codemap::Pos, Vec<Range<usize>>>,
+struct Context<'src, 'lower> {
+    program: mir::Program<'src>,
+    code_map: &'lower codemap::CodeMap,
+    resolved_variables: &'lower HashMap<codemap::Pos, codemap::Pos>,
+    expression_types: &'lower HashMap<codemap::Span, Type<'lower>>,
+    resolved_calls: &'lower HashMap<codemap::Span, ast::FunctionLike<'lower>>,
+    layouts: &'lower HashMap<codemap::Pos, Vec<Range<usize>>>,
     functions: HashMap<codemap::Pos, Id<mir::BasicBlock>>,
     variables: HashMap<codemap::Pos, Vec<Id<mir::Variable>>>,
     current_function: Option<Id<mir::BasicBlock>>,

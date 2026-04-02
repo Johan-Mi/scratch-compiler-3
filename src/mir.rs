@@ -8,15 +8,16 @@ use map::{Id, Map};
 use std::collections::HashMap;
 
 #[derive(Default)]
-pub struct Program {
-    pub functions: HashMap<Id<BasicBlock>, Function>,
+pub struct Program<'src> {
+    pub functions: HashMap<Id<BasicBlock>, Function<'src>>,
     pub basic_blocks: Map<BasicBlock>,
     pub ops: Map<Op>,
     pub variables: Map<Variable>,
     pub lists: Map<List>,
 }
 
-pub struct Function {
+pub struct Function<'src> {
+    pub name: &'src str,
     pub return_value_count: usize,
 }
 
