@@ -172,6 +172,10 @@ pub enum Constant {
     Bool(bool),
 }
 
+impl Constant {
+    const PLACEHOLDER: Self = Self::Num(0.0);
+}
+
 #[derive(Clone, Copy)]
 pub enum Ref {
     Variable(Id<Variable>),

@@ -84,9 +84,8 @@ fn lower_statement(statement: ast::Statement, basic_block: Id<mir::BasicBlock>, 
         ast::Statement::Let(it) => {
             let values = lower_expression(it.value().unwrap(), basic_block, c).values();
             let variables = std::iter::repeat_with(|| {
-                c.program.variables.insert(mir::Variable {
-                    value: mir::Constant::Num(0.0), // TODO
-                })
+                let value = mir::Constant::PLACEHOLDER;
+                c.program.variables.insert(mir::Variable { value })
             })
             .take(values.len())
             .collect();
