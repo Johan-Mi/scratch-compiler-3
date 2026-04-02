@@ -93,7 +93,18 @@ struct Compiler<'src, 'project> {
 
 impl<'src> Compiler<'src, '_> {
     fn function(&mut self, name: &str, body: &mir::BasicBlock, mir: &mir::Program) {
-        self.target.start_script(block::when_flag_clicked()); // TODO
+        match name {
+            "when-flag-clicked" => self.target.start_script(block::when_flag_clicked()),
+            "when-key-pressed" => self.target.start_script(block::when_key_pressed(todo!())),
+            "when-cloned" => self.target.start_script(block::when_cloned()),
+            "when-received" => self.target.start_script(block::when_received(todo!())),
+            _ => {
+                let parameters = todo!();
+                let (custom_block, point) =
+                    self.target.add_custom_block(name.to_owned(), parameters);
+                let _: sb3::InsertionPoint = self.target.insert_at(point);
+            }
+        }
         for &op in &body.0 {
             let res = self.op(&mir.ops[op], mir);
             self.ops.extend(Some(op).zip(res));
