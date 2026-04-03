@@ -28,6 +28,7 @@ pub enum Function<'src> {
     },
     Normal {
         name: &'src str,
+        parameter_count: usize,
         return_value_count: usize,
     },
 }

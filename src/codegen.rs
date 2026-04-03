@@ -105,9 +105,15 @@ impl<'src> Compiler<'src, '_> {
                 .start_script(block::when_received(&self.string_literals[&message])),
             mir::Function::Normal {
                 name,
+                parameter_count,
                 return_value_count,
             } => {
-                let parameters = todo!();
+                let parameters = (0..parameter_count)
+                    .map(|index| sb3::Parameter {
+                        name: format!("{name}.{index}"),
+                        kind: sb3::ParameterKind::StringOrNumber,
+                    })
+                    .collect();
                 let (custom_block, point) =
                     self.target.add_custom_block(name.to_owned(), parameters);
                 let _: sb3::InsertionPoint = self.target.insert_at(point);
