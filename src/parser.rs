@@ -296,7 +296,7 @@ impl Parser<'_> {
         match self.peek() {
             K::KwStruct => self.parse_struct(),
             K::KwSprite => self.parse_sprite(),
-            K::KwInline | K::KwFn => self.parse_function(),
+            K::KwFn => self.parse_function(),
             K::KwCostumes => self.parse_costume_list(),
             K::KwLet => self.parse_let(),
             K::KwIf => self.parse_if(),
@@ -673,14 +673,9 @@ impl Parser<'_> {
     }
 
     fn parse_function(&mut self) {
-        let checkpoint = self.checkpoint();
+        self.start_node(K::Function);
+        self.bump(); // K::KwFn
         let _: bool = self.eat(K::KwInline);
-        if !self.eat(K::KwFn) {
-            let span = self.peek_span();
-            self.diagnostics
-                .error("expected `fn` after `inline`", [primary(span, "")]);
-            return;
-        }
         if self.at(K::Identifier) || self.peek().is_binary_operator() {
             self.bump();
         } else {
@@ -693,7 +688,7 @@ impl Parser<'_> {
             self.parse_type_expression();
         }
         self.parse_block();
-        self.builder.finish_node_at(checkpoint, K::Function);
+        self.builder.finish_node();
     }
 
     fn parse_costume_list(&mut self) {
@@ -738,7 +733,7 @@ impl Parser<'_> {
         };
         while !self.eat(K::Rbrace) {
             match self.peek() {
-                K::KwInline | K::KwFn => self.parse_function(),
+                K::KwFn => self.parse_function(),
                 K::KwCostumes => self.parse_costume_list(),
                 K::KwLet => self.parse_let(),
                 K::Eof | K::KwSprite => {
@@ -760,7 +755,7 @@ impl Parser<'_> {
         match self.peek() {
             K::KwStruct => self.parse_struct(),
             K::KwSprite => self.parse_sprite(),
-            K::KwInline | K::KwFn => self.parse_function(),
+            K::KwFn => self.parse_function(),
             K::KwLet => self.parse_let(),
             _ => self.error(),
         }
