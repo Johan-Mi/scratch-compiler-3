@@ -686,8 +686,7 @@ impl Parser<'_> {
         } else {
             self.error();
         }
-        let _: bool = self.eat(K::String);
-        if self.at(K::Lparen) {
+        if !self.eat(K::String) && self.at(K::Lparen) {
             self.parse_parameters();
         }
         if self.eat(K::Arrow) {
