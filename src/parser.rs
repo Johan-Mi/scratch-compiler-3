@@ -125,8 +125,6 @@ pub enum K {
     Lbracket,
     #[token("]")]
     Rbracket,
-    #[token("->")]
-    Arrow,
     #[token(":")]
     Colon,
     #[token(",")]
@@ -488,7 +486,7 @@ impl Parser<'_> {
                 self.bump();
                 continue;
             }
-            if self.at(K::Arrow) || self.at(K::Lbrace) {
+            if self.at(K::Lbrace) {
                 let span = self.peek_span();
                 self.diagnostics.error(
                     "unterminated parameter list",
@@ -684,7 +682,7 @@ impl Parser<'_> {
         if !self.eat(K::String) && self.at(K::Lparen) {
             self.parse_parameters();
         }
-        if self.eat(K::Arrow) {
+        if !self.at(K::Lbrace) {
             self.parse_type_expression();
         }
         self.parse_block();
