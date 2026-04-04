@@ -3,7 +3,9 @@ use crate::parser::{K, SyntaxNode};
 use codemap::{CodeMap, Pos, Span};
 use std::collections::HashMap;
 
-pub fn resolve(ast: ast::Program, code_map: &CodeMap) -> HashMap<Pos, Pos> {
+pub type S = HashMap<Pos, Pos>;
+
+pub fn resolve(ast: ast::Program, code_map: &CodeMap) -> S {
     ast.documents()
         .flat_map(|it| crate::name::resolve_document(it.syntax(), code_map))
         .collect()

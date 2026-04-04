@@ -1,13 +1,13 @@
 use crate::ast::{self, Node};
-use crate::mir;
 use crate::ty::{self, Type};
+use crate::{mir, name};
 use map::Id;
 use std::{collections::HashMap, ops::Range};
 
 pub fn lower<'src>(
     ast: ast::Program,
     code_map: &'src codemap::CodeMap,
-    resolved_variables: &HashMap<codemap::Pos, codemap::Pos>,
+    resolved_variables: &name::S,
     typing: &ty::Ping,
     layouts: &ty::layout::S,
 ) -> mir::Program<'src> {
@@ -78,7 +78,7 @@ pub fn lower<'src>(
 struct Context<'src, 'lower> {
     program: mir::Program<'src>,
     code_map: &'lower codemap::CodeMap,
-    resolved_variables: &'lower HashMap<codemap::Pos, codemap::Pos>,
+    resolved_variables: &'lower name::S,
     expression_types: &'lower HashMap<codemap::Span, Type<'lower>>,
     resolved_calls: &'lower HashMap<codemap::Span, ast::FunctionLike<'lower>>,
     layouts: &'lower ty::layout::S,

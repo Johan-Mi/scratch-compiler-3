@@ -2,7 +2,7 @@ pub mod layout;
 
 use crate::ast::{self, Node};
 use crate::diagnostics::{Diagnostics, primary};
-use crate::parser::K;
+use crate::{name, parser::K};
 use codemap::{CodeMap, Pos, Span};
 use std::{collections::HashMap, fmt};
 
@@ -75,7 +75,7 @@ pub struct Ping<'src> {
 pub fn check<'src>(
     ast: ast::Program<'src>,
     code_map: &'src CodeMap,
-    resolved_variables: &HashMap<Pos, Pos>,
+    resolved_variables: &name::S,
     diagnostics: &mut Diagnostics,
 ) -> Ping<'src> {
     let type_expressions: HashMap<Pos, Type> = ast
@@ -148,7 +148,7 @@ pub fn check<'src>(
 }
 
 struct Checker<'a, 'src> {
-    resolved_variables: &'a HashMap<Pos, Pos>,
+    resolved_variables: &'a name::S,
     variable_types: HashMap<Pos, Type<'src>>,
     type_expressions: HashMap<Pos, Type<'src>>,
     expression_types: HashMap<Span, Type<'src>>,
