@@ -4,12 +4,14 @@ use crate::diagnostics::{Diagnostics, primary};
 use std::collections::{HashMap, hash_map::Entry};
 use std::ops::Range;
 
+pub type S = HashMap<codemap::Pos, Vec<Range<usize>>>;
+
 pub fn s(
     ast: ast::Program,
     type_expressions: &HashMap<codemap::Pos, Type>,
     diagnostics: &mut Diagnostics,
-) -> HashMap<codemap::Pos, Vec<Range<usize>>> {
-    let mut layouts = HashMap::<_, Vec<Range<_>>>::new();
+) -> S {
+    let mut layouts = S::new();
     for component in scc(ast, type_expressions) {
         let [it] = *component else {
             let labels = component
@@ -50,7 +52,7 @@ pub fn s(
     layouts
 }
 
-pub fn size(base: Base, layouts: &HashMap<codemap::Pos, Vec<Range<usize>>>) -> usize {
+pub fn size(base: Base, layouts: &S) -> usize {
     match base {
         Base::Unit => 0,
         Base::Num | Base::String | Base::Bool => 1,

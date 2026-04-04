@@ -9,7 +9,7 @@ pub fn lower<'src>(
     code_map: &'src codemap::CodeMap,
     resolved_variables: &HashMap<codemap::Pos, codemap::Pos>,
     typing: &ty::Ping,
-    layouts: &HashMap<codemap::Pos, Vec<Range<usize>>>,
+    layouts: &ty::layout::S,
 ) -> mir::Program<'src> {
     let function_asts = || {
         ast.documents().flat_map(ast::Document::functions).chain(
@@ -81,7 +81,7 @@ struct Context<'src, 'lower> {
     resolved_variables: &'lower HashMap<codemap::Pos, codemap::Pos>,
     expression_types: &'lower HashMap<codemap::Span, Type<'lower>>,
     resolved_calls: &'lower HashMap<codemap::Span, ast::FunctionLike<'lower>>,
-    layouts: &'lower HashMap<codemap::Pos, Vec<Range<usize>>>,
+    layouts: &'lower ty::layout::S,
     functions: HashMap<codemap::Pos, Id<mir::BasicBlock>>,
     variables: HashMap<codemap::Pos, Vec<Id<mir::Variable>>>,
     current_function: Option<Id<mir::BasicBlock>>,
