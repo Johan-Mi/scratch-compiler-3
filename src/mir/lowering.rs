@@ -55,7 +55,10 @@ pub fn lower<'src>(
             },
             _ => mir::Function::Normal {
                 name,
-                parameter_count: todo!(),
+                parameter_count: typing.parameter_types[&pos]
+                    .iter()
+                    .map(|it| ty::layout::size(it.base, layouts))
+                    .sum(),
                 return_value_count: ty::layout::size(typing.return_types[&pos].base, layouts),
             },
         };

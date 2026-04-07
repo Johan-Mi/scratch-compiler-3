@@ -69,6 +69,7 @@ pub struct Ping<'src> {
     pub type_expressions: HashMap<Pos, Type<'src>>,
     pub expression_types: HashMap<Span, Type<'src>>,
     pub resolved_calls: HashMap<Span, ast::FunctionLike<'src>>,
+    pub parameter_types: HashMap<Pos, Vec<Type<'src>>>,
     pub return_types: HashMap<Pos, Type<'src>>,
 }
 
@@ -111,6 +112,7 @@ pub fn check<'src>(
             }
         });
 
+    let mut parameter_types = HashMap::new();
     let mut return_types = HashMap::new();
 
     for function in ast.syntax().pre_order().filter_map(ast::Function::cast) {
@@ -143,6 +145,7 @@ pub fn check<'src>(
         type_expressions: c.type_expressions,
         expression_types: c.expression_types,
         resolved_calls: c.resolved_calls,
+        parameter_types,
         return_types,
     }
 }
