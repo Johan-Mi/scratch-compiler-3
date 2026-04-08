@@ -3,7 +3,7 @@ use crate::parser::{K, SyntaxNode};
 use codemap::{CodeMap, Pos, Span};
 use std::collections::HashMap;
 
-pub type S = HashMap<Pos, Pos>;
+pub type S = HashMap<ast::VariableUnmanaged, Pos>;
 
 pub fn resolve(ast: ast::Program, code_map: &CodeMap) -> S {
     ast.documents()
@@ -11,7 +11,10 @@ pub fn resolve(ast: ast::Program, code_map: &CodeMap) -> S {
         .collect()
 }
 
-fn resolve_document(document: SyntaxNode, code_map: &CodeMap) -> impl Iterator<Item = (Pos, Pos)> {
+fn resolve_document(
+    document: SyntaxNode,
+    code_map: &CodeMap,
+) -> impl Iterator<Item = (ast::VariableUnmanaged, Pos)> {
     let file = code_map.find_file(document.span().low());
 
     let lets = document
@@ -42,15 +45,15 @@ fn resolve_document(document: SyntaxNode, code_map: &CodeMap) -> impl Iterator<I
     });
     let definitions: Vec<_> = lets.chain(parameters).chain(fors).collect();
 
-    let usages = document.pre_order().filter(|it| it.kind() == K::Variable);
-    usages.map(cst::Node::span).filter_map(move |usage| {
-        let text = file.source_slice(usage);
+    document.pre_order().filter_map(move |usage| {
+        let span = usage.span();
+        let usage = ast::Variable::cast(usage)?;
+        let text = file.source_slice(span);
         let possible = definitions
             .iter()
-            .filter(|it| it.scope.contains(usage) && file.source_slice(it.identifier) == text);
+            .filter(|it| it.scope.contains(span) && file.source_slice(it.identifier) == text);
         let definition = possible.min_by_key(|it| it.scope.len())?.identifier.low();
-        let usage = usage.low();
-        Some((usage, definition))
+        Some((usage.unmanaged(), definition))
     })
 }
 

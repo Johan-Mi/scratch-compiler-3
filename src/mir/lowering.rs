@@ -194,7 +194,7 @@ fn lower_expression(
             let basic_block = &mut c.program.basic_blocks[basic_block].0;
             let start = basic_block.len();
             basic_block.extend(
-                c.variables[&c.resolved_variables[&it.syntax().span().low()]]
+                c.variables[&c.resolved_variables[&it.unmanaged()]]
                     .iter()
                     .map(|&variable| mir::Ref::Variable(variable))
                     .map(|source| c.program.ops.insert(mir::Op::Load { source })),

@@ -427,6 +427,7 @@ impl<'src> Parenthesized<'src> {
 }
 
 node!(Variable);
+node_unmanaged!(Variable -> VariableUnmanaged);
 
 node!(FunctionCall);
 

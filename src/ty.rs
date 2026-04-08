@@ -305,7 +305,7 @@ fn of_actually<'src>(
     match expression {
         ast::Expression::Parenthesized(it) => of(it.inner()?, ascribed, c),
         ast::Expression::Variable(it) => {
-            let definition = c.resolved_variables.get(&it.syntax().span().low())?;
+            let definition = c.resolved_variables.get(&it.unmanaged())?;
             c.variable_types.get(definition).copied()
         }
         ast::Expression::FunctionCall(it) => of_call(it.name(), &mut it.args().iter(), c),
