@@ -167,12 +167,14 @@ impl<'src> Parameter<'src> {
         token(self.syntax, K::Identifier).unwrap()
     }
 
-    pub fn internal_name(self) -> cst::Node<'src, K> {
-        self.syntax
+    pub fn internal_name(self) -> VariableDefinition<'src> {
+        let syntax = self
+            .syntax
             .children()
             .filter(|it| it.kind() == K::Identifier)
             .last()
-            .unwrap()
+            .unwrap();
+        VariableDefinition { syntax }
     }
 
     pub fn ty(self) -> Option<TypeExpression<'src>> {
@@ -234,8 +236,9 @@ impl<'src> Node<'src> for Statement<'src> {
 node!(Let);
 
 impl<'src> Let<'src> {
-    pub fn variable(self) -> Option<cst::Node<'src, K>> {
-        token(self.syntax, K::Identifier)
+    pub fn variable(self) -> Option<VariableDefinition<'src>> {
+        let syntax = token(self.syntax, K::Identifier)?;
+        Some(VariableDefinition { syntax })
     }
 
     pub fn value(self) -> Option<Expression<'src>> {
@@ -318,8 +321,9 @@ impl<'src> Until<'src> {
 node!(For);
 
 impl<'src> For<'src> {
-    pub fn variable(self) -> Option<cst::Node<'src, K>> {
-        token(self.syntax, K::Identifier)
+    pub fn variable(self) -> Option<VariableDefinition<'src>> {
+        let syntax = token(self.syntax, K::Identifier)?;
+        Some(VariableDefinition { syntax })
     }
 
     pub fn times(self) -> Option<Expression<'src>> {
@@ -428,6 +432,19 @@ impl<'src> Parenthesized<'src> {
 
 node!(Variable);
 node_unmanaged!(Variable -> VariableUnmanaged);
+
+#[derive(Clone, Copy)]
+pub struct VariableDefinition<'src> {
+    syntax: cst::Node<'src, K>,
+}
+
+impl<'src> VariableDefinition<'src> {
+    pub const fn syntax(self) -> cst::Node<'src, K> {
+        self.syntax
+    }
+}
+
+node_unmanaged!(VariableDefinition -> VariableDefinitionUnmanaged);
 
 node!(FunctionCall);
 

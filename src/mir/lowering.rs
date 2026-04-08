@@ -90,7 +90,7 @@ struct Context<'src, 'lower> {
     resolved_calls: &'lower HashMap<ast::ExpressionUnmanaged, ast::FunctionLike<'lower>>,
     layouts: &'lower ty::layout::S,
     functions: HashMap<ast::FunctionUnmanaged, Id<mir::BasicBlock>>,
-    variables: HashMap<cst::NodeUnmanaged, Vec<Id<mir::Variable>>>,
+    variables: HashMap<ast::VariableDefinitionUnmanaged, Vec<Id<mir::Variable>>>,
     current_function: Option<Id<mir::BasicBlock>>,
 }
 
@@ -282,7 +282,9 @@ fn lower_expression(
                 .parameters()
                 .unwrap()
                 .iter()
-                .position(|field| file.source_slice(field.internal_name().span()) == field_name)
+                .position(|field| {
+                    file.source_slice(field.internal_name().syntax().span()) == field_name
+                })
                 .unwrap();
             let range = copy_range(&c.layouts[&ty.unmanaged()][field_index]);
             values.drain(range).collect::<Vec<_>>().into()
@@ -347,7 +349,9 @@ fn lower_lvalue(expression: ast::Expression, c: &mut Context) -> Bundle {
                 .parameters()
                 .unwrap()
                 .iter()
-                .position(|field| file.source_slice(field.internal_name().span()) == field_name)
+                .position(|field| {
+                    file.source_slice(field.internal_name().syntax().span()) == field_name
+                })
                 .unwrap();
             let range = copy_range(&c.layouts[&ty.unmanaged()][field_index]);
             Bundle::Refs(refs.drain(range).collect())

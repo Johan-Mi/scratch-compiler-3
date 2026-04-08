@@ -168,7 +168,7 @@ pub fn check<'src>(
 
 struct Checker<'a, 'src> {
     resolved_variables: &'a name::S,
-    variable_types: HashMap<cst::NodeUnmanaged, Type<'src>>,
+    variable_types: HashMap<ast::VariableDefinitionUnmanaged, Type<'src>>,
     type_expressions: &'a HashMap<ast::TypeExpressionUnmanaged, Type<'src>>,
     expression_types: HashMap<ast::ExpressionUnmanaged, Type<'src>>,
     resolved_calls: HashMap<ast::ExpressionUnmanaged, ast::FunctionLike<'src>>,
@@ -434,7 +434,7 @@ fn of_field_access<'src>(
     let file = c.code_map.find_file(r#struct.syntax().span().low());
     let Some(field) = r#struct.parameters().and_then(|it| {
         it.iter()
-            .find(|it| file.source_slice(it.internal_name().span()) == name)
+            .find(|it| file.source_slice(it.internal_name().syntax().span()) == name)
     }) else {
         c.diagnostics.error(
             format!(

@@ -3,7 +3,7 @@ use crate::parser::K;
 use codemap::{CodeMap, Pos, Span};
 use std::collections::HashMap;
 
-pub type S = HashMap<ast::VariableUnmanaged, cst::NodeUnmanaged>;
+pub type S = HashMap<ast::VariableUnmanaged, ast::VariableDefinitionUnmanaged>;
 
 pub fn resolve(ast: ast::Program, code_map: &CodeMap) -> S {
     ast.documents()
@@ -14,7 +14,7 @@ pub fn resolve(ast: ast::Program, code_map: &CodeMap) -> S {
 fn resolve_document(
     document: cst::Node<K>,
     code_map: &CodeMap,
-) -> impl Iterator<Item = (ast::VariableUnmanaged, cst::NodeUnmanaged)> {
+) -> impl Iterator<Item = (ast::VariableUnmanaged, ast::VariableDefinitionUnmanaged)> {
     let file = code_map.find_file(document.span().low());
 
     let lets = document
@@ -50,7 +50,7 @@ fn resolve_document(
         let usage = ast::Variable::cast(usage)?;
         let text = file.source_slice(span);
         let possible = definitions.iter().filter(|it| {
-            it.scope.contains(span) && file.source_slice(it.identifier.span()) == text
+            it.scope.contains(span) && file.source_slice(it.identifier.syntax().span()) == text
         });
         let definition = possible.min_by_key(|it| it.scope.len())?.identifier;
         Some((usage.unmanaged(), definition.unmanaged()))
@@ -58,7 +58,7 @@ fn resolve_document(
 }
 
 struct Definition<'src> {
-    identifier: cst::Node<'src, K>,
+    identifier: ast::VariableDefinition<'src>,
     scope: Span,
 }
 
