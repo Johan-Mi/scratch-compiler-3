@@ -87,7 +87,7 @@ struct Context<'src, 'lower> {
     code_map: &'lower codemap::CodeMap,
     resolved_variables: &'lower name::S,
     expression_types: &'lower HashMap<ast::ExpressionUnmanaged, Type<'lower>>,
-    resolved_calls: &'lower HashMap<cst::NodeUnmanaged, ast::FunctionLike<'lower>>,
+    resolved_calls: &'lower HashMap<ast::ExpressionUnmanaged, ast::FunctionLike<'lower>>,
     layouts: &'lower ty::layout::S,
     functions: HashMap<ast::FunctionUnmanaged, Id<mir::BasicBlock>>,
     variables: HashMap<cst::NodeUnmanaged, Vec<Id<mir::Variable>>>,
@@ -206,10 +206,10 @@ fn lower_expression(
                 .into()
         }
         ast::Expression::FunctionCall(it) => {
-            lower_call(it.name(), &mut it.args().iter(), basic_block, c)
+            lower_call(expression, &mut it.args().iter(), basic_block, c)
         }
         ast::Expression::BinaryOperation(it) => lower_call(
-            it.operator(),
+            expression,
             &mut [it.lhs().unwrap(), it.rhs().unwrap()].into_iter(),
             basic_block,
             c,
@@ -261,7 +261,7 @@ fn lower_expression(
             lower_expression(it.inner().unwrap(), basic_block, c)
         }
         ast::Expression::MethodCall(it) => lower_call(
-            it.name(),
+            expression,
             &mut std::iter::once(it.caller()).chain(it.arguments().iter()),
             basic_block,
             c,
@@ -356,7 +356,7 @@ fn lower_lvalue(expression: ast::Expression, c: &mut Context) -> Bundle {
 }
 
 fn lower_call(
-    name: cst::Node<K>,
+    expression: ast::Expression,
     arguments: &mut dyn Iterator<Item = ast::Expression>,
     basic_block: Id<mir::BasicBlock>,
     c: &mut Context,
@@ -365,7 +365,7 @@ fn lower_call(
         .flat_map(|it| lower_expression(it, basic_block, c).values())
         .collect();
 
-    let function_like: ast::FunctionLike = c.resolved_calls[&name.unmanaged()];
+    let function_like: ast::FunctionLike = c.resolved_calls[&expression.unmanaged()];
     let Some(function) = ast::Function::cast(function_like.syntax()) else {
         assert!(ast::Struct::cast(function_like.syntax()).is_some());
         return arguments.into();
