@@ -68,7 +68,7 @@ impl<'src> Type<'src> {
 
 pub struct Ping<'src> {
     pub type_expressions: HashMap<ast::TypeExpressionUnmanaged, Type<'src>>,
-    pub expression_types: HashMap<Span, Type<'src>>,
+    pub expression_types: HashMap<ast::ExpressionUnmanaged, Type<'src>>,
     pub resolved_calls: HashMap<cst::NodeUnmanaged, ast::FunctionLike<'src>>,
     pub parameter_types: HashMap<ast::FunctionUnmanaged, Vec<Type<'src>>>,
     pub return_types: HashMap<ast::FunctionUnmanaged, Type<'src>>,
@@ -171,7 +171,7 @@ struct Checker<'a, 'src> {
     resolved_variables: &'a name::S,
     variable_types: HashMap<Pos, Type<'src>>,
     type_expressions: &'a HashMap<ast::TypeExpressionUnmanaged, Type<'src>>,
-    expression_types: HashMap<Span, Type<'src>>,
+    expression_types: HashMap<ast::ExpressionUnmanaged, Type<'src>>,
     resolved_calls: HashMap<cst::NodeUnmanaged, ast::FunctionLike<'src>>,
     ast: ast::Program<'src>,
     code_map: &'a CodeMap,
@@ -293,7 +293,7 @@ fn of<'src>(
 ) -> Option<Type<'src>> {
     let it = of_actually(expression, ascribed, c);
     c.expression_types
-        .extend(Some(expression.syntax().span()).zip(it));
+        .extend(Some(expression.unmanaged()).zip(it));
     it
 }
 

@@ -368,6 +368,8 @@ pub enum Expression<'src> {
     FieldAccess(FieldAccess<'src>),
 }
 
+node_unmanaged!(Expression -> ExpressionUnmanaged);
+
 impl<'src> Node<'src> for Expression<'src> {
     fn cast(node: SyntaxNode<'src>) -> Option<Self> {
         match node.kind() {

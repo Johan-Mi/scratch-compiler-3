@@ -86,7 +86,7 @@ struct Context<'src, 'lower> {
     program: mir::Program<'src>,
     code_map: &'lower codemap::CodeMap,
     resolved_variables: &'lower name::S,
-    expression_types: &'lower HashMap<codemap::Span, Type<'lower>>,
+    expression_types: &'lower HashMap<ast::ExpressionUnmanaged, Type<'lower>>,
     resolved_calls: &'lower HashMap<cst::NodeUnmanaged, ast::FunctionLike<'lower>>,
     layouts: &'lower ty::layout::S,
     functions: HashMap<ast::FunctionUnmanaged, Id<mir::BasicBlock>>,
@@ -236,7 +236,7 @@ fn lower_expression(
         }
         ast::Expression::Lvalue(it) => lower_lvalue(it.inner().unwrap(), c),
         ast::Expression::ListLiteral(it) => {
-            let base = c.expression_types[&it.syntax().span()].base;
+            let base = c.expression_types[&expression.unmanaged()].base;
             let size = ty::layout::size(base, c.layouts);
 
             let lists = std::iter::repeat_with(|| c.program.lists.insert(mir::List::default()))
@@ -268,7 +268,7 @@ fn lower_expression(
         ),
         ast::Expression::FieldAccess(it) => {
             let mut values = lower_expression(it.aggregate(), basic_block, c).values();
-            let ty = c.expression_types[&it.syntax().span()];
+            let ty = c.expression_types[&expression.unmanaged()];
             assert!(matches!(ty.shape, ty::Shape::Flat));
             let ty::Base::Struct(ty) = ty.base else {
                 unreachable!();
@@ -338,7 +338,7 @@ fn lower_lvalue(expression: ast::Expression, c: &mut Context) -> Bundle {
         ),
         ast::Expression::FieldAccess(it) => {
             let mut refs = lower_lvalue(it.aggregate(), c).refs();
-            let ty = c.expression_types[&it.syntax().span()];
+            let ty = c.expression_types[&expression.unmanaged()];
             assert!(matches!(ty.shape, ty::Shape::Flat));
             let ty::Base::Struct(ty) = ty.base else {
                 unreachable!();
