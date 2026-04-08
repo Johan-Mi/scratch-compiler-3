@@ -1,5 +1,5 @@
 use super::{Base, Shape, Type};
-use crate::ast::{self, Node};
+use crate::ast;
 use crate::diagnostics::{Diagnostics, primary};
 use std::collections::{HashMap, hash_map::Entry};
 use std::ops::Range;
@@ -74,13 +74,13 @@ fn scc<'src>(
         type_expressions: &'a HashMap<ast::TypeExpressionUnmanaged, Type<'src>>,
         result: Vec<Vec<ast::Struct<'src>>>,
         stack: Vec<ast::Struct<'src>>,
-        low: HashMap<codemap::Pos, usize>,
+        low: HashMap<ast::StructUnmanaged, usize>,
     }
 
     impl<'src> Tarjan<'_, 'src> {
         fn visit(&mut self, node: ast::Struct<'src>) {
             let num = self.low.len();
-            match self.low.entry(node.syntax().span().low()) {
+            match self.low.entry(node.unmanaged()) {
                 Entry::Occupied(_) => return,
                 Entry::Vacant(it) => _ = it.insert(num),
             }
@@ -94,16 +94,14 @@ fn scc<'src>(
                 }
             }) {
                 self.visit(successor);
-                let other = self.low[&successor.syntax().span().low()];
-                let l = self.low.get_mut(&node.syntax().span().low()).unwrap();
+                let other = self.low[&successor.unmanaged()];
+                let l = self.low.get_mut(&node.unmanaged()).unwrap();
                 *l = (*l).min(other);
             }
 
-            if num == self.low[&node.syntax().span().low()] {
+            if num == self.low[&node.unmanaged()] {
                 let component = self.stack.split_off(stack_pos);
-                let done = component
-                    .iter()
-                    .map(|it| (it.syntax().span().low(), usize::MAX));
+                let done = component.iter().map(|it| (it.unmanaged(), usize::MAX));
                 self.low.extend(done);
                 self.result.push(component);
             }
