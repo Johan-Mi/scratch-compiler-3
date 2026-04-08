@@ -1,4 +1,5 @@
 use crate::ast::{self, Node};
+use crate::parser::SyntaxNode;
 use crate::ty::{self, Type};
 use crate::{mir, name};
 use map::Id;
@@ -86,7 +87,7 @@ struct Context<'src, 'lower> {
     code_map: &'lower codemap::CodeMap,
     resolved_variables: &'lower name::S,
     expression_types: &'lower HashMap<codemap::Span, Type<'lower>>,
-    resolved_calls: &'lower HashMap<codemap::Span, ast::FunctionLike<'lower>>,
+    resolved_calls: &'lower HashMap<cst::NodeUnmanaged, ast::FunctionLike<'lower>>,
     layouts: &'lower ty::layout::S,
     functions: HashMap<ast::FunctionUnmanaged, Id<mir::BasicBlock>>,
     variables: HashMap<codemap::Pos, Vec<Id<mir::Variable>>>,
@@ -205,10 +206,10 @@ fn lower_expression(
                 .into()
         }
         ast::Expression::FunctionCall(it) => {
-            lower_call(it.name().span(), &mut it.args().iter(), basic_block, c)
+            lower_call(it.name(), &mut it.args().iter(), basic_block, c)
         }
         ast::Expression::BinaryOperation(it) => lower_call(
-            it.operator().span(),
+            it.operator(),
             &mut [it.lhs().unwrap(), it.rhs().unwrap()].into_iter(),
             basic_block,
             c,
@@ -260,7 +261,7 @@ fn lower_expression(
             lower_expression(it.inner().unwrap(), basic_block, c)
         }
         ast::Expression::MethodCall(it) => lower_call(
-            it.name().span(),
+            it.name(),
             &mut std::iter::once(it.caller()).chain(it.arguments().iter()),
             basic_block,
             c,
@@ -360,7 +361,7 @@ fn lower_lvalue(expression: ast::Expression, c: &mut Context) -> Bundle {
 }
 
 fn lower_call(
-    name: codemap::Span,
+    name: SyntaxNode,
     arguments: &mut dyn Iterator<Item = ast::Expression>,
     basic_block: Id<mir::BasicBlock>,
     c: &mut Context,
@@ -369,7 +370,7 @@ fn lower_call(
         .flat_map(|it| lower_expression(it, basic_block, c).values())
         .collect();
 
-    let function_like: ast::FunctionLike = c.resolved_calls[&name];
+    let function_like: ast::FunctionLike = c.resolved_calls[&name.unmanaged()];
     let Some(function) = ast::Function::cast(function_like.syntax()) else {
         assert!(ast::Struct::cast(function_like.syntax()).is_some());
         return arguments.into();

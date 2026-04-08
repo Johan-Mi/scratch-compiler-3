@@ -2,6 +2,7 @@ pub mod layout;
 
 use crate::ast::{self, Node};
 use crate::diagnostics::{Diagnostics, primary};
+use crate::parser::SyntaxNode;
 use crate::{name, parser::K};
 use codemap::{CodeMap, Pos, Span};
 use std::{collections::HashMap, fmt};
@@ -68,7 +69,7 @@ impl<'src> Type<'src> {
 pub struct Ping<'src> {
     pub type_expressions: HashMap<ast::TypeExpressionUnmanaged, Type<'src>>,
     pub expression_types: HashMap<Span, Type<'src>>,
-    pub resolved_calls: HashMap<Span, ast::FunctionLike<'src>>,
+    pub resolved_calls: HashMap<cst::NodeUnmanaged, ast::FunctionLike<'src>>,
     pub parameter_types: HashMap<ast::FunctionUnmanaged, Vec<Type<'src>>>,
     pub return_types: HashMap<ast::FunctionUnmanaged, Type<'src>>,
 }
@@ -171,7 +172,7 @@ struct Checker<'a, 'src> {
     variable_types: HashMap<Pos, Type<'src>>,
     type_expressions: &'a HashMap<ast::TypeExpressionUnmanaged, Type<'src>>,
     expression_types: HashMap<Span, Type<'src>>,
-    resolved_calls: HashMap<Span, ast::FunctionLike<'src>>,
+    resolved_calls: HashMap<cst::NodeUnmanaged, ast::FunctionLike<'src>>,
     ast: ast::Program<'src>,
     code_map: &'a CodeMap,
     diagnostics: &'a mut Diagnostics,
@@ -307,12 +308,10 @@ fn of_actually<'src>(
             let definition = c.resolved_variables.get(&it.syntax().span().low())?;
             c.variable_types.get(definition).copied()
         }
-        ast::Expression::FunctionCall(it) => of_call(it.name().span(), &mut it.args().iter(), c),
-        ast::Expression::BinaryOperation(it) => of_call(
-            it.operator().span(),
-            &mut [it.lhs()?, it.rhs()?].into_iter(),
-            c,
-        ),
+        ast::Expression::FunctionCall(it) => of_call(it.name(), &mut it.args().iter(), c),
+        ast::Expression::BinaryOperation(it) => {
+            of_call(it.operator(), &mut [it.lhs()?, it.rhs()?].into_iter(), c)
+        }
         ast::Expression::NamedArgument(it) => of(it.value()?, ascribed, c),
         ast::Expression::DecimalNumber(_)
         | ast::Expression::BinaryNumber(_)
@@ -402,7 +401,7 @@ fn of_actually<'src>(
             ascribed_ty
         }
         ast::Expression::MethodCall(it) => of_call(
-            it.name().span(),
+            it.name(),
             &mut std::iter::once(it.caller()).chain(it.arguments().iter()),
             c,
         ),
@@ -502,12 +501,16 @@ fn evaluate<'src>(
 }
 
 fn of_call<'src>(
-    name: Span,
+    name: SyntaxNode,
     arguments: &mut dyn Iterator<Item = ast::Expression<'src>>,
     c: &mut Checker<'_, 'src>,
 ) -> Option<Type<'src>> {
-    let function_like = resolve_call(name, arguments, c)?;
-    assert!(c.resolved_calls.insert(name, function_like).is_none());
+    let function_like = resolve_call(name.span(), arguments, c)?;
+    assert!(
+        c.resolved_calls
+            .insert(name.unmanaged(), function_like)
+            .is_none()
+    );
     return_ty(function_like, c)
 }
 
