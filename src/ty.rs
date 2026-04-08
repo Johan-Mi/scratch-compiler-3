@@ -116,6 +116,21 @@ pub fn check<'src>(
     let mut return_types = HashMap::new();
 
     for function in ast.syntax().pre_order().filter_map(ast::Function::cast) {
+        assert!(
+            parameter_types
+                .insert(
+                    function.syntax().span().low(),
+                    function
+                        .parameters()
+                        .into_iter()
+                        .flat_map(ast::Parameters::iter)
+                        .filter_map(ast::Parameter::ty)
+                        .filter_map(|it| c.type_expressions.get(&it.syntax().span().low()).copied())
+                        .collect()
+                )
+                .is_none()
+        );
+
         c.return_ty = return_ty(function.into(), &c);
         if let Some(return_ty) = c.return_ty {
             assert!(
@@ -130,6 +145,7 @@ pub fn check<'src>(
                 );
             }
         }
+
         if let Some(body) = function.body() {
             check_block(body, &mut c);
             if c.return_ty.is_some_and(|it| it != Base::Unit) && !body.diverges() {
