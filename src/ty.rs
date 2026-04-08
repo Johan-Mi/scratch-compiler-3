@@ -91,7 +91,7 @@ pub fn check<'src>(
     let mut c = Checker {
         resolved_variables,
         variable_types: HashMap::new(),
-        type_expressions,
+        type_expressions: &type_expressions,
         expression_types: HashMap::new(),
         resolved_calls: HashMap::new(),
         ast,
@@ -157,10 +157,12 @@ pub fn check<'src>(
         }
     }
 
+    let expression_types = c.expression_types;
+    let resolved_calls = c.resolved_calls;
     Ping {
-        type_expressions: c.type_expressions,
-        expression_types: c.expression_types,
-        resolved_calls: c.resolved_calls,
+        type_expressions,
+        expression_types,
+        resolved_calls,
         parameter_types,
         return_types,
     }
@@ -169,7 +171,7 @@ pub fn check<'src>(
 struct Checker<'a, 'src> {
     resolved_variables: &'a name::S,
     variable_types: HashMap<Pos, Type<'src>>,
-    type_expressions: HashMap<Pos, Type<'src>>,
+    type_expressions: &'a HashMap<Pos, Type<'src>>,
     expression_types: HashMap<Span, Type<'src>>,
     resolved_calls: HashMap<Span, ast::FunctionLike<'src>>,
     ast: ast::Program<'src>,
@@ -568,15 +570,7 @@ fn resolve_call<'src>(
     let viable_overloads: Vec<ast::FunctionLike> = all_overloads
         .iter()
         .copied()
-        .filter(|it| {
-            can_call(
-                it,
-                &labels,
-                &argument_types,
-                &c.type_expressions,
-                c.code_map,
-            )
-        })
+        .filter(|it| can_call(it, &labels, &argument_types, c.type_expressions, c.code_map))
         .collect();
     match *viable_overloads {
         [] => {
