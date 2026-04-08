@@ -130,6 +130,7 @@ impl<'src> Costume<'src> {
 }
 
 node!(Function);
+node_unmanaged!(Function -> FunctionUnmanaged);
 
 impl<'src> Function<'src> {
     pub fn kw_inline(self) -> Option<SyntaxNode<'src>> {

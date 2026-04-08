@@ -69,8 +69,8 @@ pub struct Ping<'src> {
     pub type_expressions: HashMap<ast::TypeExpressionUnmanaged, Type<'src>>,
     pub expression_types: HashMap<Span, Type<'src>>,
     pub resolved_calls: HashMap<Span, ast::FunctionLike<'src>>,
-    pub parameter_types: HashMap<Pos, Vec<Type<'src>>>,
-    pub return_types: HashMap<Pos, Type<'src>>,
+    pub parameter_types: HashMap<ast::FunctionUnmanaged, Vec<Type<'src>>>,
+    pub return_types: HashMap<ast::FunctionUnmanaged, Type<'src>>,
 }
 
 pub fn check<'src>(
@@ -117,7 +117,7 @@ pub fn check<'src>(
         assert!(
             parameter_types
                 .insert(
-                    function.syntax().span().low(),
+                    function.unmanaged(),
                     function
                         .parameters()
                         .into_iter()
@@ -133,7 +133,7 @@ pub fn check<'src>(
         if let Some(return_ty) = c.return_ty {
             assert!(
                 return_types
-                    .insert(function.syntax().span().low(), return_ty)
+                    .insert(function.unmanaged(), return_ty)
                     .is_none()
             );
             if matches!(return_ty.shape, Shape::List | Shape::Ref) {

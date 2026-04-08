@@ -21,7 +21,7 @@ pub fn lower<'src>(
 
     let mut program = mir::Program::default();
     let functions = function_asts()
-        .map(|it| it.syntax().span().low())
+        .map(ast::Function::unmanaged)
         .zip(std::iter::repeat_with(|| {
             program.basic_blocks.insert(mir::BasicBlock(Vec::new()))
         }))
@@ -41,7 +41,7 @@ pub fn lower<'src>(
     for function in function_asts() {
         let body = function.body().unwrap();
         let pos = function.syntax().span().low();
-        let basic_block = context.functions[&pos];
+        let basic_block = context.functions[&function.unmanaged()];
         let file = code_map.find_file(pos);
         let name = file.source_slice(function.name().unwrap().span());
         let function = match name {
@@ -55,11 +55,14 @@ pub fn lower<'src>(
             },
             _ => mir::Function::Normal {
                 name,
-                parameter_count: typing.parameter_types[&pos]
+                parameter_count: typing.parameter_types[&function.unmanaged()]
                     .iter()
                     .map(|it| ty::layout::size(it.base, layouts))
                     .sum(),
-                return_value_count: ty::layout::size(typing.return_types[&pos].base, layouts),
+                return_value_count: ty::layout::size(
+                    typing.return_types[&function.unmanaged()].base,
+                    layouts,
+                ),
             },
         };
         assert!(
@@ -85,7 +88,7 @@ struct Context<'src, 'lower> {
     expression_types: &'lower HashMap<codemap::Span, Type<'lower>>,
     resolved_calls: &'lower HashMap<codemap::Span, ast::FunctionLike<'lower>>,
     layouts: &'lower ty::layout::S,
-    functions: HashMap<codemap::Pos, Id<mir::BasicBlock>>,
+    functions: HashMap<ast::FunctionUnmanaged, Id<mir::BasicBlock>>,
     variables: HashMap<codemap::Pos, Vec<Id<mir::Variable>>>,
     current_function: Option<Id<mir::BasicBlock>>,
 }
@@ -376,7 +379,7 @@ fn lower_call(
         todo!("lower inline functions to MIR");
     }
 
-    let function = c.functions[&function.syntax().span().low()];
+    let function = c.functions[&function.unmanaged()];
     let call = c.program.ops.insert(mir::Op::Call {
         function,
         arguments,
