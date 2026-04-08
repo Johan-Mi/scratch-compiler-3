@@ -33,8 +33,8 @@ macro_rules! node_unmanaged {
         }
 
         impl $NameManaged<'_> {
-            pub const fn unmanaged(self) -> $NameUnmanaged {
-                let syntax = self.syntax.unmanaged();
+            pub fn unmanaged(self) -> $NameUnmanaged {
+                let syntax = self.syntax().unmanaged();
                 $NameUnmanaged { syntax }
             }
         }
