@@ -4,7 +4,7 @@ use crate::diagnostics::{Diagnostics, primary};
 use std::collections::{HashMap, hash_map::Entry};
 use std::ops::Range;
 
-pub type S = HashMap<codemap::Pos, Vec<Range<usize>>>;
+pub type S = HashMap<ast::StructUnmanaged, Vec<Range<usize>>>;
 
 pub fn s(
     ast: ast::Program,
@@ -47,7 +47,7 @@ pub fn s(
             .map(|ty| size(ty.base, &layouts))
             .scan(0, |start, size| Some(*start..(*start += size, *start).1))
             .collect();
-        assert!(layouts.insert(it.syntax().span().low(), layout).is_none());
+        assert!(layouts.insert(it.unmanaged(), layout).is_none());
     }
     layouts
 }
@@ -59,7 +59,7 @@ pub fn size(base: Base, layouts: &S) -> usize {
         Base::Struct(it) => layouts
             // Recursive structs default to size 0, which is fine since they emit errors,
             // thereby preventing us from ever using any layouts.
-            .get(&it.syntax().span().low())
+            .get(&it.unmanaged())
             .and_then(|it| it.last())
             .map_or(0, |it| it.end),
         Base::Generic(_) => unreachable!(),

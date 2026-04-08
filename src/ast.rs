@@ -66,6 +66,7 @@ impl<'src> Document<'src> {
 }
 
 node!(Struct);
+node_unmanaged!(Struct -> StructUnmanaged);
 
 impl PartialEq for Struct<'_> {
     fn eq(&self, other: &Self) -> bool {
