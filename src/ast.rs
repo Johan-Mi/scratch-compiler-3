@@ -38,13 +38,6 @@ macro_rules! node_unmanaged {
                 $NameUnmanaged { syntax }
             }
         }
-
-        impl $NameUnmanaged {
-            pub const fn managed(self, tree: &cst::Tree<K>) -> $NameManaged<'_> {
-                let syntax = self.syntax.managed(tree);
-                $NameManaged { syntax }
-            }
-        }
     };
 }
 
