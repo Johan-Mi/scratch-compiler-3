@@ -90,7 +90,7 @@ struct Context<'src, 'lower> {
     resolved_calls: &'lower HashMap<cst::NodeUnmanaged, ast::FunctionLike<'lower>>,
     layouts: &'lower ty::layout::S,
     functions: HashMap<ast::FunctionUnmanaged, Id<mir::BasicBlock>>,
-    variables: HashMap<codemap::Pos, Vec<Id<mir::Variable>>>,
+    variables: HashMap<cst::NodeUnmanaged, Vec<Id<mir::Variable>>>,
     current_function: Option<Id<mir::BasicBlock>>,
 }
 
@@ -119,8 +119,8 @@ fn lower_statement(statement: ast::Statement, basic_block: Id<mir::BasicBlock>, 
                 })
             });
             c.program.basic_blocks[basic_block].0.extend(stores);
-            let pos = it.variable().unwrap().span().low();
-            assert!(c.variables.insert(pos, variables).is_none());
+            let node = it.variable().unwrap().unmanaged();
+            assert!(c.variables.insert(node, variables).is_none());
         }
         ast::Statement::If(it) => {
             let condition = one(lower_expression(it.condition().unwrap(), basic_block, c).values());
@@ -158,8 +158,8 @@ fn lower_statement(statement: ast::Statement, basic_block: Id<mir::BasicBlock>, 
         ast::Statement::For(it) => {
             let value = mir::Constant::Num(0.0);
             let variable = c.program.variables.insert(mir::Variable { value });
-            let pos = it.variable().unwrap().span().low();
-            assert!(c.variables.insert(pos, [variable].into()).is_none());
+            let node = it.variable().unwrap().unmanaged();
+            assert!(c.variables.insert(node, [variable].into()).is_none());
             let times = one(lower_expression(it.times().unwrap(), basic_block, c).values());
             let body = lower_block(it.body().unwrap(), c);
             let op = c.program.ops.insert(mir::Op::For {
@@ -331,7 +331,7 @@ fn lower_lvalue(expression: ast::Expression, c: &mut Context) -> Bundle {
         | ast::Expression::MethodCall(_) => unreachable!(),
 
         ast::Expression::Variable(it) => Bundle::Refs(
-            c.variables[&it.syntax().span().low()]
+            c.variables[&c.resolved_variables[&it.unmanaged()]]
                 .iter()
                 .map(|&it| mir::Ref::Variable(it))
                 .collect(),

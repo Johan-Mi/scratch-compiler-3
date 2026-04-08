@@ -4,7 +4,7 @@ use crate::ast::{self, Node};
 use crate::diagnostics::{Diagnostics, primary};
 use crate::parser::SyntaxNode;
 use crate::{name, parser::K};
-use codemap::{CodeMap, Pos, Span};
+use codemap::{CodeMap, Span};
 use std::{collections::HashMap, fmt};
 
 #[derive(Clone, Copy, PartialEq)]
@@ -104,7 +104,7 @@ pub fn check<'src>(
         .filter(|it| matches!(it.kind(), K::Document | K::Sprite))
         .flat_map(cst::Node::children)
         .filter_map(ast::Let::cast)
-        .filter_map(|it| Some((it.variable()?.span().low(), it.value()?)))
+        .filter_map(|it| Some((it.variable()?.unmanaged(), it.value()?)))
         .for_each(|(variable, value)| {
             if let Some(ty) = of(value, None, &mut c) {
                 assert!(c.variable_types.insert(variable, ty).is_none());
@@ -169,7 +169,7 @@ pub fn check<'src>(
 
 struct Checker<'a, 'src> {
     resolved_variables: &'a name::S,
-    variable_types: HashMap<Pos, Type<'src>>,
+    variable_types: HashMap<cst::NodeUnmanaged, Type<'src>>,
     type_expressions: &'a HashMap<ast::TypeExpressionUnmanaged, Type<'src>>,
     expression_types: HashMap<ast::ExpressionUnmanaged, Type<'src>>,
     resolved_calls: HashMap<cst::NodeUnmanaged, ast::FunctionLike<'src>>,
@@ -192,7 +192,7 @@ fn check_statement<'src>(statement: ast::Statement<'src>, c: &mut Checker<'_, 's
                 && let Some(ty) = of(value, None, c)
                 && let Some(variable) = it.variable()
             {
-                assert!(c.variable_types.insert(variable.span().low(), ty).is_none());
+                assert!(c.variable_types.insert(variable.unmanaged(), ty).is_none());
                 if matches!(ty.shape, Shape::List | Shape::Ref) {
                     c.diagnostics.error(
                         format!("type `{}` cannot be used at runtime", ty.display(c)),
@@ -250,10 +250,9 @@ fn check_statement<'src>(statement: ast::Statement<'src>, c: &mut Checker<'_, 's
                 expect(times, Base::Num.into(), c);
             }
             if let Some(variable) = it.variable() {
-                let variable = variable.span().low();
                 assert!(
                     c.variable_types
-                        .insert(variable, Base::Num.into())
+                        .insert(variable.unmanaged(), Base::Num.into())
                         .is_none()
                 );
             }
