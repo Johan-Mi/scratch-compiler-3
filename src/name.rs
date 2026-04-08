@@ -1,5 +1,5 @@
 use crate::ast::{self, Node};
-use crate::parser::{K, SyntaxNode};
+use crate::parser::K;
 use codemap::{CodeMap, Pos, Span};
 use std::collections::HashMap;
 
@@ -12,7 +12,7 @@ pub fn resolve(ast: ast::Program, code_map: &CodeMap) -> S {
 }
 
 fn resolve_document(
-    document: SyntaxNode,
+    document: cst::Node<K>,
     code_map: &CodeMap,
 ) -> impl Iterator<Item = (ast::VariableUnmanaged, cst::NodeUnmanaged)> {
     let file = code_map.find_file(document.span().low());
@@ -58,7 +58,7 @@ fn resolve_document(
 }
 
 struct Definition<'src> {
-    identifier: SyntaxNode<'src>,
+    identifier: cst::Node<'src, K>,
     scope: Span,
 }
 

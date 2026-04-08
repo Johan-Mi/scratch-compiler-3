@@ -1,24 +1,24 @@
-use crate::parser::{K, SyntaxNode};
+use crate::parser::K;
 
 pub trait Node<'src>: Sized {
-    fn cast(syntax: SyntaxNode<'src>) -> Option<Self>;
+    fn cast(syntax: cst::Node<'src, K>) -> Option<Self>;
 
-    fn syntax(self) -> SyntaxNode<'src>;
+    fn syntax(self) -> cst::Node<'src, K>;
 }
 
 macro_rules! node {
     ($Name:ident) => {
         #[derive(Clone, Copy)]
         pub struct $Name<'src> {
-            syntax: SyntaxNode<'src>,
+            syntax: cst::Node<'src, K>,
         }
 
         impl<'src> Node<'src> for $Name<'src> {
-            fn cast(syntax: SyntaxNode<'src>) -> Option<Self> {
+            fn cast(syntax: cst::Node<'src, K>) -> Option<Self> {
                 (syntax.kind() == K::$Name).then_some(Self { syntax })
             }
 
-            fn syntax(self) -> SyntaxNode<'src> {
+            fn syntax(self) -> cst::Node<'src, K> {
                 self.syntax
             }
         }
@@ -75,7 +75,7 @@ impl PartialEq for Struct<'_> {
 }
 
 impl<'src> Struct<'src> {
-    pub fn name(self) -> Option<SyntaxNode<'src>> {
+    pub fn name(self) -> Option<cst::Node<'src, K>> {
         token(self.syntax, K::Identifier)
     }
 
@@ -87,7 +87,7 @@ impl<'src> Struct<'src> {
 node!(Sprite);
 
 impl<'src> Sprite<'src> {
-    pub fn name(self) -> Option<SyntaxNode<'src>> {
+    pub fn name(self) -> Option<cst::Node<'src, K>> {
         token(self.syntax, K::Identifier)
     }
 
@@ -111,11 +111,11 @@ impl<'src> CostumeList<'src> {
 node!(Costume);
 
 impl<'src> Costume<'src> {
-    pub fn name(self) -> SyntaxNode<'src> {
+    pub fn name(self) -> cst::Node<'src, K> {
         token(self.syntax, K::String).unwrap()
     }
 
-    pub fn path(self) -> Option<SyntaxNode<'src>> {
+    pub fn path(self) -> Option<cst::Node<'src, K>> {
         let colon = token(self.syntax, K::Colon)?;
         self.syntax
             .children()
@@ -127,15 +127,15 @@ node!(Function);
 node_unmanaged!(Function -> FunctionUnmanaged);
 
 impl<'src> Function<'src> {
-    pub fn kw_inline(self) -> Option<SyntaxNode<'src>> {
+    pub fn kw_inline(self) -> Option<cst::Node<'src, K>> {
         token(self.syntax, K::KwInline)
     }
 
-    pub fn name(self) -> Option<SyntaxNode<'src>> {
+    pub fn name(self) -> Option<cst::Node<'src, K>> {
         token(self.syntax, K::Identifier)
     }
 
-    pub fn tag(self) -> Option<SyntaxNode<'src>> {
+    pub fn tag(self) -> Option<cst::Node<'src, K>> {
         token(self.syntax, K::String)
     }
 
@@ -163,11 +163,11 @@ impl<'src> Parameters<'src> {
 node!(Parameter);
 
 impl<'src> Parameter<'src> {
-    pub fn external_name(self) -> SyntaxNode<'src> {
+    pub fn external_name(self) -> cst::Node<'src, K> {
         token(self.syntax, K::Identifier).unwrap()
     }
 
-    pub fn internal_name(self) -> SyntaxNode<'src> {
+    pub fn internal_name(self) -> cst::Node<'src, K> {
         self.syntax
             .children()
             .filter(|it| it.kind() == K::Identifier)
@@ -202,7 +202,7 @@ pub enum Statement<'src> {
 }
 
 impl<'src> Node<'src> for Statement<'src> {
-    fn cast(node: SyntaxNode<'src>) -> Option<Self> {
+    fn cast(node: cst::Node<'src, K>) -> Option<Self> {
         match node.kind() {
             K::Let => Node::cast(node).map(Self::Let),
             K::If => Node::cast(node).map(Self::If),
@@ -216,7 +216,7 @@ impl<'src> Node<'src> for Statement<'src> {
         }
     }
 
-    fn syntax(self) -> SyntaxNode<'src> {
+    fn syntax(self) -> cst::Node<'src, K> {
         match self {
             Self::Let(inner) => inner.syntax,
             Self::If(inner) => inner.syntax,
@@ -234,7 +234,7 @@ impl<'src> Node<'src> for Statement<'src> {
 node!(Let);
 
 impl<'src> Let<'src> {
-    pub fn variable(self) -> Option<SyntaxNode<'src>> {
+    pub fn variable(self) -> Option<cst::Node<'src, K>> {
         token(self.syntax, K::Identifier)
     }
 
@@ -318,7 +318,7 @@ impl<'src> Until<'src> {
 node!(For);
 
 impl<'src> For<'src> {
-    pub fn variable(self) -> Option<SyntaxNode<'src>> {
+    pub fn variable(self) -> Option<cst::Node<'src, K>> {
         token(self.syntax, K::Identifier)
     }
 
@@ -343,7 +343,7 @@ node!(TypeExpression);
 node_unmanaged!(TypeExpression -> TypeExpressionUnmanaged);
 
 impl<'src> TypeExpression<'src> {
-    pub fn variable(self) -> Option<SyntaxNode<'src>> {
+    pub fn variable(self) -> Option<cst::Node<'src, K>> {
         token(self.syntax, K::Identifier)
     }
 }
@@ -372,7 +372,7 @@ pub enum Expression<'src> {
 node_unmanaged!(Expression -> ExpressionUnmanaged);
 
 impl<'src> Node<'src> for Expression<'src> {
-    fn cast(node: SyntaxNode<'src>) -> Option<Self> {
+    fn cast(node: cst::Node<'src, K>) -> Option<Self> {
         match node.kind() {
             K::Parenthesized => Node::cast(node).map(Self::Parenthesized),
             K::Variable => Node::cast(node).map(Self::Variable),
@@ -395,7 +395,7 @@ impl<'src> Node<'src> for Expression<'src> {
         }
     }
 
-    fn syntax(self) -> SyntaxNode<'src> {
+    fn syntax(self) -> cst::Node<'src, K> {
         match self {
             Self::Variable(inner) => inner.syntax,
             Self::FunctionCall(inner) => inner.syntax,
@@ -432,7 +432,7 @@ node_unmanaged!(Variable -> VariableUnmanaged);
 node!(FunctionCall);
 
 impl<'src> FunctionCall<'src> {
-    pub fn name(self) -> SyntaxNode<'src> {
+    pub fn name(self) -> cst::Node<'src, K> {
         token(self.syntax, K::Identifier).unwrap()
     }
 
@@ -452,7 +452,7 @@ impl<'src> Arguments<'src> {
 node!(BinaryOperation);
 
 impl<'src> BinaryOperation<'src> {
-    pub fn operator(self) -> SyntaxNode<'src> {
+    pub fn operator(self) -> cst::Node<'src, K> {
         self.syntax
             .children()
             .find(|child| child.kind().is_binary_operator())
@@ -479,7 +479,7 @@ impl<'src> BinaryOperation<'src> {
 node!(NamedArgument);
 
 impl<'src> NamedArgument<'src> {
-    pub fn name(self) -> SyntaxNode<'src> {
+    pub fn name(self) -> cst::Node<'src, K> {
         token(self.syntax, K::Identifier).unwrap()
     }
 
@@ -531,7 +531,7 @@ impl<'src> MethodCall<'src> {
         child(self.syntax).unwrap()
     }
 
-    pub fn name(self) -> SyntaxNode<'src> {
+    pub fn name(self) -> cst::Node<'src, K> {
         token(self.syntax, K::Identifier).unwrap()
     }
 
@@ -547,26 +547,26 @@ impl<'src> FieldAccess<'src> {
         child(self.syntax).unwrap()
     }
 
-    pub fn field(self) -> SyntaxNode<'src> {
+    pub fn field(self) -> cst::Node<'src, K> {
         token(self.syntax, K::Identifier).unwrap()
     }
 }
 
-fn child<'src, N: Node<'src>>(syntax: SyntaxNode<'src>) -> Option<N> {
+fn child<'src, N: Node<'src>>(syntax: cst::Node<'src, K>) -> Option<N> {
     syntax.children().find_map(N::cast)
 }
 
-fn children<'src, N: Node<'src>>(syntax: SyntaxNode<'src>) -> impl Iterator<Item = N> {
+fn children<'src, N: Node<'src>>(syntax: cst::Node<'src, K>) -> impl Iterator<Item = N> {
     syntax.children().filter_map(N::cast)
 }
 
-fn token(syntax: SyntaxNode<'_>, kind: K) -> Option<SyntaxNode<'_>> {
+fn token(syntax: cst::Node<K>, kind: K) -> Option<cst::Node<K>> {
     syntax.children().find(|it| it.kind() == kind)
 }
 
 #[derive(Clone, Copy)]
 pub struct FunctionLike<'src> {
-    syntax: SyntaxNode<'src>,
+    syntax: cst::Node<'src, K>,
 }
 
 impl<'src> From<Function<'src>> for FunctionLike<'src> {
@@ -584,11 +584,11 @@ impl<'src> From<Struct<'src>> for FunctionLike<'src> {
 }
 
 impl<'src> FunctionLike<'src> {
-    pub const fn syntax(self) -> SyntaxNode<'src> {
+    pub const fn syntax(self) -> cst::Node<'src, K> {
         self.syntax
     }
 
-    pub fn name(self) -> Option<SyntaxNode<'src>> {
+    pub fn name(self) -> Option<cst::Node<'src, K>> {
         token(self.syntax, K::Identifier)
     }
 

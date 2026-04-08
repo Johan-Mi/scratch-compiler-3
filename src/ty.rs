@@ -2,7 +2,6 @@ pub mod layout;
 
 use crate::ast::{self, Node};
 use crate::diagnostics::{Diagnostics, primary};
-use crate::parser::SyntaxNode;
 use crate::{name, parser::K};
 use codemap::{CodeMap, Span};
 use std::{collections::HashMap, fmt};
@@ -500,7 +499,7 @@ fn evaluate<'src>(
 }
 
 fn of_call<'src>(
-    name: SyntaxNode,
+    name: cst::Node<K>,
     arguments: &mut dyn Iterator<Item = ast::Expression<'src>>,
     c: &mut Checker<'_, 'src>,
 ) -> Option<Type<'src>> {

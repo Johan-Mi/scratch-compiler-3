@@ -1,5 +1,5 @@
 use crate::ast::{self, Node};
-use crate::parser::SyntaxNode;
+use crate::parser::K;
 use crate::ty::{self, Type};
 use crate::{mir, name};
 use map::Id;
@@ -290,12 +290,7 @@ fn lower_expression(
     }
 }
 
-fn float(
-    radix: u32,
-    letter: u8,
-    node: crate::parser::SyntaxNode,
-    code_map: &codemap::CodeMap,
-) -> Bundle {
+fn float(radix: u32, letter: u8, node: cst::Node<K>, code_map: &codemap::CodeMap) -> Bundle {
     let span = node.span();
     let file = code_map.find_file(span.low());
     let text = file.source_slice(span);
@@ -361,7 +356,7 @@ fn lower_lvalue(expression: ast::Expression, c: &mut Context) -> Bundle {
 }
 
 fn lower_call(
-    name: SyntaxNode,
+    name: cst::Node<K>,
     arguments: &mut dyn Iterator<Item = ast::Expression>,
     basic_block: Id<mir::BasicBlock>,
     c: &mut Context,

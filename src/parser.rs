@@ -222,8 +222,6 @@ impl K {
     }
 }
 
-pub type SyntaxNode<'src> = cst::Node<'src, K>;
-
 struct Parser<'src> {
     builder: &'src mut cst::Builder<K>,
     tokens: &'src [(K, Span)],
