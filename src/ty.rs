@@ -66,7 +66,7 @@ impl<'src> Type<'src> {
 }
 
 pub struct Ping<'src> {
-    pub type_expressions: HashMap<Pos, Type<'src>>,
+    pub type_expressions: HashMap<ast::TypeExpressionUnmanaged, Type<'src>>,
     pub expression_types: HashMap<Span, Type<'src>>,
     pub resolved_calls: HashMap<Span, ast::FunctionLike<'src>>,
     pub parameter_types: HashMap<Pos, Vec<Type<'src>>>,
@@ -79,13 +79,11 @@ pub fn check<'src>(
     resolved_variables: &name::S,
     diagnostics: &mut Diagnostics,
 ) -> Ping<'src> {
-    let type_expressions: HashMap<Pos, Type> = ast
+    let type_expressions: HashMap<ast::TypeExpressionUnmanaged, Type> = ast
         .syntax()
         .pre_order()
         .filter_map(ast::TypeExpression::cast)
-        .filter_map(|it| {
-            Some(it.syntax().span().low()).zip(evaluate(it, ast, code_map, diagnostics))
-        })
+        .filter_map(|it| Some(it.unmanaged()).zip(evaluate(it, ast, code_map, diagnostics)))
         .collect();
 
     let mut c = Checker {
@@ -125,7 +123,7 @@ pub fn check<'src>(
                         .into_iter()
                         .flat_map(ast::Parameters::iter)
                         .filter_map(ast::Parameter::ty)
-                        .filter_map(|it| c.type_expressions.get(&it.syntax().span().low()).copied())
+                        .filter_map(|it| c.type_expressions.get(&it.unmanaged()).copied())
                         .collect()
                 )
                 .is_none()
@@ -171,7 +169,7 @@ pub fn check<'src>(
 struct Checker<'a, 'src> {
     resolved_variables: &'a name::S,
     variable_types: HashMap<Pos, Type<'src>>,
-    type_expressions: &'a HashMap<Pos, Type<'src>>,
+    type_expressions: &'a HashMap<ast::TypeExpressionUnmanaged, Type<'src>>,
     expression_types: HashMap<Span, Type<'src>>,
     resolved_calls: HashMap<Span, ast::FunctionLike<'src>>,
     ast: ast::Program<'src>,
@@ -386,10 +384,7 @@ fn of_actually<'src>(
             }
         }
         ast::Expression::TypeAscription(it) => {
-            let ascribed_ty = c
-                .type_expressions
-                .get(&it.ty()?.syntax().span().low())
-                .copied();
+            let ascribed_ty = c.type_expressions.get(&it.ty()?.unmanaged()).copied();
             let inner = it.inner()?;
             if let Some(actual) = of(inner, ascribed_ty, c)
                 && let Some(ascribed) = ascribed_ty
@@ -447,9 +442,7 @@ fn of_field_access<'src>(
         );
         return None;
     };
-    c.type_expressions
-        .get(&field.ty()?.syntax().span().low())
-        .copied()
+    c.type_expressions.get(&field.ty()?.unmanaged()).copied()
 }
 
 fn return_ty<'src>(
@@ -460,7 +453,7 @@ fn return_ty<'src>(
         let Some(ty) = it.return_ty() else {
             return Some(Base::Unit.into());
         };
-        c.type_expressions.get(&ty.syntax().span().low()).copied()
+        c.type_expressions.get(&ty.unmanaged()).copied()
     } else {
         let it = ast::Struct::cast(function_like.syntax()).unwrap();
         Some(Base::Struct(it).into())
@@ -605,7 +598,7 @@ fn can_call(
     it: &ast::FunctionLike,
     labels: &[Option<&str>],
     argument_types: &[Option<Type>],
-    type_expressions: &HashMap<Pos, Type>,
+    type_expressions: &HashMap<ast::TypeExpressionUnmanaged, Type>,
     code_map: &CodeMap,
 ) -> bool {
     let file = code_map.find_file(it.syntax().span().low());
@@ -619,7 +612,7 @@ fn can_call(
             .parameters()
             .into_iter()
             .flat_map(ast::Parameters::iter)
-            .map(|it| Some(*type_expressions.get(&it.ty()?.syntax().span().low())?))
+            .map(|it| Some(*type_expressions.get(&it.ty()?.unmanaged())?))
             .zip(argument_types.iter().copied())
             .filter_map(|(a, b)| a.zip(b))
             .all(|(pattern, ty)| pattern_match(pattern, ty, &mut constraints))

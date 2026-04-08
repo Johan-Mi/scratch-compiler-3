@@ -8,7 +8,7 @@ pub type S = HashMap<codemap::Pos, Vec<Range<usize>>>;
 
 pub fn s(
     ast: ast::Program,
-    type_expressions: &HashMap<codemap::Pos, Type>,
+    type_expressions: &HashMap<ast::TypeExpressionUnmanaged, Type>,
     diagnostics: &mut Diagnostics,
 ) -> S {
     let mut layouts = S::new();
@@ -28,7 +28,7 @@ pub fn s(
             .parameters()
             .unwrap()
             .iter()
-            .map(|field| type_expressions[&field.ty().unwrap().syntax().span().low()])
+            .map(|field| type_expressions[&field.ty().unwrap().unmanaged()])
             .any(|ty| ty.base == Base::Struct(it))
         {
             diagnostics.error(
@@ -42,7 +42,7 @@ pub fn s(
             .parameters()
             .unwrap()
             .iter()
-            .map(|field| type_expressions[&field.ty().unwrap().syntax().span().low()])
+            .map(|field| type_expressions[&field.ty().unwrap().unmanaged()])
             .inspect(|ty| assert!(matches!(ty.shape, Shape::Flat)))
             .map(|ty| size(ty.base, &layouts))
             .scan(0, |start, size| Some(*start..(*start += size, *start).1))
@@ -68,10 +68,10 @@ pub fn size(base: Base, layouts: &S) -> usize {
 
 fn scc<'src>(
     ast: ast::Program<'src>,
-    type_expressions: &HashMap<codemap::Pos, Type<'src>>,
+    type_expressions: &HashMap<ast::TypeExpressionUnmanaged, Type<'src>>,
 ) -> Vec<Vec<ast::Struct<'src>>> {
     struct Tarjan<'a, 'src> {
-        type_expressions: &'a HashMap<codemap::Pos, Type<'src>>,
+        type_expressions: &'a HashMap<ast::TypeExpressionUnmanaged, Type<'src>>,
         result: Vec<Vec<ast::Struct<'src>>>,
         stack: Vec<ast::Struct<'src>>,
         low: HashMap<codemap::Pos, usize>,
@@ -88,7 +88,7 @@ fn scc<'src>(
             self.stack.push(node);
 
             for successor in node.parameters().unwrap().iter().filter_map(|it| {
-                match self.type_expressions[&it.ty().unwrap().syntax().span().low()].base {
+                match self.type_expressions[&it.ty().unwrap().unmanaged()].base {
                     Base::Struct(it) => Some(it),
                     _ => None,
                 }

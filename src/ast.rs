@@ -25,6 +25,29 @@ macro_rules! node {
     };
 }
 
+macro_rules! node_unmanaged {
+    ($NameManaged:ident -> $NameUnmanaged:ident) => {
+        #[derive(Clone, Copy, PartialEq, Eq, Hash)]
+        pub struct $NameUnmanaged {
+            syntax: cst::NodeUnmanaged,
+        }
+
+        impl $NameManaged<'_> {
+            pub const fn unmanaged(self) -> $NameUnmanaged {
+                let syntax = self.syntax.unmanaged();
+                $NameUnmanaged { syntax }
+            }
+        }
+
+        impl $NameUnmanaged {
+            pub const fn managed(self, tree: &cst::Tree<K>) -> $NameManaged<'_> {
+                let syntax = self.syntax.managed(tree);
+                $NameManaged { syntax }
+            }
+        }
+    };
+}
+
 node!(Program);
 
 impl<'src> Program<'src> {
@@ -322,6 +345,7 @@ impl<'src> Return<'src> {
 }
 
 node!(TypeExpression);
+node_unmanaged!(TypeExpression -> TypeExpressionUnmanaged);
 
 impl<'src> TypeExpression<'src> {
     pub fn variable(self) -> Option<SyntaxNode<'src>> {
