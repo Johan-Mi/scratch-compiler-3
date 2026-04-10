@@ -74,7 +74,8 @@ fn real_main(code_map: &mut CodeMap, diagnostics: &mut Diagnostics) -> Result<()
         return Err(());
     }
 
-    let mir = mir::lower(ast, code_map, &resolved_variables, &typing, &layouts);
+    let mut mir = mir::lower(ast, code_map, &resolved_variables, &typing, &layouts);
+    mir::linearity::spill(&mut mir);
 
     codegen::compile(code_map, &string_literals, ast, &mir, "project.sb3").map_err(|err| {
         diagnostics.error("failed to create project file", []);

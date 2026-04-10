@@ -1,4 +1,4 @@
-mod linearity;
+pub mod linearity;
 mod lowering;
 
 pub use lowering::lower;
