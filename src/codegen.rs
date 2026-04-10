@@ -106,7 +106,7 @@ impl<'src> Compiler<'src, '_> {
             mir::Function::Normal {
                 name,
                 parameter_count,
-                return_value_count,
+                ..
             } => {
                 let parameters = (0..parameter_count).map(|index| sb3::Parameter {
                     name: format!("{name}.{index}"),
