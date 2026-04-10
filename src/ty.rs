@@ -345,46 +345,7 @@ fn of_actually<'src>(
                 }
             }
         }
-        ast::Expression::ListLiteral(it) => {
-            let span = it.syntax().span();
-            let mut items = it.iter();
-            let Some(first) = items.next() else {
-                return ascribed.filter(|it| it.shape == Shape::List).or_else(|| {
-                    c.diagnostics
-                        .error("cannot infer type of empty list", [primary(span, "")]);
-                    None
-                });
-            };
-            let first_type = of(first, None, c);
-            for item in items {
-                let item_type = of(item, None, c);
-                if first_type.zip(item_type).is_some_and(|(f, i)| f != i) {
-                    c.diagnostics
-                        .error("type mismatch", [primary(item.syntax().span(), "")]);
-                }
-            }
-            let first_type = first_type?;
-            match first_type.shape {
-                Shape::Flat => Some(Type {
-                    shape: Shape::List,
-                    ..first_type
-                }),
-                Shape::List => {
-                    c.diagnostics.error(
-                        "lists of lists are not supported",
-                        [primary(it.syntax().span(), "")],
-                    );
-                    None
-                }
-                Shape::Ref => {
-                    c.diagnostics.error(
-                        "lists of references are not supported",
-                        [primary(it.syntax().span(), "")],
-                    );
-                    None
-                }
-            }
-        }
+        ast::Expression::ListLiteral(it) => of_list_literal(it, ascribed, c),
         ast::Expression::TypeAscription(it) => {
             let ascribed_ty = c.type_expressions.get(&it.ty()?.unmanaged()).copied();
             let inner = it.inner()?;
@@ -410,6 +371,51 @@ fn of_actually<'src>(
             c,
         ),
         ast::Expression::FieldAccess(it) => of_field_access(it, c),
+    }
+}
+
+fn of_list_literal<'src>(
+    it: ast::ListLiteral<'src>,
+    ascribed: Option<Type<'src>>,
+    c: &mut Checker<'_, 'src>,
+) -> Option<Type<'src>> {
+    let span = it.syntax().span();
+    let mut items = it.iter();
+    let Some(first) = items.next() else {
+        return ascribed.filter(|it| it.shape == Shape::List).or_else(|| {
+            c.diagnostics
+                .error("cannot infer type of empty list", [primary(span, "")]);
+            None
+        });
+    };
+    let first_type = of(first, None, c);
+    for item in items {
+        let item_type = of(item, None, c);
+        if first_type.zip(item_type).is_some_and(|(f, i)| f != i) {
+            c.diagnostics
+                .error("type mismatch", [primary(item.syntax().span(), "")]);
+        }
+    }
+    let first_type = first_type?;
+    match first_type.shape {
+        Shape::Flat => Some(Type {
+            shape: Shape::List,
+            ..first_type
+        }),
+        Shape::List => {
+            c.diagnostics.error(
+                "lists of lists are not supported",
+                [primary(it.syntax().span(), "")],
+            );
+            None
+        }
+        Shape::Ref => {
+            c.diagnostics.error(
+                "lists of references are not supported",
+                [primary(it.syntax().span(), "")],
+            );
+            None
+        }
     }
 }
 
