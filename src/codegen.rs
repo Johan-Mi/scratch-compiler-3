@@ -220,7 +220,8 @@ impl<'src> Compiler<'src, '_> {
                 ref arguments,
             } => {
                 let arguments = arguments.iter().map(|&it| self.value(it)).collect();
-                self.target.use_custom_block(todo!(), arguments);
+                self.target
+                    .use_custom_block(self.custom_blocks[&function], arguments);
                 None
             }
             mir::Op::DeleteAll(list) => {
