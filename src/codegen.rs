@@ -151,25 +151,25 @@ impl<'src> Compiler<'src, '_> {
             mir::Op::Load { source } => Some(match source {
                 mir::Ref::Variable(variable) => self.variables[&variable].into(),
                 mir::Ref::List { list, index } => {
-                    let index = self.value(index);
+                    let index = self.value(index, mir);
                     self.target.item_num_of_list(self.lists[&list], index)
                 }
             }),
             mir::Op::Store { target, value } => {
-                let value = self.value(value);
+                let value = self.value(value, mir);
                 let block = match target {
                     mir::Ref::Variable(variable) => {
                         block::set_variable(self.variables[&variable], value)
                     }
                     mir::Ref::List { list, index } => {
-                        block::replace(self.lists[&list], self.value(index), value)
+                        block::replace(self.lists[&list], self.value(index, mir), value)
                     }
                 };
                 self.target.put(block);
                 None
             }
             mir::Op::Repeat { times, body } => {
-                let times = self.value(times);
+                let times = self.value(times, mir);
                 let after = self.target.repeat(times);
                 self.basic_block(body, mir);
                 let _: sb3::InsertionPoint = self.target.insert_at(after);
@@ -180,7 +180,7 @@ impl<'src> Compiler<'src, '_> {
                 times,
                 body,
             } => {
-                let times = self.value(times);
+                let times = self.value(times, mir);
                 let after = self.target.for_(self.variables[&variable], times);
                 self.basic_block(body, mir);
                 let _: sb3::InsertionPoint = self.target.insert_at(after);
@@ -196,7 +196,7 @@ impl<'src> Compiler<'src, '_> {
                 then,
                 r#else,
             } => {
-                let condition = self.value(condition);
+                let condition = self.value(condition, mir);
                 let [else_point, after] = self.target.if_else(condition);
                 self.basic_block(then, mir);
                 let _: sb3::InsertionPoint = self.target.insert_at(else_point);
@@ -209,7 +209,7 @@ impl<'src> Compiler<'src, '_> {
                 ref values,
             } => {
                 for (&variable, &value) in self.returns[&function].iter().zip(values) {
-                    let value = self.value(value);
+                    let value = self.value(value, mir);
                     self.target.put(block::set_variable(variable, value));
                 }
                 self.target.put(block::stop_this_script());
@@ -219,7 +219,7 @@ impl<'src> Compiler<'src, '_> {
                 function,
                 ref arguments,
             } => {
-                let arguments = arguments.iter().map(|&it| self.value(it)).collect();
+                let arguments = arguments.iter().map(|&it| self.value(it, mir)).collect();
                 self.target
                     .use_custom_block(self.custom_blocks[&function], arguments);
                 None
@@ -230,18 +230,18 @@ impl<'src> Compiler<'src, '_> {
                 None
             }
             mir::Op::Push { list, value } => {
-                let value = self.value(value);
+                let value = self.value(value, mir);
                 self.target.put(block::append(self.lists[&list], value));
                 None
             }
             mir::Op::Add(args) => {
-                let [lhs, rhs] = args.map(|it| self.value(it));
+                let [lhs, rhs] = args.map(|it| self.value(it, mir));
                 Some(self.target.add(lhs, rhs))
             }
         }
     }
 
-    fn value(&mut self, value: mir::Value) -> sb3::Operand<'src> {
+    fn value(&mut self, value: mir::Value, mir: &mir::Program) -> sb3::Operand<'src> {
         match value {
             mir::Value::FunctionParameter { index } => {
                 let function: Id<mir::BasicBlock> = todo!();
@@ -249,7 +249,12 @@ impl<'src> Compiler<'src, '_> {
                     .custom_block_parameter(self.custom_blocks[&function], index)
             }
             mir::Value::Op(op) => self.ops.remove(&op).unwrap(),
-            mir::Value::Returned { .. } => todo!(),
+            mir::Value::Returned { call, index } => {
+                let mir::Op::Call { function, .. } = mir.ops[call] else {
+                    unreachable!();
+                };
+                self.returns[&function][index].into()
+            }
             mir::Value::Constant(mir::Constant::Num(n)) => n.into(),
             mir::Value::Constant(mir::Constant::String(s)) => (&*self.string_literals[&s]).into(),
             mir::Value::Constant(mir::Constant::Bool(b)) => if b { "true" } else { "false" }.into(),
