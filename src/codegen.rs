@@ -96,11 +96,12 @@ pub fn compile(
             returns: &returns,
             custom_blocks: &custom_blocks,
             points,
+            mir,
             string_literals,
         };
 
         for (&body, &it) in &mir.functions {
-            compiler.function(it, body, mir);
+            compiler.function(it, body);
         }
     }
     project.finish(output_file)
@@ -114,11 +115,12 @@ struct Compiler<'src, 'project> {
     returns: &'project HashMap<Id<mir::BasicBlock>, Vec<sb3::VariableRef>>,
     custom_blocks: &'project HashMap<Id<mir::BasicBlock>, sb3::CustomBlockRef>,
     points: HashMap<Id<mir::BasicBlock>, sb3::InsertionPoint>,
+    mir: &'src mir::Program<'src>,
     string_literals: &'src HashMap<codemap::Pos, String>,
 }
 
 impl<'src> Compiler<'src, '_> {
-    fn function(&mut self, it: mir::Function, body: Id<mir::BasicBlock>, mir: &mir::Program) {
+    fn function(&mut self, it: mir::Function, body: Id<mir::BasicBlock>) {
         match it {
             mir::Function::WhenFlagClicked => self.target.start_script(block::when_flag_clicked()),
             mir::Function::WhenKeyPressed { key } => self
@@ -133,45 +135,45 @@ impl<'src> Compiler<'src, '_> {
                     self.target.insert_at(self.points.remove(&body).unwrap());
             }
         }
-        for &op in &mir.basic_blocks[body].0 {
-            let res = self.op(&mir.ops[op], mir);
+        for &op in &self.mir.basic_blocks[body].0 {
+            let res = self.op(&self.mir.ops[op]);
             self.ops.extend(Some(op).zip(res));
         }
     }
 
-    fn basic_block(&mut self, block: Id<mir::BasicBlock>, mir: &mir::Program) {
-        for &op in &mir.basic_blocks[block].0 {
-            let res = self.op(&mir.ops[op], mir);
+    fn basic_block(&mut self, block: Id<mir::BasicBlock>) {
+        for &op in &self.mir.basic_blocks[block].0 {
+            let res = self.op(&self.mir.ops[op]);
             self.ops.extend(Some(op).zip(res));
         }
     }
 
-    fn op(&mut self, op: &mir::Op, mir: &mir::Program) -> Option<sb3::Operand<'src>> {
+    fn op(&mut self, op: &mir::Op) -> Option<sb3::Operand<'src>> {
         match *op {
             mir::Op::Load { source } => Some(match source {
                 mir::Ref::Variable(variable) => self.variables[&variable].into(),
                 mir::Ref::List { list, index } => {
-                    let index = self.value(index, mir);
+                    let index = self.value(index);
                     self.target.item_num_of_list(self.lists[&list], index)
                 }
             }),
             mir::Op::Store { target, value } => {
-                let value = self.value(value, mir);
+                let value = self.value(value);
                 let block = match target {
                     mir::Ref::Variable(variable) => {
                         block::set_variable(self.variables[&variable], value)
                     }
                     mir::Ref::List { list, index } => {
-                        block::replace(self.lists[&list], self.value(index, mir), value)
+                        block::replace(self.lists[&list], self.value(index), value)
                     }
                 };
                 self.target.put(block);
                 None
             }
             mir::Op::Repeat { times, body } => {
-                let times = self.value(times, mir);
+                let times = self.value(times);
                 let after = self.target.repeat(times);
-                self.basic_block(body, mir);
+                self.basic_block(body);
                 let _: sb3::InsertionPoint = self.target.insert_at(after);
                 None
             }
@@ -180,15 +182,15 @@ impl<'src> Compiler<'src, '_> {
                 times,
                 body,
             } => {
-                let times = self.value(times, mir);
+                let times = self.value(times);
                 let after = self.target.for_(self.variables[&variable], times);
-                self.basic_block(body, mir);
+                self.basic_block(body);
                 let _: sb3::InsertionPoint = self.target.insert_at(after);
                 None
             }
             mir::Op::Forever(body) => {
                 self.target.forever();
-                self.basic_block(body, mir);
+                self.basic_block(body);
                 None
             }
             mir::Op::If {
@@ -196,11 +198,11 @@ impl<'src> Compiler<'src, '_> {
                 then,
                 r#else,
             } => {
-                let condition = self.value(condition, mir);
+                let condition = self.value(condition);
                 let [else_point, after] = self.target.if_else(condition);
-                self.basic_block(then, mir);
+                self.basic_block(then);
                 let _: sb3::InsertionPoint = self.target.insert_at(else_point);
-                self.basic_block(r#else, mir);
+                self.basic_block(r#else);
                 let _: sb3::InsertionPoint = self.target.insert_at(after);
                 None
             }
@@ -209,7 +211,7 @@ impl<'src> Compiler<'src, '_> {
                 ref values,
             } => {
                 for (&variable, &value) in self.returns[&function].iter().zip(values) {
-                    let value = self.value(value, mir);
+                    let value = self.value(value);
                     self.target.put(block::set_variable(variable, value));
                 }
                 self.target.put(block::stop_this_script());
@@ -219,7 +221,7 @@ impl<'src> Compiler<'src, '_> {
                 function,
                 ref arguments,
             } => {
-                let arguments = arguments.iter().map(|&it| self.value(it, mir)).collect();
+                let arguments = arguments.iter().map(|&it| self.value(it)).collect();
                 self.target
                     .use_custom_block(self.custom_blocks[&function], arguments);
                 None
@@ -230,18 +232,18 @@ impl<'src> Compiler<'src, '_> {
                 None
             }
             mir::Op::Push { list, value } => {
-                let value = self.value(value, mir);
+                let value = self.value(value);
                 self.target.put(block::append(self.lists[&list], value));
                 None
             }
             mir::Op::Add(args) => {
-                let [lhs, rhs] = args.map(|it| self.value(it, mir));
+                let [lhs, rhs] = args.map(|it| self.value(it));
                 Some(self.target.add(lhs, rhs))
             }
         }
     }
 
-    fn value(&mut self, value: mir::Value, mir: &mir::Program) -> sb3::Operand<'src> {
+    fn value(&mut self, value: mir::Value) -> sb3::Operand<'src> {
         match value {
             mir::Value::FunctionParameter { index } => {
                 let function: Id<mir::BasicBlock> = todo!();
@@ -250,7 +252,7 @@ impl<'src> Compiler<'src, '_> {
             }
             mir::Value::Op(op) => self.ops.remove(&op).unwrap(),
             mir::Value::Returned { call, index } => {
-                let mir::Op::Call { function, .. } = mir.ops[call] else {
+                let mir::Op::Call { function, .. } = self.mir.ops[call] else {
                     unreachable!();
                 };
                 self.returns[&function][index].into()
