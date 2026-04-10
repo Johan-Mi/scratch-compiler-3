@@ -243,7 +243,11 @@ impl<'src> Compiler<'src, '_> {
 
     fn value(&mut self, value: mir::Value) -> sb3::Operand<'src> {
         match value {
-            mir::Value::FunctionParameter { .. } => todo!(),
+            mir::Value::FunctionParameter { index } => {
+                let function: Id<mir::BasicBlock> = todo!();
+                self.target
+                    .custom_block_parameter(self.custom_blocks[&function], index)
+            }
             mir::Value::Op(op) => self.ops.remove(&op).unwrap(),
             mir::Value::Returned { .. } => todo!(),
             mir::Value::Constant(mir::Constant::Num(n)) => n.into(),
