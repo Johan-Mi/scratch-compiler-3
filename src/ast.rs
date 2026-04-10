@@ -439,7 +439,11 @@ pub struct VariableDefinition<'src> {
 }
 
 impl<'src> VariableDefinition<'src> {
-    pub const fn syntax(self) -> cst::Node<'src, K> {
+    #[expect(
+        clippy::missing_const_for_fn,
+        reason = "Would make `node_unmanaged` generate this same warning."
+    )]
+    pub fn syntax(self) -> cst::Node<'src, K> {
         self.syntax
     }
 }
