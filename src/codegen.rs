@@ -67,17 +67,40 @@ pub fn compile(
             })
             .collect();
 
+        let (custom_blocks, points) = mir
+            .functions
+            .iter()
+            .filter_map(|(&basic_block, &it)| match it {
+                mir::Function::Normal {
+                    name,
+                    parameter_count,
+                    ..
+                } => {
+                    let parameters = (0..parameter_count).map(|index| sb3::Parameter {
+                        name: format!("{name}.{index}"),
+                        kind: sb3::ParameterKind::StringOrNumber,
+                    });
+                    let (custom_block, point) =
+                        target.add_custom_block(name.to_owned(), parameters);
+                    Some(((basic_block, custom_block), (basic_block, point)))
+                }
+                _ => None,
+            })
+            .collect();
+
         let mut compiler = Compiler {
             target,
             ops: HashMap::new(),
             variables,
             lists,
             returns: &returns,
+            custom_blocks: &custom_blocks,
+            points,
             string_literals,
         };
 
         for (&body, &it) in &mir.functions {
-            compiler.function(it, &mir.basic_blocks[body], mir);
+            compiler.function(it, body, mir);
         }
     }
     project.finish(output_file)
@@ -89,11 +112,13 @@ struct Compiler<'src, 'project> {
     variables: HashMap<Id<mir::Variable>, sb3::VariableRef>,
     lists: HashMap<Id<mir::List>, sb3::ListRef>,
     returns: &'project HashMap<Id<mir::BasicBlock>, Vec<sb3::VariableRef>>,
+    custom_blocks: &'project HashMap<Id<mir::BasicBlock>, sb3::CustomBlockRef>,
+    points: HashMap<Id<mir::BasicBlock>, sb3::InsertionPoint>,
     string_literals: &'src HashMap<codemap::Pos, String>,
 }
 
 impl<'src> Compiler<'src, '_> {
-    fn function(&mut self, it: mir::Function, body: &mir::BasicBlock, mir: &mir::Program) {
+    fn function(&mut self, it: mir::Function, body: Id<mir::BasicBlock>, mir: &mir::Program) {
         match it {
             mir::Function::WhenFlagClicked => self.target.start_script(block::when_flag_clicked()),
             mir::Function::WhenKeyPressed { key } => self
@@ -103,21 +128,12 @@ impl<'src> Compiler<'src, '_> {
             mir::Function::WhenReceived { message } => self
                 .target
                 .start_script(block::when_received(&self.string_literals[&message])),
-            mir::Function::Normal {
-                name,
-                parameter_count,
-                ..
-            } => {
-                let parameters = (0..parameter_count).map(|index| sb3::Parameter {
-                    name: format!("{name}.{index}"),
-                    kind: sb3::ParameterKind::StringOrNumber,
-                });
-                let (custom_block, point) =
-                    self.target.add_custom_block(name.to_owned(), parameters);
-                let _: sb3::InsertionPoint = self.target.insert_at(point);
+            mir::Function::Normal { .. } => {
+                let _: sb3::InsertionPoint =
+                    self.target.insert_at(self.points.remove(&body).unwrap());
             }
         }
-        for &op in &body.0 {
+        for &op in &mir.basic_blocks[body].0 {
             let res = self.op(&mir.ops[op], mir);
             self.ops.extend(Some(op).zip(res));
         }
