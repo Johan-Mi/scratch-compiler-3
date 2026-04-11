@@ -105,6 +105,7 @@ pub enum K {
     For,
     Parenthesized,
     BinaryOperation,
+    Index,
     Lvalue,
     ListLiteral,
     TypeAscription,
@@ -459,6 +460,13 @@ impl Parser<'_> {
                     self.parse_anything();
                     K::Error
                 }
+            } else if self.eat(K::Lbrace) {
+                self.parse_expression();
+                if !self.eat(K::Rbrace) {
+                    let span = self.peek_span();
+                    self.diagnostics.error("expected `]`", [primary(span, "")]);
+                }
+                K::Index
             } else {
                 self.bump(); // operator
                 if right == K::KwAs {
@@ -771,7 +779,7 @@ const PRECEDENCE: &[&[K]] = &[
     &[K::Lt, K::EqEq, K::Gt],
     &[K::Plus, K::Minus],
     &[K::Star, K::Slash, K::Percent],
-    &[K::Dot, K::KwAs],
+    &[K::Dot, K::Lbrace, K::KwAs],
 ];
 
 fn binding_power(kind: K) -> Option<usize> {

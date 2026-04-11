@@ -214,6 +214,7 @@ fn lower_expression(
             basic_block,
             c,
         ),
+        ast::Expression::Index(_) => todo!(),
         ast::Expression::NamedArgument(it) => lower_expression(it.value().unwrap(), basic_block, c),
         ast::Expression::DecimalNumber(it) => {
             let span = it.syntax().span();
@@ -333,6 +334,7 @@ fn lower_lvalue(expression: ast::Expression, c: &mut Context) -> Bundle {
                 .map(|&it| mir::Ref::Variable(it))
                 .collect(),
         ),
+        ast::Expression::Index(_) => todo!(),
         ast::Expression::FieldAccess(it) => {
             let mut refs = lower_lvalue(it.aggregate(), c).refs();
             let ty = c.expression_types[&expression.unmanaged()];

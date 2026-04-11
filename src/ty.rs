@@ -315,6 +315,7 @@ fn of_actually<'src>(
             &mut [it.lhs()?, it.rhs()?].into_iter(),
             c,
         ),
+        ast::Expression::Index(_) => todo!(),
         ast::Expression::NamedArgument(it) => of(it.value()?, ascribed, c),
         ast::Expression::DecimalNumber(_)
         | ast::Expression::BinaryNumber(_)

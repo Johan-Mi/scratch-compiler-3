@@ -358,6 +358,7 @@ pub enum Expression<'src> {
     Variable(Variable<'src>),
     FunctionCall(FunctionCall<'src>),
     BinaryOperation(BinaryOperation<'src>),
+    Index(Index<'src>),
     NamedArgument(NamedArgument<'src>),
     DecimalNumber(DecimalNumber<'src>),
     BinaryNumber(BinaryNumber<'src>),
@@ -382,6 +383,7 @@ impl<'src> Node<'src> for Expression<'src> {
             K::Variable => Node::cast(node).map(Self::Variable),
             K::FunctionCall => Node::cast(node).map(Self::FunctionCall),
             K::BinaryOperation => Node::cast(node).map(Self::BinaryOperation),
+            K::Index => Node::cast(node).map(Self::Index),
             K::NamedArgument => Node::cast(node).map(Self::NamedArgument),
             K::DecimalNumber => Node::cast(node).map(Self::DecimalNumber),
             K::BinaryNumber => Node::cast(node).map(Self::BinaryNumber),
@@ -404,6 +406,7 @@ impl<'src> Node<'src> for Expression<'src> {
             Self::Variable(inner) => inner.syntax,
             Self::FunctionCall(inner) => inner.syntax,
             Self::BinaryOperation(inner) => inner.syntax,
+            Self::Index(inner) => inner.syntax,
             Self::Parenthesized(inner) => inner.syntax,
             Self::NamedArgument(inner) => inner.syntax,
             Self::DecimalNumber(inner) => inner.syntax,
@@ -496,6 +499,8 @@ impl<'src> BinaryOperation<'src> {
             .find_map(Node::cast)
     }
 }
+
+node!(Index);
 
 node!(NamedArgument);
 
