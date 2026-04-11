@@ -199,11 +199,8 @@ fn lower_expression(
                     .map(|&variable| mir::Ref::Variable(variable))
                     .map(|source| c.program.ops.insert(mir::Op::Load { source })),
             );
-            basic_block[start..]
-                .iter()
-                .map(|&variable| mir::Value::Op(variable))
-                .collect::<Vec<_>>()
-                .into()
+            let ops = basic_block[start..].iter().map(|&it| mir::Value::Op(it));
+            ops.collect::<Vec<_>>().into()
         }
         ast::Expression::FunctionCall(it) => {
             lower_call(expression, &mut it.args().iter(), basic_block, c)
