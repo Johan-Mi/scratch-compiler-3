@@ -269,29 +269,7 @@ fn lower_expression(
             let mut arguments = std::iter::once(it.caller()).chain(it.arguments().iter());
             lower_call(expression, &mut arguments, basic_block, c)
         }
-        ast::Expression::FieldAccess(it) => {
-            let mut values = lower_expression(it.aggregate(), basic_block, c).values();
-            let ty = c.expression_types[&expression.unmanaged()];
-            assert!(matches!(ty.shape, ty::Shape::Flat));
-            let ty::Base::Struct(ty) = ty.base else {
-                unreachable!();
-            };
-            let field_name = c
-                .code_map
-                .find_file(it.field().span().low())
-                .source_slice(it.field().span());
-            let file = c.code_map.find_file(ty.syntax().span().low());
-            let field_index: usize = ty
-                .parameters()
-                .unwrap()
-                .iter()
-                .position(|field| {
-                    file.source_slice(field.internal_name().syntax().span()) == field_name
-                })
-                .unwrap();
-            let range = copy_range(&c.layouts[&ty.unmanaged()][field_index]);
-            values.drain(range).collect::<Vec<_>>().into()
-        }
+        ast::Expression::FieldAccess(it) => lower_field_access(it, basic_block, c),
     }
 }
 
@@ -310,6 +288,32 @@ fn float(radix: u32, letter: u8, node: cst::Node<K>, code_map: &codemap::CodeMap
     )]
     let number = u64::from_str_radix(text, radix).unwrap() as f64 * sign;
     Vec::from([mir::Value::Constant(mir::Constant::Num(number))]).into()
+}
+
+fn lower_field_access(
+    it: ast::FieldAccess,
+    basic_block: Id<mir::BasicBlock>,
+    c: &mut Context,
+) -> Bundle {
+    let mut values = lower_expression(it.aggregate(), basic_block, c).values();
+    let ty = c.expression_types[&ast::Expression::FieldAccess(it).unmanaged()];
+    assert!(matches!(ty.shape, ty::Shape::Flat));
+    let ty::Base::Struct(ty) = ty.base else {
+        unreachable!();
+    };
+    let field_name = c
+        .code_map
+        .find_file(it.field().span().low())
+        .source_slice(it.field().span());
+    let file = c.code_map.find_file(ty.syntax().span().low());
+    let field_index: usize = ty
+        .parameters()
+        .unwrap()
+        .iter()
+        .position(|field| file.source_slice(field.internal_name().syntax().span()) == field_name)
+        .unwrap();
+    let range = copy_range(&c.layouts[&ty.unmanaged()][field_index]);
+    values.drain(range).collect::<Vec<_>>().into()
 }
 
 fn lower_lvalue(
