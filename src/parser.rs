@@ -273,10 +273,7 @@ impl Parser<'_> {
     }
 
     fn eat(&mut self, kind: K) -> bool {
-        self.at(kind) && {
-            self.bump();
-            true
-        }
+        self.at(kind) && (self.bump(), true).1
     }
 
     fn start_node(&mut self, kind: K) {
