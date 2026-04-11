@@ -214,7 +214,18 @@ fn lower_expression(
             basic_block,
             c,
         ),
-        ast::Expression::Index(_) => todo!(),
+        ast::Expression::Index(it) => {
+            let lists = lower_lvalue(it.lhs().unwrap(), basic_block, c).lists();
+            let index = one(lower_expression(it.rhs().unwrap(), basic_block, c).values());
+            let basic_block = &mut c.program.basic_blocks[basic_block].0;
+            let start = basic_block.len();
+            basic_block.extend(lists.iter().map(|&list| {
+                let source = mir::Ref::List { list, index };
+                c.program.ops.insert(mir::Op::Load { source })
+            }));
+            let ops = basic_block[start..].iter().map(|&it| mir::Value::Op(it));
+            ops.collect::<Vec<_>>().into()
+        }
         ast::Expression::NamedArgument(it) => lower_expression(it.value().unwrap(), basic_block, c),
         ast::Expression::DecimalNumber(it) => {
             let span = it.syntax().span();
