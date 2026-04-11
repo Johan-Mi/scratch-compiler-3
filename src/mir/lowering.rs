@@ -171,10 +171,8 @@ fn lower_statement(statement: ast::Statement, basic_block: Id<mir::BasicBlock>, 
         }
         ast::Statement::Return(it) => {
             let values = lower_expression(it.expression().unwrap(), basic_block, c).values();
-            let op = c.program.ops.insert(mir::Op::Return {
-                function: c.current_function.unwrap(),
-                values,
-            });
+            let function = c.current_function.unwrap();
+            let op = c.program.ops.insert(mir::Op::Return { function, values });
             c.program.basic_blocks[basic_block].0.push(op);
         }
         ast::Statement::Expression(it) => {
