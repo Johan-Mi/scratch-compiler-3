@@ -205,12 +205,10 @@ fn lower_expression(
         ast::Expression::FunctionCall(it) => {
             lower_call(expression, &mut it.args().iter(), basic_block, c)
         }
-        ast::Expression::BinaryOperation(it) => lower_call(
-            expression,
-            &mut [it.lhs().unwrap(), it.rhs().unwrap()].into_iter(),
-            basic_block,
-            c,
-        ),
+        ast::Expression::BinaryOperation(it) => {
+            let mut arguments = [it.lhs().unwrap(), it.rhs().unwrap()].into_iter();
+            lower_call(expression, &mut arguments, basic_block, c)
+        }
         ast::Expression::Index(it) => {
             let lists = lower_lvalue(it.lhs().unwrap(), basic_block, c).lists();
             let index = one(lower_expression(it.rhs().unwrap(), basic_block, c).values());
@@ -269,12 +267,10 @@ fn lower_expression(
         ast::Expression::TypeAscription(it) => {
             lower_expression(it.inner().unwrap(), basic_block, c)
         }
-        ast::Expression::MethodCall(it) => lower_call(
-            expression,
-            &mut std::iter::once(it.caller()).chain(it.arguments().iter()),
-            basic_block,
-            c,
-        ),
+        ast::Expression::MethodCall(it) => {
+            let mut arguments = std::iter::once(it.caller()).chain(it.arguments().iter());
+            lower_call(expression, &mut arguments, basic_block, c)
+        }
         ast::Expression::FieldAccess(it) => {
             let mut values = lower_expression(it.aggregate(), basic_block, c).values();
             let ty = c.expression_types[&expression.unmanaged()];
