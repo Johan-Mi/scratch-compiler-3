@@ -264,12 +264,9 @@ impl Parser<'_> {
     }
 
     fn bump(&mut self) {
-        while let Some(&(kind, span)) = self.tokens.split_off_first() {
-            self.builder.token(kind, span);
-            if kind != K::Trivia {
-                break;
-            }
-        }
+        while let Some(&(kind, span)) = self.tokens.split_off_first()
+            && (self.builder.token(kind, span), kind == K::Trivia).1
+        {}
     }
 
     fn eat(&mut self, kind: K) -> bool {
