@@ -502,6 +502,28 @@ impl<'src> BinaryOperation<'src> {
 
 node!(Index);
 
+impl<'src> Index<'src> {
+    fn lbrace(self) -> cst::Node<'src, K> {
+        token(self.syntax, K::Lbrace).unwrap()
+    }
+
+    pub fn lhs(self) -> Option<Expression<'src>> {
+        let operator = self.lbrace().span().low();
+        self.syntax
+            .children()
+            .take_while(|child| child.span().high() <= operator)
+            .find_map(Node::cast)
+    }
+
+    pub fn rhs(self) -> Option<Expression<'src>> {
+        let operator = self.lbrace().span().high();
+        self.syntax
+            .children()
+            .skip_while(|child| child.span().low() < operator)
+            .find_map(Node::cast)
+    }
+}
+
 node!(NamedArgument);
 
 impl<'src> NamedArgument<'src> {

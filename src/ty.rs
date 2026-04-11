@@ -315,7 +315,25 @@ fn of_actually<'src>(
             &mut [it.lhs()?, it.rhs()?].into_iter(),
             c,
         ),
-        ast::Expression::Index(_) => todo!(),
+        ast::Expression::Index(it) => {
+            let ty = if let Some(lhs) = it.lhs()
+                && let Some(ty) = of(lhs, None, c)
+                && (ty.shape == Shape::List || {
+                    c.diagnostics.error(
+                        format!("cannot index non-list type `{}`", ty.display(c)),
+                        [primary(lhs.syntax().span(), "")],
+                    );
+                    false
+                }) {
+                Some(ty.base.into())
+            } else {
+                None
+            };
+            if let Some(rhs) = it.rhs() {
+                expect(rhs, Base::Num.into(), c);
+            }
+            ty
+        }
         ast::Expression::NamedArgument(it) => of(it.value()?, ascribed, c),
         ast::Expression::DecimalNumber(_)
         | ast::Expression::BinaryNumber(_)
