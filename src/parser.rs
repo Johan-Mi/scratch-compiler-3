@@ -328,7 +328,7 @@ impl Parser<'_> {
     fn parse_struct(&mut self) {
         self.start_node(K::Struct);
         self.bump(); // K::KwStruct
-        if !self.at(K::Lbrace) && !self.eat(K::Identifier) {
+        if !self.at(K::Lparen) && !self.eat(K::Identifier) {
             self.error();
         }
         if self.at(K::Lparen) {
