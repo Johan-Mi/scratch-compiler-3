@@ -771,8 +771,7 @@ const PRECEDENCE: &[&[K]] = &[
     &[K::Lt, K::EqEq, K::Gt],
     &[K::Plus, K::Minus],
     &[K::Star, K::Slash, K::Percent],
-    &[K::KwAs],
-    &[K::Dot],
+    &[K::Dot, K::KwAs],
 ];
 
 fn binding_power(kind: K) -> Option<usize> {
