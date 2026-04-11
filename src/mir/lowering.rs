@@ -235,7 +235,7 @@ fn lower_expression(
         ast::Expression::KwTrue(_) => {
             Vec::from([mir::Value::Constant(mir::Constant::Bool(true))]).into()
         }
-        ast::Expression::Lvalue(it) => lower_lvalue(it.inner().unwrap(), c),
+        ast::Expression::Lvalue(it) => lower_lvalue(it.inner().unwrap(), basic_block, c),
         ast::Expression::ListLiteral(it) => {
             let base = c.expression_types[&expression.unmanaged()].base;
             let size = ty::layout::size(base, c.layouts);
@@ -310,7 +310,11 @@ fn float(radix: u32, letter: u8, node: cst::Node<K>, code_map: &codemap::CodeMap
     Vec::from([mir::Value::Constant(mir::Constant::Num(number))]).into()
 }
 
-fn lower_lvalue(expression: ast::Expression, c: &mut Context) -> Bundle {
+fn lower_lvalue(
+    expression: ast::Expression,
+    basic_block: Id<mir::BasicBlock>,
+    c: &mut Context,
+) -> Bundle {
     match expression {
         ast::Expression::Parenthesized(_)
         | ast::Expression::FunctionCall(_)
@@ -334,9 +338,14 @@ fn lower_lvalue(expression: ast::Expression, c: &mut Context) -> Bundle {
                 .map(|&it| mir::Ref::Variable(it))
                 .collect(),
         ),
-        ast::Expression::Index(_) => todo!(),
+        ast::Expression::Index(it) => {
+            let lists = lower_lvalue(it.lhs().unwrap(), basic_block, c).lists();
+            let index = one(lower_expression(it.rhs().unwrap(), basic_block, c).values());
+            let refs = lists.iter().map(|&list| mir::Ref::List { list, index });
+            Bundle::Refs(refs.collect())
+        }
         ast::Expression::FieldAccess(it) => {
-            let mut refs = lower_lvalue(it.aggregate(), c).refs();
+            let mut refs = lower_lvalue(it.aggregate(), basic_block, c).refs();
             let ty = c.expression_types[&expression.unmanaged()];
             assert!(matches!(ty.shape, ty::Shape::Flat));
             let ty::Base::Struct(ty) = ty.base else {
@@ -412,6 +421,13 @@ impl Bundle {
     fn values(self) -> Vec<mir::Value> {
         match self {
             Self::Values(it) => it,
+            _ => unreachable!(),
+        }
+    }
+
+    fn lists(self) -> Vec<Id<mir::List>> {
+        match self {
+            Self::Lists(it) => it,
             _ => unreachable!(),
         }
     }
