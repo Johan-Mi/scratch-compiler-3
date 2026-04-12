@@ -132,7 +132,9 @@ impl<'src> Function<'src> {
     }
 
     pub fn name(self) -> Option<cst::Node<'src, K>> {
-        token(self.syntax, K::Identifier)
+        self.syntax
+            .children()
+            .find(|it| it.kind() == K::Identifier || it.kind().is_binary_operator())
     }
 
     pub fn tag(self) -> Option<cst::Node<'src, K>> {
@@ -637,7 +639,9 @@ impl<'src> FunctionLike<'src> {
     }
 
     pub fn name(self) -> Option<cst::Node<'src, K>> {
-        token(self.syntax, K::Identifier)
+        self.syntax
+            .children()
+            .find(|it| it.kind() == K::Identifier || it.kind().is_binary_operator())
     }
 
     pub fn parameters(self) -> Option<Parameters<'src>> {
