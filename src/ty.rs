@@ -639,7 +639,7 @@ fn can_call(
     it.parameters()
         .into_iter()
         .flat_map(ast::Parameters::iter)
-        .map(|it| Some(file.source_slice(it.external_name().span())))
+        .map(|it| Some(file.source_slice(it.external_name().span())).filter(|&it| it != "_"))
         .eq(labels.iter().copied())
         && it
             .parameters()
