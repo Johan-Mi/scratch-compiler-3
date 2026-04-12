@@ -9,6 +9,7 @@ pub fn parse(
     builder: &mut cst::Builder<K>,
     string_literals: &mut HashMap<codemap::Pos, String>,
     diagnostics: &mut Diagnostics,
+    builtin: bool,
 ) {
     let source_code = file.source();
     let tokens = &K::lexer(source_code)
@@ -28,6 +29,7 @@ pub fn parse(
         tokens,
         eof_span: file.span.subspan(len, len),
         diagnostics,
+        builtin,
     }
     .parse();
 }
@@ -228,6 +230,7 @@ struct Parser<'src> {
     tokens: &'src [(K, Span)],
     eof_span: Span,
     diagnostics: &'src mut Diagnostics,
+    builtin: bool,
 }
 
 impl Parser<'_> {
@@ -685,7 +688,9 @@ impl Parser<'_> {
         if !self.at(K::Lbrace) {
             self.parse_type_expression();
         }
-        self.parse_block();
+        if !self.builtin {
+            self.parse_block();
+        }
         self.builder.finish_node();
     }
 

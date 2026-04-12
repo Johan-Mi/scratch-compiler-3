@@ -1,155 +1,155 @@
-fn get(_ var: *%T) %T {}
+fn get(_ var: *%T) %T
 
-fn =(_ var: *%T, _ value: %T) {}
+fn =(_ var: *%T, _ value: %T)
 
-fn push(_ list: []%T, _ value: %T) {}
+fn push(_ list: []%T, _ value: %T)
 
-fn delete(_ list: []%T, index _: Num) {}
+fn delete(_ list: []%T, index _: Num)
 
-fn pop(_ list: []%T) {}
+fn pop(_ list: []%T)
 
-fn delete-all(_ list: []%T) {}
+fn delete-all(_ list: []%T)
 
-fn insert(_ list: []%T, _ item: %T, at index: Num) {}
+fn insert(_ list: []%T, _ item: %T, at index: Num)
 
-fn replace(_ list: []%T, index _: Num, with item: %T) {}
+fn replace(_ list: []%T, index _: Num, with item: %T)
 
-fn replace-last(_ list: []%T, with item: %T) {}
+fn replace-last(_ list: []%T, with item: %T)
 
-fn at(_ list: []%T, _ index: Num) %T {}
+fn at(_ list: []%T, _ index: Num) %T
 
-fn last(_ list: []%T) %T {}
+fn last(_ list: []%T) %T
 
-fn index(_ list: []%T, of item: %T) Num {}
+fn index(_ list: []%T, of item: %T) Num
 
-fn length(_ list: []%T) Num {}
+fn length(_ list: []%T) Num
 
-fn contains(_ list: []%T, _ item: %T) Bool {}
+fn contains(_ list: []%T, _ item: %T) Bool
 
-fn to-string(_: Num) String {}
-fn to-string(_: Bool) Bool {}
+fn to-string(_: Num) String
+fn to-string(_: Bool) Bool
 
-fn to-num(_: String) Num {}
+fn to-num(_: String) Num
 
-fn length(_: String) Num {}
+fn length(_: String) Num
 
-fn letter(_: String, _ index: Num) String {}
+fn letter(_: String, _ index: Num) String
 
-fn contains(_ haystack: String, _ needle: String) Bool {}
+fn contains(_ haystack: String, _ needle: String) Bool
 
-fn +(_: Num, _: Num) Num {}
-fn -(_: Num, _: Num) Num {}
-fn *(_: Num, _: Num) Num {}
-fn /(_: Num, _: Num) Num {}
-fn %(_: Num, _: Num) Num {}
+fn +(_: Num, _: Num) Num
+fn -(_: Num, _: Num) Num
+fn *(_: Num, _: Num) Num
+fn /(_: Num, _: Num) Num
+fn %(_: Num, _: Num) Num
 
-fn <(_: Num, _: Num) Bool {}
-fn ==(_: Num, _: Num) Bool {}
-fn >(_: Num, _: Num) Bool {}
-fn <(_: String, _: String) Bool {}
-fn ==(_: String, _: String) Bool {}
-fn >(_: String, _: String) Bool {}
+fn <(_: Num, _: Num) Bool
+fn ==(_: Num, _: Num) Bool
+fn >(_: Num, _: Num) Bool
+fn <(_: String, _: String) Bool
+fn ==(_: String, _: String) Bool
+fn >(_: String, _: String) Bool
 
-fn abs(_: Num) Num {}
+fn abs(_: Num) Num
 
-fn floor(_: Num) Num {}
+fn floor(_: Num) Num
 
-fn ceil(_: Num) Num {}
+fn ceil(_: Num) Num
 
-fn sqrt(_: Num) Num {}
+fn sqrt(_: Num) Num
 
-fn ln(_: Num) Num {}
+fn ln(_: Num) Num
 
-fn log(_: Num) Num {}
+fn log(_: Num) Num
 
-fn exp(_ exponent: Num) Num {}
+fn exp(_ exponent: Num) Num
 
-fn exp-10(_ exponent: Num) Num {}
+fn exp-10(_ exponent: Num) Num
 
-fn sin(_ angle: Num) Num {}
+fn sin(_ angle: Num) Num
 
-fn cos(_ angle: Num) Num {}
+fn cos(_ angle: Num) Num
 
-fn tan(_ angle: Num) Num {}
+fn tan(_ angle: Num) Num
 
-fn asin(_: Num) Num {}
+fn asin(_: Num) Num
 
-fn acos(_: Num) Num {}
+fn acos(_: Num) Num
 
-fn atan(_: Num) Num {}
+fn atan(_: Num) Num
 
-fn not(_: Bool) Bool {}
+fn not(_: Bool) Bool
 
-fn and(_: Bool, _: Bool) Bool {}
+fn and(_: Bool, _: Bool) Bool
 
-fn or(_: Bool, _: Bool) Bool {}
+fn or(_: Bool, _: Bool) Bool
 
-fn join(_: String, _: String) String {}
+fn join(_: String, _: String) String
 
-fn answer String {}
+fn answer String
 
-fn ask(_ question: String) {}
+fn ask(_ question: String)
 
-fn broadcast-and-wait(_ message: String) {}
+fn broadcast-and-wait(_ message: String)
 
-fn change-x(by amount: Num) {}
+fn change-x(by amount: Num)
 
-fn change-y(by amount: Num) {}
+fn change-y(by amount: Num)
 
-fn clone-self {}
+fn clone-self
 
-fn erase-all {}
+fn erase-all
 
-fn go-to(x: Num, y: Num) {}
+fn go-to(x: Num, y: Num)
 
-fn go-to-back-layer {}
+fn go-to-back-layer
 
-fn go-to-front-layer {}
+fn go-to-front-layer
 
-fn hide {}
+fn hide
 
-fn mouse-x Num {}
+fn mouse-x Num
 
-fn mouse-y Num {}
+fn mouse-y Num
 
-fn move(steps: Num) {}
+fn move(steps: Num)
 
-fn pen-down {}
+fn pen-down
 
-fn pen-up {}
+fn pen-up
 
-fn pressing-key(_ key: String) Bool {}
+fn pressing-key(_ key: String) Bool
 
-fn random(between low: Num, and high: Num) Num {}
+fn random(between low: Num, and high: Num) Num
 
-fn reset-timer {}
+fn reset-timer
 
-fn say(_ message: String) {}
-fn say(_ message: String, seconds: Num) {}
+fn say(_ message: String)
+fn say(_ message: String, seconds: Num)
 
-fn set-costume(to: String) {}
-fn set-costume(to: Num) {}
+fn set-costume(to: String)
+fn set-costume(to: Num)
 
-fn set-pen-color(to: Num) {}
+fn set-pen-color(to: Num)
 
-fn set-pen-size(to: Num) {}
+fn set-pen-size(to: Num)
 
-fn set-size(to: Num) {}
+fn set-size(to: Num)
 
-fn set-x(to: Num) {}
+fn set-x(to: Num)
 
-fn set-y(to: Num) {}
+fn set-y(to: Num)
 
-fn show {}
+fn show
 
-fn stamp {}
+fn stamp
 
-fn stop-all {}
+fn stop-all
 
-fn timer Num {}
+fn timer Num
 
-fn wait(seconds: Num) {}
+fn wait(seconds: Num)
 
-fn x-pos Num {}
+fn x-pos Num
 
-fn y-pos Num {}
+fn y-pos Num

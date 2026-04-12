@@ -38,7 +38,13 @@ fn real_main(code_map: &mut CodeMap, diagnostics: &mut Diagnostics) -> Result<()
     let builtins = include_str!("builtins.sc3");
     let builtins = code_map.add_file("<builtins>".to_owned(), builtins.to_owned());
     builder.start_node(parser::K::Program, builtins.span);
-    parser::parse(&builtins, &mut builder, &mut string_literals, diagnostics);
+    parser::parse(
+        &builtins,
+        &mut builder,
+        &mut string_literals,
+        diagnostics,
+        true,
+    );
 
     for source_path in args {
         let source_code = std::fs::read_to_string(&source_path).map_err(|err| {
@@ -51,6 +57,7 @@ fn real_main(code_map: &mut CodeMap, diagnostics: &mut Diagnostics) -> Result<()
             &mut builder,
             &mut string_literals,
             diagnostics,
+            false,
         );
     }
 
