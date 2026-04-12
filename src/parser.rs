@@ -457,9 +457,9 @@ impl Parser<'_> {
                     self.parse_anything();
                     K::Error
                 }
-            } else if self.eat(K::Lbrace) {
+            } else if self.eat(K::Lbracket) {
                 self.parse_expression();
-                if !self.eat(K::Rbrace) {
+                if !self.eat(K::Rbracket) {
                     let span = self.peek_span();
                     self.diagnostics.error("expected `]`", [primary(span, "")]);
                 }
@@ -778,7 +778,7 @@ const PRECEDENCE: &[&[K]] = &[
     &[K::Lt, K::EqEq, K::Gt],
     &[K::Plus, K::Minus],
     &[K::Star, K::Slash, K::Percent],
-    &[K::Dot, K::Lbrace, K::KwAs],
+    &[K::Dot, K::Lbracket, K::KwAs],
 ];
 
 fn binding_power(kind: K) -> Option<usize> {
