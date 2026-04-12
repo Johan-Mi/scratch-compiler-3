@@ -1,8 +1,8 @@
-fn get(_ var: *%T) T {}
+fn get(_ var: *%T) %T {}
 
-fn =(_ var: *%T, _ value: T) {}
+fn =(_ var: *%T, _ value: %T) {}
 
-fn push(_ list: []%T, _ value: T) {}
+fn push(_ list: []%T, _ value: %T) {}
 
 fn delete(_ list: []%T, index _: Num) {}
 
@@ -10,21 +10,21 @@ fn pop(_ list: []%T) {}
 
 fn delete-all(_ list: []%T) {}
 
-fn insert(_ list: []%T, _ item: T, at index: Num) {}
+fn insert(_ list: []%T, _ item: %T, at index: Num) {}
 
-fn replace(_ list: []%T, index _: Num, with item: T) {}
+fn replace(_ list: []%T, index _: Num, with item: %T) {}
 
-fn replace-last(_ list: []%T, with item: T) {}
+fn replace-last(_ list: []%T, with item: %T) {}
 
-fn at(_ list: []%T, _ index: Num) T {}
+fn at(_ list: []%T, _ index: Num) %T {}
 
-fn last(_ list: []%T) T {}
+fn last(_ list: []%T) %T {}
 
-fn index(_ list: []%T, of item: T) Num {}
+fn index(_ list: []%T, of item: %T) Num {}
 
 fn length(_ list: []%T) Num {}
 
-fn contains(_ list: []%T, _ item: T) Bool {}
+fn contains(_ list: []%T, _ item: %T) Bool {}
 
 fn to-string(_: Num) String {}
 fn to-string(_: Bool) Bool {}
