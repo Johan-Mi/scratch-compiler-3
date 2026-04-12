@@ -685,7 +685,10 @@ impl Parser<'_> {
         if !self.eat(K::String) && self.at(K::Lparen) {
             self.parse_parameters();
         }
-        if !self.at(K::Lbrace) {
+        if matches!(
+            self.peek(),
+            K::Identifier | K::Star | K::Lbracket | K::Percent
+        ) {
             self.parse_type_expression();
         }
         if !self.builtin {
