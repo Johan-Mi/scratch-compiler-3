@@ -30,6 +30,7 @@ fn to-string(_: Num) String
 fn to-string(_: Bool) Bool
 
 fn to-num(_: String) Num
+fn to-num(_: Bool) Num
 
 fn length(_: String) Num
 
