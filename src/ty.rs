@@ -611,7 +611,7 @@ fn resolve_call<'src>(
             None
         }
         [it] => Some(it),
-        _ => {
+        _ if argument_types.iter().all(Option::is_some) => {
             c.diagnostics.error(
                 "function call has multiple viable overloads",
                 [primary(name, "")],
@@ -624,6 +624,7 @@ fn resolve_call<'src>(
                 .note("following are all of the viable overloads:", spans);
             None
         }
+        _ => None,
     }
 }
 
