@@ -1,5 +1,5 @@
 use codemap::Span;
-use codemap_diagnostic::{ColorConfig, Diagnostic, Emitter, Level, SpanLabel, SpanStyle};
+use codemap_diagnostic::{Diagnostic, Level, SpanLabel, SpanStyle};
 
 #[derive(Default)]
 pub struct Diagnostics(Vec<Diagnostic>);
@@ -19,23 +19,7 @@ impl Diagnostics {
             ),
         }
 
-        let color_config = if let Some(it) = std::env::var_os("NO_COLOR")
-            && !(it.is_empty() || it == "0")
-        {
-            ColorConfig::Never
-        } else if let Some(it) = std::env::var_os("CLICOLOR_FORCE")
-            && !(it.is_empty() || it == "0")
-        {
-            ColorConfig::Always
-        } else if let Some(it) = std::env::var_os("CLICOLOR")
-            && it == "0"
-        {
-            ColorConfig::Never
-        } else {
-            ColorConfig::Auto
-        };
-
-        Emitter::stderr(color_config, Some(code_map)).emit(&self.0);
+        codemap_diagnostic::emit_to_stderr(&self.0, Some(code_map)).unwrap();
     }
 
     pub fn error(&mut self, message: impl Into<String>, labels: impl Into<Vec<SpanLabel>>) {
