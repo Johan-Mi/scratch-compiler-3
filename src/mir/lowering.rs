@@ -297,7 +297,7 @@ fn lower_field_access(
 ) -> Bundle {
     let mut values = lower_expression(it.aggregate(), basic_block, c).values();
     let ty = c.expression_types[&ast::Expression::FieldAccess(it).unmanaged()];
-    assert!(matches!(ty.shape, ty::Shape::Flat));
+    assert_eq!(ty::Shape::Flat, ty.shape);
     let ty::Base::Struct(ty) = ty.base else {
         unreachable!();
     };
@@ -353,7 +353,7 @@ fn lower_lvalue(
         ast::Expression::FieldAccess(it) => {
             let mut refs = lower_lvalue(it.aggregate(), basic_block, c).refs();
             let ty = c.expression_types[&expression.unmanaged()];
-            assert!(matches!(ty.shape, ty::Shape::Flat));
+            assert_eq!(ty::Shape::Flat, ty.shape);
             let ty::Base::Struct(ty) = ty.base else {
                 unreachable!();
             };

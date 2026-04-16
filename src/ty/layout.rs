@@ -43,7 +43,7 @@ pub fn s(
             .unwrap()
             .iter()
             .map(|field| type_expressions[&field.ty().unwrap().unmanaged()])
-            .inspect(|ty| assert!(matches!(ty.shape, Shape::Flat)))
+            .inspect(|ty| assert_eq!(Shape::Flat, ty.shape))
             .map(|ty| size(ty.base, &layouts))
             .scan(0, |start, size| Some(*start..(*start += size, *start).1))
             .collect();

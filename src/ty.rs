@@ -12,7 +12,7 @@ pub struct Type<'src> {
     pub base: Base<'src>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Shape {
     Flat,
     List,
