@@ -149,8 +149,8 @@ impl<'src> Compiler<'src, '_> {
     }
 
     fn op(&mut self, op: &mir::Op, function: Id<mir::BasicBlock>) -> Option<sb3::Operand<'src>> {
-        match *op {
-            mir::Op::Load { source } => Some(match source {
+        match op {
+            mir::Op::Load { source } => Some(match *source {
                 mir::Ref::Variable(variable) => self.variables[&variable].into(),
                 mir::Ref::List { list, index } => {
                     let index = self.value(index, function);
@@ -158,8 +158,8 @@ impl<'src> Compiler<'src, '_> {
                 }
             }),
             mir::Op::Store { target, value } => {
-                let value = self.value(value, function);
-                let block = match target {
+                let value = self.value(*value, function);
+                let block = match *target {
                     mir::Ref::Variable(variable) => {
                         block::set_variable(self.variables[&variable], value)
                     }
@@ -171,9 +171,9 @@ impl<'src> Compiler<'src, '_> {
                 None
             }
             mir::Op::Repeat { times, body } => {
-                let times = self.value(times, function);
+                let times = self.value(*times, function);
                 let after = self.target.repeat(times);
-                self.basic_block(body, function);
+                self.basic_block(*body, function);
                 let _: sb3::InsertionPoint = self.target.insert_at(after);
                 None
             }
@@ -182,15 +182,15 @@ impl<'src> Compiler<'src, '_> {
                 times,
                 body,
             } => {
-                let times = self.value(times, function);
-                let after = self.target.for_(self.variables[&variable], times);
-                self.basic_block(body, function);
+                let times = self.value(*times, function);
+                let after = self.target.for_(self.variables[variable], times);
+                self.basic_block(*body, function);
                 let _: sb3::InsertionPoint = self.target.insert_at(after);
                 None
             }
             mir::Op::Forever(body) => {
                 self.target.forever();
-                self.basic_block(body, function);
+                self.basic_block(*body, function);
                 None
             }
             mir::Op::If {
@@ -198,20 +198,17 @@ impl<'src> Compiler<'src, '_> {
                 then,
                 r#else,
             } => {
-                let condition = self.value(condition, function);
+                let condition = self.value(*condition, function);
                 let [else_point, after] = self.target.if_else(condition);
-                self.basic_block(then, function);
+                self.basic_block(*then, function);
                 let _: sb3::InsertionPoint = self.target.insert_at(else_point);
-                self.basic_block(r#else, function);
+                self.basic_block(*r#else, function);
                 let _: sb3::InsertionPoint = self.target.insert_at(after);
                 None
             }
-            mir::Op::Return {
-                function,
-                ref values,
-            } => {
-                for (&variable, &value) in self.returns[&function].iter().zip(values) {
-                    let value = self.value(value, function);
+            mir::Op::Return { function, values } => {
+                for (&variable, &value) in self.returns[function].iter().zip(values) {
+                    let value = self.value(value, *function);
                     self.target.put(block::set_variable(variable, value));
                 }
                 self.target.put(block::stop_this_script());
@@ -219,30 +216,26 @@ impl<'src> Compiler<'src, '_> {
             }
             mir::Op::Call {
                 function,
-                ref arguments,
+                arguments,
             } => {
                 let arguments = arguments
                     .iter()
-                    .map(|&it| self.value(it, function))
+                    .map(|&it| self.value(it, *function))
                     .collect();
                 self.target
-                    .use_custom_block(self.custom_blocks[&function], arguments);
+                    .use_custom_block(self.custom_blocks[function], arguments);
                 None
             }
             mir::Op::DeleteAll(list) => {
-                self.target
-                    .put(block::delete_all_of_list(self.lists[&list]));
+                self.target.put(block::delete_all_of_list(self.lists[list]));
                 None
             }
             mir::Op::Push { list, value } => {
-                let value = self.value(value, function);
-                self.target.put(block::append(self.lists[&list], value));
+                let value = self.value(*value, function);
+                self.target.put(block::append(self.lists[list], value));
                 None
             }
-            mir::Op::Intrinsic {
-                name,
-                ref arguments,
-            } => {
+            mir::Op::Intrinsic { name, arguments } => {
                 let arguments = arguments.iter().map(|&it| self.value(it, function));
                 let arguments = arguments.collect::<Vec<_>>();
                 self.intrinsic(name, &arguments)
