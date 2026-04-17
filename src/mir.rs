@@ -86,7 +86,10 @@ pub enum Op {
         value: Value,
     },
 
-    Add([Value; 2]),
+    Intrinsic {
+        name: &'static str,
+        arguments: Vec<Value>,
+    },
 }
 
 impl Op {
@@ -123,7 +126,6 @@ impl Op {
             Self::Load { .. } | Self::Forever(_) | Self::DeleteAll(_) => {
                 Left(std::slice::Iter::default())
             }
-            Self::Add(args) => Left(args.iter()),
             Self::Return {
                 function: _,
                 values,
@@ -131,7 +133,8 @@ impl Op {
             Self::Call {
                 function: _,
                 arguments,
-            } => Left(arguments.iter()),
+            }
+            | Self::Intrinsic { name: _, arguments } => Left(arguments.iter()),
         }
     }
 
@@ -168,7 +171,6 @@ impl Op {
             Self::Load { .. } | Self::Forever(_) | Self::DeleteAll(_) => {
                 Left(std::slice::IterMut::default())
             }
-            Self::Add(args) => Left(args.iter_mut()),
             Self::Return {
                 function: _,
                 values,
@@ -176,7 +178,8 @@ impl Op {
             Self::Call {
                 function: _,
                 arguments,
-            } => Left(arguments.iter_mut()),
+            }
+            | Self::Intrinsic { name: _, arguments } => Left(arguments.iter_mut()),
         }
     }
 }

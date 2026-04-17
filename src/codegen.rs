@@ -239,9 +239,13 @@ impl<'src> Compiler<'src, '_> {
                 self.target.put(block::append(self.lists[&list], value));
                 None
             }
-            mir::Op::Add(args) => {
-                let [lhs, rhs] = args.map(|it| self.value(it, function));
-                Some(self.target.add(lhs, rhs))
+            mir::Op::Intrinsic {
+                name,
+                ref arguments,
+            } => {
+                let arguments = arguments.iter().map(|&it| self.value(it, function));
+                let arguments = arguments.collect::<Vec<_>>();
+                self.intrinsic(name, &arguments)
             }
         }
     }
@@ -262,5 +266,9 @@ impl<'src> Compiler<'src, '_> {
             mir::Value::Constant(mir::Constant::String(s)) => (&*self.string_literals[&s]).into(),
             mir::Value::Constant(mir::Constant::Bool(b)) => if b { "true" } else { "false" }.into(),
         }
+    }
+
+    fn intrinsic(&self, name: &str, arguments: &[sb3::Operand]) -> Option<sb3::Operand<'src>> {
+        todo!()
     }
 }
