@@ -70,7 +70,7 @@ node_unmanaged!(Struct -> StructUnmanaged);
 
 impl PartialEq for Struct<'_> {
     fn eq(&self, other: &Self) -> bool {
-        self.syntax.span() == other.syntax.span()
+        self.unmanaged() == other.unmanaged()
     }
 }
 
@@ -116,10 +116,10 @@ impl<'src> Costume<'src> {
     }
 
     pub fn path(self) -> Option<cst::Node<'src, K>> {
-        let colon = token(self.syntax, K::Colon)?;
+        let colon = token(self.syntax, K::Colon)?.unmanaged();
         self.syntax
             .children()
-            .find(|it| it.span().low() >= colon.span().high() && it.kind() == K::String)
+            .find(|it| colon < it.unmanaged() && it.kind() == K::String)
     }
 }
 
@@ -486,18 +486,18 @@ impl<'src> BinaryOperation<'src> {
     }
 
     pub fn lhs(self) -> Option<Expression<'src>> {
-        let operator = self.operator().span().low();
+        let operator = self.operator().unmanaged();
         self.syntax
             .children()
-            .take_while(|child| child.span().high() <= operator)
+            .take_while(|child| child.unmanaged() < operator)
             .find_map(Node::cast)
     }
 
     pub fn rhs(self) -> Option<Expression<'src>> {
-        let operator = self.operator().span().high();
+        let operator = self.operator().unmanaged();
         self.syntax
             .children()
-            .skip_while(|child| child.span().low() < operator)
+            .skip_while(|child| child.unmanaged() <= operator)
             .find_map(Node::cast)
     }
 }
@@ -510,18 +510,18 @@ impl<'src> Index<'src> {
     }
 
     pub fn lhs(self) -> Option<Expression<'src>> {
-        let operator = self.lbrace().span().low();
+        let operator = self.lbrace().unmanaged();
         self.syntax
             .children()
-            .take_while(|child| child.span().high() <= operator)
+            .take_while(|child| child.unmanaged() < operator)
             .find_map(Node::cast)
     }
 
     pub fn rhs(self) -> Option<Expression<'src>> {
-        let operator = self.lbrace().span().high();
+        let operator = self.lbrace().unmanaged();
         self.syntax
             .children()
-            .skip_while(|child| child.span().low() < operator)
+            .skip_while(|child| child.unmanaged() <= operator)
             .find_map(Node::cast)
     }
 }
