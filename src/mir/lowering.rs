@@ -1,7 +1,6 @@
 use crate::ast::{self, Node};
 use crate::parser::K;
-use crate::ty::{self, Type};
-use crate::{mir, name};
+use crate::{mir, name, ty};
 use map::Id;
 use std::{collections::HashMap, ops::Range};
 
@@ -9,7 +8,7 @@ pub fn lower<'src>(
     ast: ast::Program,
     code_map: &'src codemap::CodeMap,
     resolved_variables: &name::S,
-    typing: &ty::Ping,
+    typing: &ty::Ping<'src>,
     layouts: &ty::layout::S,
 ) -> mir::Program<'src> {
     let function_asts = || {
@@ -31,8 +30,7 @@ pub fn lower<'src>(
         program,
         code_map,
         resolved_variables,
-        expression_types: &typing.expression_types,
-        resolved_calls: &typing.resolved_calls,
+        typing,
         layouts,
         functions,
         variables: HashMap::new(),
@@ -86,8 +84,7 @@ struct Context<'src, 'lower> {
     program: mir::Program<'src>,
     code_map: &'lower codemap::CodeMap,
     resolved_variables: &'lower name::S,
-    expression_types: &'lower HashMap<ast::ExpressionUnmanaged, Type<'lower>>,
-    resolved_calls: &'lower HashMap<ast::ExpressionUnmanaged, ast::FunctionLike<'lower>>,
+    typing: &'lower ty::Ping<'src>,
     layouts: &'lower ty::layout::S,
     functions: HashMap<ast::FunctionUnmanaged, Id<mir::BasicBlock>>,
     variables: HashMap<ast::VariableDefinitionUnmanaged, Vec<Id<mir::Variable>>>,
@@ -241,7 +238,7 @@ fn lower_expression(
         }
         ast::Expression::Lvalue(it) => lower_lvalue(it.inner().unwrap(), basic_block, c),
         ast::Expression::ListLiteral(it) => {
-            let base = c.expression_types[&expression.unmanaged()].base;
+            let base = c.typing.expression_types[&expression.unmanaged()].base;
             let size = ty::layout::size(base, c.layouts);
 
             let lists = std::iter::repeat_with(|| c.program.lists.insert(mir::List::default()))
@@ -296,7 +293,7 @@ fn lower_field_access(
     c: &mut Context,
 ) -> Bundle {
     let mut values = lower_expression(it.aggregate(), basic_block, c).values();
-    let ty = c.expression_types[&ast::Expression::FieldAccess(it).unmanaged()];
+    let ty = c.typing.expression_types[&ast::Expression::FieldAccess(it).unmanaged()];
     assert_eq!(ty::Shape::Flat, ty.shape);
     let ty::Base::Struct(ty) = ty.base else {
         unreachable!();
@@ -352,7 +349,7 @@ fn lower_lvalue(
         }
         ast::Expression::FieldAccess(it) => {
             let mut refs = lower_lvalue(it.aggregate(), basic_block, c).refs();
-            let ty = c.expression_types[&expression.unmanaged()];
+            let ty = c.typing.expression_types[&expression.unmanaged()];
             assert_eq!(ty::Shape::Flat, ty.shape);
             let ty::Base::Struct(ty) = ty.base else {
                 unreachable!();
@@ -386,7 +383,7 @@ fn lower_call(
         .flat_map(|it| lower_expression(it, basic_block, c).values())
         .collect();
 
-    let function_like: ast::FunctionLike = c.resolved_calls[&expression.unmanaged()];
+    let function_like: ast::FunctionLike = c.typing.resolved_calls[&expression.unmanaged()];
     let Some(function) = ast::Function::cast(function_like.syntax()) else {
         assert!(ast::Struct::cast(function_like.syntax()).is_some());
         return arguments.into();
