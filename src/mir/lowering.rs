@@ -396,6 +396,10 @@ fn lower_call(
         todo!("lower inline functions to MIR");
     }
 
+    if function.body().is_none() {
+        todo!("lower intrinsic calls to MIR");
+    }
+
     let function = c.functions[&function.unmanaged()];
     let call = c.program.ops.insert(mir::Op::Call {
         function,
