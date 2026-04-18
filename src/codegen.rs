@@ -238,7 +238,7 @@ impl<'src> Compiler<'src, '_> {
             mir::Op::Intrinsic { name, arguments } => {
                 let arguments = arguments.iter().map(|&it| self.value(it, function));
                 let arguments = arguments.collect();
-                self.intrinsic(name, arguments)
+                self.intrinsic(todo!(), arguments)
             }
         }
     }

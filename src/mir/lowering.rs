@@ -394,7 +394,14 @@ fn lower_call(
     }
 
     if function.body().is_none() {
-        todo!("lower intrinsic calls to MIR");
+        let name = function.name().unwrap().unmanaged();
+        let op = c.program.ops.insert(mir::Op::Intrinsic { name, arguments });
+        c.program.basic_blocks[basic_block].0.push(op);
+        return (c.typing.return_types[&function.unmanaged()] != ty::Base::Unit)
+            .then_some(mir::Value::Op(op))
+            .into_iter()
+            .collect::<Vec<_>>()
+            .into();
     }
 
     let function = c.functions[&function.unmanaged()];

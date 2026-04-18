@@ -87,7 +87,7 @@ pub enum Op {
     },
 
     Intrinsic {
-        name: &'static str,
+        name: cst::NodeUnmanaged,
         arguments: Vec<Value>,
     },
 }
