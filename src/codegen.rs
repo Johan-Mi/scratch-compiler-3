@@ -237,8 +237,8 @@ impl<'src> Compiler<'src, '_> {
             }
             mir::Op::Intrinsic { name, arguments } => {
                 let arguments = arguments.iter().map(|&it| self.value(it, function));
-                let arguments = arguments.collect::<Vec<_>>();
-                self.intrinsic(name, &arguments)
+                let arguments = arguments.collect();
+                self.intrinsic(name, arguments)
             }
         }
     }
@@ -261,7 +261,114 @@ impl<'src> Compiler<'src, '_> {
         }
     }
 
-    fn intrinsic(&self, name: &str, arguments: &[sb3::Operand]) -> Option<sb3::Operand<'src>> {
-        todo!()
+    fn intrinsic(
+        &mut self,
+        name: &str,
+        mut arguments: Vec<sb3::Operand<'src>>,
+    ) -> Option<sb3::Operand<'src>> {
+        macro_rules! f {
+        ($block:ident($($param:ident),*)) => {
+            {
+                let [$($param),*] = arguments.try_into().ok().unwrap();
+                self.target.put(block::$block($($param),*));
+                None
+            }
+        };
+
+        (= $block:ident($($param:ident),*)) => {
+            {
+                let [$($param),*] = arguments.try_into().ok().unwrap();
+                Some(self.target.$block($($param),*))
+            }
+        };
+    }
+
+        match name {
+            "to-string" | "to-num" => arguments.pop(),
+            "length" => f! { = length(string) },
+            "letter" => f! { = letter_of(string, index) },
+            "+" => f! { = add(lhs, rhs) },
+            "-" => f! { = sub(lhs, rhs) },
+            "*" => f! { = mul(lhs, rhs) },
+            "/" => f! { = div(lhs, rhs) },
+            "%" => f! { = modulo(lhs, rhs) },
+            "<" => f! { = lt(lhs, rhs) },
+            "==" => f! { = eq(lhs, rhs) },
+            ">" => f! { = gt(lhs, rhs) },
+            "abs" => Some(self.mathop("abs", arguments)),
+            "floor" => Some(self.mathop("floor", arguments)),
+            "ceil" => Some(self.mathop("ceiling", arguments)),
+            "sqrt" => Some(self.mathop("sqrt", arguments)),
+            "ln" => Some(self.mathop("ln", arguments)),
+            "log" => Some(self.mathop("log", arguments)),
+            "exp" => Some(self.mathop("e ^", arguments)),
+            "exp-10" => Some(self.mathop("10 ^", arguments)),
+            "sin" => Some(self.mathop("sin", arguments)),
+            "cos" => Some(self.mathop("cos", arguments)),
+            "tan" => Some(self.mathop("tan", arguments)),
+            "asin" => Some(self.mathop("asin", arguments)),
+            "acos" => Some(self.mathop("acos", arguments)),
+            "atan" => Some(self.mathop("atan", arguments)),
+            "not" => {
+                let [operand] = arguments.try_into().ok().unwrap();
+                Some(self.target.not(operand))
+            }
+            "and" => {
+                let [lhs, rhs] = arguments.try_into().ok().unwrap();
+                Some(self.target.and(lhs, rhs))
+            }
+            "or" => {
+                let [lhs, rhs] = arguments.try_into().ok().unwrap();
+                Some(self.target.or(lhs, rhs))
+            }
+            "join" => f! { = join(lhs, rhs) },
+            "answer" => f! { = answer() },
+            "ask" => f! { ask(question) },
+            "broadcast-and-wait" => f! { broadcast_and_wait(message) },
+            "change-x" => f! { change_x(amount) },
+            "change-y" => f! { change_y(amount) },
+            "clone-self" => {
+                self.target.clone_self();
+                None
+            }
+            "erase-all" => f! { erase_all() },
+            "go-to" => f! { go_to_xy(x, y) },
+            "go-to-back-layer" => f! { go_to_back_layer() },
+            "go-to-front-layer" => f! { go_to_front_layer() },
+            "hide" => f! { hide() },
+            "move" => f! { move_steps(steps) },
+            "mouse-x" => f! { = mouse_x() },
+            "mouse-y" => f! { = mouse_y() },
+            "pen-down" => f! { pen_down() },
+            "pen-up" => f! { pen_up() },
+            "pressing-key" => f! { = key_is_pressed(key) },
+            "random" => f! { = random(low, high) },
+            "reset-timer" => f! { reset_timer() },
+            "say" if arguments.len() == 1 => f! { say(message) },
+            "say" => f! { say_for_seconds(seconds, message) },
+            "set-costume" => f! { set_costume(costume) },
+            "set-pen-color" => f! { set_pen_color(color) },
+            "set-pen-size" => f! { set_pen_size(size) },
+            "set-size" => f! { set_size(size) },
+            "set-x" => f! { set_x(x) },
+            "set-y" => f! { set_y(y) },
+            "show" => f! { show() },
+            "stamp" => f! { stamp() },
+            "stop-all" => f! { stop_all() },
+            "timer" => f! { = timer() },
+            "wait" => f! { wait(seconds) },
+            "x-pos" => f! { = x_position() },
+            "y-pos" => f! { = y_position() },
+            _ => panic!("invalid intrinsic: {name:?}"),
+        }
+    }
+
+    fn mathop(
+        &mut self,
+        operator: &'static str,
+        arguments: Vec<sb3::Operand<'src>>,
+    ) -> sb3::Operand<'src> {
+        let [operand] = arguments.try_into().ok().unwrap();
+        self.target.mathop(operator, operand)
     }
 }
