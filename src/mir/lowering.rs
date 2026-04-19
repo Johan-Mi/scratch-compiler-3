@@ -394,7 +394,7 @@ fn lower_call(
     }
 
     if function.body().is_none() {
-        let name = function.name().unwrap().unmanaged();
+        let name = function.name().unwrap().span();
         let op = c.program.ops.insert(mir::Op::Intrinsic { name, arguments });
         c.program.basic_blocks[basic_block].0.push(op);
         return (c.typing.return_types[&function.unmanaged()] != ty::Base::Unit)

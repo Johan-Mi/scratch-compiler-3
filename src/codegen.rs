@@ -96,6 +96,7 @@ pub fn compile(
             returns: &returns,
             custom_blocks: &custom_blocks,
             points,
+            code_map,
             mir,
             string_literals,
         };
@@ -115,6 +116,7 @@ struct Compiler<'src, 'project> {
     returns: &'project HashMap<Id<mir::BasicBlock>, Vec<sb3::VariableRef>>,
     custom_blocks: &'project HashMap<Id<mir::BasicBlock>, sb3::CustomBlockRef>,
     points: HashMap<Id<mir::BasicBlock>, sb3::InsertionPoint>,
+    code_map: &'src codemap::CodeMap,
     mir: &'src mir::Program<'src>,
     string_literals: &'src HashMap<codemap::Pos, String>,
 }
@@ -238,7 +240,8 @@ impl<'src> Compiler<'src, '_> {
             mir::Op::Intrinsic { name, arguments } => {
                 let arguments = arguments.iter().map(|&it| self.value(it, function));
                 let arguments = arguments.collect();
-                self.intrinsic(todo!(), arguments)
+                let name = self.code_map.find_file(name.low()).source_slice(*name);
+                self.intrinsic(name, arguments)
             }
         }
     }

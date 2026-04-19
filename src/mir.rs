@@ -87,7 +87,7 @@ pub enum Op {
     },
 
     Intrinsic {
-        name: cst::NodeUnmanaged,
+        name: codemap::Span,
         arguments: Vec<Value>,
     },
 }
