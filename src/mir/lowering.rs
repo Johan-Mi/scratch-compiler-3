@@ -38,7 +38,9 @@ pub fn lower<'src>(
     };
 
     for function in function_asts() {
-        let body = function.body().unwrap();
+        let Some(body) = function.body() else {
+            continue;
+        };
         let pos = function.syntax().span().low();
         let basic_block = context.functions[&function.unmanaged()];
         let file = code_map.find_file(pos);
