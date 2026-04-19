@@ -13,7 +13,7 @@ pub fn spill(program: &mut Program) {
         .ops
         .iter()
         .flat_map(|(id, op)| {
-            op.args().filter_map(move |&it| match it {
+            op.arguments().filter_map(move |&it| match it {
                 Value::Op(arg) => Some((arg, id)),
                 _ => None,
             })
@@ -42,7 +42,7 @@ pub fn spill(program: &mut Program) {
         let source = Ref::Variable(variable);
         let load = program.ops.insert(Op::Load { source });
         let arg = program.ops[user]
-            .args_mut()
+            .arguments_mut()
             .find(|&&mut it| matches!(it, Value::Op(op) if op == def))
             .unwrap();
         *arg = Value::Op(load);

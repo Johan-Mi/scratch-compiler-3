@@ -93,7 +93,7 @@ pub enum Op {
 }
 
 impl Op {
-    fn args(&self) -> impl Iterator<Item = &Value> {
+    fn arguments(&self) -> impl Iterator<Item = &Value> {
         use Either::{Left, Right};
 
         match self {
@@ -138,7 +138,7 @@ impl Op {
         }
     }
 
-    fn args_mut(&mut self) -> impl Iterator<Item = &mut Value> {
+    fn arguments_mut(&mut self) -> impl Iterator<Item = &mut Value> {
         use Either::{Left, Right};
 
         match self {

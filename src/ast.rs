@@ -462,7 +462,7 @@ impl<'src> FunctionCall<'src> {
         token(self.syntax, K::Identifier).unwrap()
     }
 
-    pub fn args(self) -> Arguments<'src> {
+    pub fn arguments(self) -> Arguments<'src> {
         child(self.syntax).unwrap()
     }
 }

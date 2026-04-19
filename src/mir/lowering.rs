@@ -198,7 +198,7 @@ fn lower_expression(
             ops.collect::<Vec<_>>().into()
         }
         ast::Expression::FunctionCall(it) => {
-            lower_call(expression, &mut it.args().iter(), basic_block, c)
+            lower_call(expression, &mut it.arguments().iter(), basic_block, c)
         }
         ast::Expression::BinaryOperation(it) => {
             let mut arguments = [it.lhs().unwrap(), it.rhs().unwrap()].into_iter();

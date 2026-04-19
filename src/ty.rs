@@ -307,7 +307,7 @@ fn of_actually<'src>(
             c.variable_types.get(definition).copied()
         }
         ast::Expression::FunctionCall(it) => {
-            of_call(expression, it.name(), &mut it.args().iter(), c)
+            of_call(expression, it.name(), &mut it.arguments().iter(), c)
         }
         ast::Expression::BinaryOperation(it) => of_call(
             expression,
