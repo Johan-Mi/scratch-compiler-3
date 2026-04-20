@@ -190,12 +190,15 @@ fn lower_expression(
         ast::Expression::Variable(it) => {
             let basic_block = &mut c.program.basic_blocks[basic_block].0;
             let start = basic_block.len();
-            basic_block.extend(
-                c.variables[&c.resolved_variables[&it.unmanaged()]]
+            if let Some(variables) = c.variables.get(&c.resolved_variables[&it.unmanaged()]) {
+                let loads = variables
                     .iter()
                     .map(|&variable| mir::Ref::Variable(variable))
-                    .map(|source| c.program.ops.insert(mir::Op::Load { source })),
-            );
+                    .map(|source| c.program.ops.insert(mir::Op::Load { source }));
+                basic_block.extend(loads);
+            } else {
+                todo!("lower function parameters to MIR");
+            }
             let ops = basic_block[start..].iter().map(|&it| mir::Value::Op(it));
             ops.collect::<Vec<_>>().into()
         }
