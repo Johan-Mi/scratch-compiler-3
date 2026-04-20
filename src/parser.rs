@@ -392,12 +392,6 @@ impl Parser<'_> {
             | K::String
             | K::KwFalse
             | K::KwTrue => self.bump(),
-            K::Ampersand => {
-                self.start_node(K::Lvalue);
-                self.bump();
-                self.parse_atom();
-                self.builder.finish_node();
-            }
             K::Lbracket => self.parse_list_literal(),
             _ => self.error(),
         }
@@ -435,7 +429,12 @@ impl Parser<'_> {
 
     fn parse_recursive_expression(&mut self, left: K) {
         let checkpoint = self.checkpoint();
-        self.parse_atom();
+        if self.eat(K::Ampersand) {
+            self.parse_expression();
+            self.builder.finish_node_at(checkpoint, K::Lvalue);
+        } else {
+            self.parse_atom();
+        }
 
         while let right = self.peek()
             && binding_power(left) < binding_power(right)
