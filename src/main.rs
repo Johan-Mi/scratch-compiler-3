@@ -70,7 +70,7 @@ fn real_main(code_map: &mut CodeMap, diagnostics: &mut Diagnostics) -> Result<()
         debug::print_cst(ast.syntax(), 0);
     }
 
-    let resolved_variables = crate::name::resolve(ast, code_map);
+    let resolved_variables = crate::name::resolve(ast, code_map, diagnostics);
     let typing = ty::check(ast, code_map, &resolved_variables, diagnostics);
 
     if diagnostics.have_errors() {
