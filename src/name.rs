@@ -52,8 +52,10 @@ fn resolve_document(
         let possible = definitions.iter().filter(|it| {
             it.scope.contains(span) && file.source_slice(it.identifier.syntax().span()) == text
         });
-        let definition = possible.min_by_key(|it| it.scope.len())?.identifier;
-        Some((usage.unmanaged(), definition.unmanaged()))
+        let Some(definition) = possible.min_by_key(|it| it.scope.len()) else {
+            todo!("undefined variable");
+        };
+        Some((usage.unmanaged(), definition.identifier.unmanaged()))
     })
 }
 
