@@ -430,13 +430,14 @@ impl Parser<'_> {
     fn parse_recursive_expression(&mut self, left: K) {
         let checkpoint = self.checkpoint();
         if self.eat(K::Ampersand) {
-            self.parse_expression();
+            self.parse_recursive_expression(K::Ampersand);
             self.builder.finish_node_at(checkpoint, K::Lvalue);
         } else {
             self.parse_atom();
         }
 
         while let right = self.peek()
+            && right != K::Ampersand
             && binding_power(left) < binding_power(right)
         {
             let node_kind = if self.eat(K::Dot) {
@@ -780,6 +781,7 @@ const PRECEDENCE: &[&[K]] = &[
     &[K::Lt, K::EqEq, K::Gt],
     &[K::Plus, K::Minus],
     &[K::Star, K::Slash, K::Percent],
+    &[K::Ampersand],
     &[K::Dot, K::Lbracket, K::KwAs],
 ];
 
