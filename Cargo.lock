@@ -51,8 +51,8 @@ dependencies = [
 
 [[package]]
 name = "cst"
-version = "1.2.0"
-source = "git+https://github.com/Johan-Mi/cst#6450a44bef2128b63868382dd740b12a8733e71c"
+version = "1.2.1"
+source = "git+https://github.com/Johan-Mi/cst#0c674158aefa43c9207fc190e0b9c23aace9b0a2"
 dependencies = [
  "codemap",
 ]
