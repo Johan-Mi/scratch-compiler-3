@@ -5,7 +5,7 @@ use map::Id;
 use std::{collections::HashMap, ops::Range};
 
 pub fn lower<'src>(
-    ast: ast::Program,
+    ast: ast::Program<'src>,
     code_map: &'src codemap::CodeMap,
     resolved_variables: &name::S,
     typing: &ty::Ping<'src>,
@@ -45,6 +45,7 @@ pub fn lower<'src>(
         let basic_block = context.functions[&function.unmanaged()];
         let file = code_map.find_file(pos);
         let name = file.source_slice(function.name().unwrap().span());
+        context.current_function = Some(function);
         let function = match name {
             "when-flag-clicked" => mir::Function::WhenFlagClicked,
             "when-key-pressed" => mir::Function::WhenKeyPressed {
@@ -73,7 +74,6 @@ pub fn lower<'src>(
                 .insert(basic_block, function)
                 .is_none()
         );
-        context.current_function = Some(basic_block);
         for statement in body.statements() {
             lower_statement(statement, basic_block, &mut context);
         }
@@ -90,7 +90,7 @@ struct Context<'src, 'lower> {
     layouts: &'lower ty::layout::S,
     functions: HashMap<ast::FunctionUnmanaged, Id<mir::BasicBlock>>,
     variables: HashMap<ast::VariableDefinitionUnmanaged, Vec<Id<mir::Variable>>>,
-    current_function: Option<Id<mir::BasicBlock>>,
+    current_function: Option<ast::Function<'src>>,
 }
 
 fn lower_block(block: ast::Block, c: &mut Context) -> Id<mir::BasicBlock> {
@@ -170,7 +170,7 @@ fn lower_statement(statement: ast::Statement, basic_block: Id<mir::BasicBlock>, 
         }
         ast::Statement::Return(it) => {
             let values = lower_expression(it.expression().unwrap(), basic_block, c).values();
-            let function = c.current_function.unwrap();
+            let function = c.functions[&c.current_function.unwrap().unmanaged()];
             let op = c.program.ops.insert(mir::Op::Return { function, values });
             c.program.basic_blocks[basic_block].0.push(op);
         }
@@ -274,14 +274,19 @@ fn lower_variable(it: ast::Variable, basic_block: Id<mir::BasicBlock>, c: &mut C
         let ops = basic_block[start..].iter().map(|&it| mir::Value::Op(it));
         ops.collect::<Vec<_>>()
     } else {
-        let parameter: usize = todo!();
-        let types: &[ty::Base] = todo!();
+        let function = c.current_function.unwrap();
+        let parameter = function
+            .parameters()
+            .unwrap()
+            .iter()
+            .position(|it| it.internal_name().unmanaged() == definition)
+            .unwrap();
+        let types = &c.typing.parameter_types[&function.unmanaged()];
         let start: usize = types[0..parameter]
             .iter()
-            .map(|&it| ty::layout::size(it, c.layouts))
+            .map(|it| ty::layout::size(it.base, c.layouts))
             .sum();
-        let size = ty::layout::size(types[parameter], c.layouts);
-        (start..start + size)
+        (start..start + ty::layout::size(types[parameter].base, c.layouts))
             .map(|index| mir::Value::FunctionParameter { index })
             .collect()
     }
