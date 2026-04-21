@@ -187,21 +187,30 @@ fn lower_expression(
 ) -> Bundle {
     match expression {
         ast::Expression::Parenthesized(it) => lower_expression(it.inner().unwrap(), basic_block, c),
-        ast::Expression::Variable(it) => {
-            let basic_block = &mut c.program.basic_blocks[basic_block].0;
-            let start = basic_block.len();
+        ast::Expression::Variable(it) => Bundle::from(
             if let Some(variables) = c.variables.get(&c.resolved_variables[&it.unmanaged()]) {
+                let basic_block = &mut c.program.basic_blocks[basic_block].0;
+                let start = basic_block.len();
                 let loads = variables
                     .iter()
                     .map(|&variable| mir::Ref::Variable(variable))
                     .map(|source| c.program.ops.insert(mir::Op::Load { source }));
                 basic_block.extend(loads);
+                let ops = basic_block[start..].iter().map(|&it| mir::Value::Op(it));
+                ops.collect::<Vec<_>>()
             } else {
-                todo!("lower function parameters to MIR");
-            }
-            let ops = basic_block[start..].iter().map(|&it| mir::Value::Op(it));
-            ops.collect::<Vec<_>>().into()
-        }
+                let parameter: usize = todo!();
+                let types: &[ty::Base] = todo!();
+                let start: usize = types[0..parameter]
+                    .iter()
+                    .map(|&it| ty::layout::size(it, c.layouts))
+                    .sum();
+                let size = ty::layout::size(types[parameter], c.layouts);
+                (start..start + size)
+                    .map(|index| mir::Value::FunctionParameter { index })
+                    .collect()
+            },
+        ),
         ast::Expression::FunctionCall(it) => {
             lower_call(expression, &mut it.arguments().iter(), basic_block, c)
         }
