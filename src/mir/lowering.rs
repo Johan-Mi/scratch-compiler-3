@@ -262,7 +262,8 @@ fn lower_expression(
 }
 
 fn lower_variable(it: ast::Variable, basic_block: Id<mir::BasicBlock>, c: &mut Context) -> Bundle {
-    if let Some(variables) = c.variables.get(&c.resolved_variables[&it.unmanaged()]) {
+    let definition = c.resolved_variables[&it.unmanaged()];
+    if let Some(variables) = c.variables.get(&definition) {
         let basic_block = &mut c.program.basic_blocks[basic_block].0;
         let start = basic_block.len();
         let loads = variables
