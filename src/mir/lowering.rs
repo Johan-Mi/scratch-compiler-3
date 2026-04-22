@@ -34,7 +34,7 @@ pub fn lower<'src>(
     );
     let variables = global_variables
         .map(|it| {
-            let variables = lower_constant(it.value().unwrap())
+            let variables = lower_constant(it.value().unwrap(), code_map)
                 .into_iter()
                 .map(|value| program.variables.insert(mir::Variable { value }));
             (it.variable().unwrap().unmanaged(), variables.collect())
@@ -106,10 +106,6 @@ struct Context<'src, 'lower> {
     functions: HashMap<ast::FunctionUnmanaged, Id<mir::BasicBlock>>,
     variables: HashMap<ast::VariableDefinitionUnmanaged, Vec<Id<mir::Variable>>>,
     current_function: Option<ast::Function<'src>>,
-}
-
-fn lower_constant(expression: ast::Expression) -> Vec<mir::Constant> {
-    todo!()
 }
 
 fn lower_block(block: ast::Block, c: &mut Context) -> Id<mir::BasicBlock> {
@@ -227,25 +223,17 @@ fn lower_expression(
             ops.collect::<Vec<_>>().into()
         }
         ast::Expression::NamedArgument(it) => lower_expression(it.value().unwrap(), basic_block, c),
-        ast::Expression::DecimalNumber(it) => {
-            let span = it.syntax().span();
-            let file = c.code_map.find_file(span.low());
-            let number = file.source_slice(span).parse().unwrap();
-            Vec::from([mir::Value::Constant(mir::Constant::Num(number))]).into()
-        }
-        ast::Expression::BinaryNumber(it) => float(2, b'b', it.syntax(), c.code_map),
-        ast::Expression::OctalNumber(it) => float(8, b'o', it.syntax(), c.code_map),
-        ast::Expression::HexadecimalNumber(it) => float(16, b'x', it.syntax(), c.code_map),
-        ast::Expression::String(it) => Vec::from([mir::Value::Constant(mir::Constant::String(
-            it.syntax().span().low(),
-        ))])
-        .into(),
-        ast::Expression::KwFalse(_) => {
-            Vec::from([mir::Value::Constant(mir::Constant::Bool(false))]).into()
-        }
-        ast::Expression::KwTrue(_) => {
-            Vec::from([mir::Value::Constant(mir::Constant::Bool(true))]).into()
-        }
+        ast::Expression::DecimalNumber(_)
+        | ast::Expression::BinaryNumber(_)
+        | ast::Expression::OctalNumber(_)
+        | ast::Expression::HexadecimalNumber(_)
+        | ast::Expression::String(_)
+        | ast::Expression::KwFalse(_)
+        | ast::Expression::KwTrue(_) => lower_constant(expression, c.code_map)
+            .into_iter()
+            .map(mir::Value::Constant)
+            .collect::<Vec<_>>()
+            .into(),
         ast::Expression::Lvalue(it) => lower_lvalue(it.inner().unwrap(), basic_block, c),
         ast::Expression::ListLiteral(it) => {
             let base = c.typing.expression_types[&expression.unmanaged()].base;
@@ -277,6 +265,34 @@ fn lower_expression(
             lower_call(expression, &mut arguments, basic_block, c)
         }
         ast::Expression::FieldAccess(it) => lower_field_access(it, basic_block, c),
+    }
+}
+
+fn lower_constant(expression: ast::Expression, code_map: &codemap::CodeMap) -> Vec<mir::Constant> {
+    match expression {
+        ast::Expression::Parenthesized(it) => lower_constant(it.inner().unwrap(), code_map),
+        ast::Expression::TypeAscription(it) => lower_constant(it.inner().unwrap(), code_map),
+        ast::Expression::DecimalNumber(it) => {
+            let span = it.syntax().span();
+            let file = code_map.find_file(span.low());
+            let number = file.source_slice(span).parse().unwrap();
+            [mir::Constant::Num(number)].into()
+        }
+        ast::Expression::String(it) => [mir::Constant::String(it.syntax().span().low())].into(),
+        ast::Expression::BinaryNumber(it) => float(2, b'b', it.syntax(), code_map),
+        ast::Expression::OctalNumber(it) => float(8, b'o', it.syntax(), code_map),
+        ast::Expression::HexadecimalNumber(it) => float(16, b'x', it.syntax(), code_map),
+        ast::Expression::KwFalse(_) => [mir::Constant::Bool(false)].into(),
+        ast::Expression::KwTrue(_) => [mir::Constant::Bool(true)].into(),
+        ast::Expression::Variable(_)
+        | ast::Expression::FunctionCall(_)
+        | ast::Expression::BinaryOperation(_)
+        | ast::Expression::Index(_)
+        | ast::Expression::NamedArgument(_)
+        | ast::Expression::Lvalue(_)
+        | ast::Expression::ListLiteral(_)
+        | ast::Expression::MethodCall(_)
+        | ast::Expression::FieldAccess(_) => todo!(),
     }
 }
 
@@ -312,7 +328,12 @@ fn lower_variable(it: ast::Variable, basic_block: Id<mir::BasicBlock>, c: &mut C
     .into()
 }
 
-fn float(radix: u32, letter: u8, node: cst::Node<K>, code_map: &codemap::CodeMap) -> Bundle {
+fn float(
+    radix: u32,
+    letter: u8,
+    node: cst::Node<K>,
+    code_map: &codemap::CodeMap,
+) -> Vec<mir::Constant> {
     let span = node.span();
     let file = code_map.find_file(span.low());
     let text = file.source_slice(span);
@@ -326,7 +347,7 @@ fn float(radix: u32, letter: u8, node: cst::Node<K>, code_map: &codemap::CodeMap
         reason = "These are float literals. `u64` is only used as an implementation detail."
     )]
     let number = u64::from_str_radix(text, radix).unwrap() as f64 * sign;
-    Vec::from([mir::Value::Constant(mir::Constant::Num(number))]).into()
+    [mir::Constant::Num(number)].into()
 }
 
 fn lower_field_access(
