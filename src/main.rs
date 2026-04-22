@@ -66,7 +66,7 @@ fn real_main(code_map: &mut CodeMap, diagnostics: &mut Diagnostics) -> Result<()
     let ast = ast::Program::cast(cst.root()).unwrap();
 
     #[cfg(debug_assertions)]
-    if std::env::var("DUMP_CST").is_ok() {
+    if std::env::var_os("DUMP_CST").is_some() {
         debug::print_cst(ast.syntax(), 0);
     }
 
