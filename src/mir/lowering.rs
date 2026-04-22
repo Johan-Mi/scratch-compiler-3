@@ -316,7 +316,7 @@ fn lower_field_access(
     c: &mut Context,
 ) -> Bundle {
     let mut values = lower_expression(it.aggregate(), basic_block, c).values();
-    let ty = c.typing.expression_types[&ast::Expression::FieldAccess(it).unmanaged()];
+    let ty = c.typing.expression_types[&it.aggregate().unmanaged()];
     assert_eq!(ty::Shape::Flat, ty.shape);
     let ty::Base::Struct(ty) = ty.base else {
         unreachable!();
