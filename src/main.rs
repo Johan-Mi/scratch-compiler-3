@@ -77,6 +77,20 @@ fn real_main(code_map: &mut CodeMap, diagnostics: &mut Diagnostics) -> Result<()
         return Err(());
     }
 
+    #[cfg(debug_assertions)]
+    if std::env::var_os("DUMP_TYPING").is_some() {
+        let labels: Vec<_> = cst
+            .root()
+            .pre_order()
+            .filter_map(ast::Expression::cast)
+            .filter(|&it| !typing.expression_types.contains_key(&it.unmanaged()))
+            .map(|it| diagnostics::primary(it.syntax().span(), ""))
+            .collect();
+        if !labels.is_empty() {
+            diagnostics.error("missing expression types", labels);
+        }
+    }
+
     let layouts = ty::layout::s(ast, &typing.type_expressions, diagnostics);
 
     if diagnostics.have_errors() {
