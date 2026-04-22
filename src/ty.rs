@@ -129,6 +129,17 @@ pub fn check<'src>(
                 .is_none()
         );
 
+        c.variable_types.extend(
+            function
+                .parameters()
+                .into_iter()
+                .flat_map(ast::Parameters::iter)
+                .filter_map(|parameter| {
+                    let ty = *c.type_expressions.get(&parameter.ty()?.unmanaged())?;
+                    Some((parameter.internal_name().unmanaged(), ty))
+                }),
+        );
+
         c.return_ty = return_ty(function.into(), &c);
         if let Some(return_ty) = c.return_ty {
             assert!(
