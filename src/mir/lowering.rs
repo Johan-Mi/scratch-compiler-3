@@ -37,6 +37,14 @@ pub fn lower<'src>(
         current_function: None,
     };
 
+    for _ in ast.documents().flat_map(ast::Document::lets).chain(
+        ast.documents()
+            .flat_map(ast::Document::sprites)
+            .flat_map(ast::Sprite::lets),
+    ) {
+        todo!("lower global variables to MIR");
+    }
+
     for function in function_asts().filter(|it| it.body().is_some()) {
         let pos = function.syntax().span().low();
         let basic_block = context.functions[&function.unmanaged()];

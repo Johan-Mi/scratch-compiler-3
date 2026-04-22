@@ -60,6 +60,10 @@ impl<'src> Document<'src> {
         children(self.syntax)
     }
 
+    pub fn lets(self) -> impl Iterator<Item = Let<'src>> {
+        children(self.syntax)
+    }
+
     pub fn functions(self) -> impl Iterator<Item = Function<'src>> {
         children(self.syntax)
     }
@@ -92,6 +96,10 @@ impl<'src> Sprite<'src> {
     }
 
     pub fn costume_lists(self) -> impl Iterator<Item = CostumeList<'src>> {
+        children(self.syntax)
+    }
+
+    pub fn lets(self) -> impl Iterator<Item = Let<'src>> {
         children(self.syntax)
     }
 
