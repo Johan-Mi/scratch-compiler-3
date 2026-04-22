@@ -37,15 +37,11 @@ pub fn lower<'src>(
         current_function: None,
     };
 
-    for function in function_asts() {
-        let Some(body) = function.body() else {
-            continue;
-        };
+    for function in function_asts().filter(|it| it.body().is_some()) {
         let pos = function.syntax().span().low();
         let basic_block = context.functions[&function.unmanaged()];
         let file = code_map.find_file(pos);
         let name = file.source_slice(function.name().unwrap().span());
-        context.current_function = Some(function);
         let function = match name {
             "when-flag-clicked" => mir::Function::WhenFlagClicked,
             "when-key-pressed" => mir::Function::WhenKeyPressed {
@@ -74,6 +70,10 @@ pub fn lower<'src>(
                 .insert(basic_block, function)
                 .is_none()
         );
+    }
+    for (function, body) in function_asts().filter_map(|it| Some((it, it.body()?))) {
+        let basic_block = context.functions[&function.unmanaged()];
+        context.current_function = Some(function);
         for statement in body.statements() {
             lower_statement(statement, basic_block, &mut context);
         }
