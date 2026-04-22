@@ -26,6 +26,21 @@ pub fn lower<'src>(
             program.basic_blocks.insert(mir::BasicBlock(Vec::new()))
         }))
         .collect();
+
+    let global_variables = ast.documents().flat_map(ast::Document::lets).chain(
+        ast.documents()
+            .flat_map(ast::Document::sprites)
+            .flat_map(ast::Sprite::lets),
+    );
+    let variables = global_variables
+        .map(|it| {
+            let variables = lower_constant(it.value().unwrap())
+                .into_iter()
+                .map(|value| program.variables.insert(mir::Variable { value }));
+            (it.variable().unwrap().unmanaged(), variables.collect())
+        })
+        .collect();
+
     let mut context = Context {
         program,
         code_map,
@@ -33,17 +48,9 @@ pub fn lower<'src>(
         typing,
         layouts,
         functions,
-        variables: HashMap::new(),
+        variables,
         current_function: None,
     };
-
-    for _ in ast.documents().flat_map(ast::Document::lets).chain(
-        ast.documents()
-            .flat_map(ast::Document::sprites)
-            .flat_map(ast::Sprite::lets),
-    ) {
-        todo!("lower global variables to MIR");
-    }
 
     for function in function_asts().filter(|it| it.body().is_some()) {
         let pos = function.syntax().span().low();
@@ -99,6 +106,10 @@ struct Context<'src, 'lower> {
     functions: HashMap<ast::FunctionUnmanaged, Id<mir::BasicBlock>>,
     variables: HashMap<ast::VariableDefinitionUnmanaged, Vec<Id<mir::Variable>>>,
     current_function: Option<ast::Function<'src>>,
+}
+
+fn lower_constant(expression: ast::Expression) -> Vec<mir::Constant> {
+    todo!()
 }
 
 fn lower_block(block: ast::Block, c: &mut Context) -> Id<mir::BasicBlock> {
