@@ -439,7 +439,7 @@ fn lower_lvalue(
         }
         ast::Expression::FieldAccess(it) => {
             let mut refs = lower_lvalue(it.aggregate(), basic_block, c).refs();
-            let ty = c.typing.expression_types[&expression.unmanaged()];
+            let ty = c.typing.expression_types[&it.aggregate().unmanaged()];
             assert_eq!(ty::Shape::Flat, ty.shape);
             let ty::Base::Struct(ty) = ty.base else {
                 unreachable!();
