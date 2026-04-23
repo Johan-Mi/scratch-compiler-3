@@ -486,9 +486,17 @@ fn lower_call(
 
     if function.body().is_none() {
         let name = function.name().unwrap().span();
-        match c.code_map.find_file(name.low()).source_slice(name) {
+        return match c.code_map.find_file(name.low()).source_slice(name) {
             "get" => todo!(),
-            "=" => todo!(),
+            "=" => {
+                let [refs, values] = arguments.try_into().ok().unwrap();
+                c.program.basic_blocks[basic_block].0.extend(
+                    std::iter::zip(refs.refs(), values.values()).map(|(target, value)| {
+                        c.program.ops.insert(mir::Op::Store { target, value })
+                    }),
+                );
+                Bundle::Values(Vec::new())
+            }
             "push" => todo!(),
             "delete" => todo!(),
             "pop" => todo!(),
@@ -503,13 +511,13 @@ fn lower_call(
                 let arguments = arguments.into_iter().flat_map(Bundle::values).collect();
                 let op = c.program.ops.insert(mir::Op::Intrinsic { name, arguments });
                 c.program.basic_blocks[basic_block].0.push(op);
-                return (c.typing.return_types[&function.unmanaged()] != ty::Base::Unit)
+                (c.typing.return_types[&function.unmanaged()] != ty::Base::Unit)
                     .then_some(mir::Value::Op(op))
                     .into_iter()
                     .collect::<Vec<_>>()
-                    .into();
+                    .into()
             }
-        }
+        };
     }
 
     let function = c.functions[&function.unmanaged()];
