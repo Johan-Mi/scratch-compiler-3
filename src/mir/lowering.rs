@@ -34,7 +34,7 @@ pub fn lower<'src>(
     );
     let variables = global_variables
         .map(|it| {
-            let variables = lower_constant(it.value().unwrap(), code_map)
+            let variables = lower_constant(it.value().unwrap(), code_map, typing)
                 .into_iter()
                 .map(|value| program.variables.insert(mir::Variable { value }));
             (it.variable().unwrap().unmanaged(), variables.collect())
@@ -229,7 +229,7 @@ fn lower_expression(
         | ast::Expression::HexadecimalNumber(_)
         | ast::Expression::String(_)
         | ast::Expression::KwFalse(_)
-        | ast::Expression::KwTrue(_) => lower_constant(expression, c.code_map)
+        | ast::Expression::KwTrue(_) => lower_constant(expression, c.code_map, c.typing)
             .into_iter()
             .map(mir::Value::Constant)
             .collect::<Vec<_>>()
@@ -268,21 +268,27 @@ fn lower_expression(
     }
 }
 
-fn lower_constant(expression: ast::Expression, code_map: &codemap::CodeMap) -> Vec<mir::Constant> {
+fn lower_constant(
+    expression: ast::Expression,
+    code_map: &codemap::CodeMap,
+    typing: &ty::Ping,
+) -> Vec<mir::Constant> {
     match expression {
-        ast::Expression::Parenthesized(it) => lower_constant(it.inner().unwrap(), code_map),
+        ast::Expression::Parenthesized(it) => lower_constant(it.inner().unwrap(), code_map, typing),
         ast::Expression::FunctionCall(it) => {
-            lower_constant_call(expression, &mut it.arguments().iter(), code_map)
+            lower_constant_call(expression, &mut it.arguments().iter(), code_map, typing)
         }
         ast::Expression::BinaryOperation(it) => {
             let mut arguments = [it.lhs().unwrap(), it.rhs().unwrap()].into_iter();
-            lower_constant_call(expression, &mut arguments, code_map)
+            lower_constant_call(expression, &mut arguments, code_map, typing)
         }
         ast::Expression::MethodCall(it) => {
             let mut arguments = std::iter::once(it.caller()).chain(it.arguments().iter());
-            lower_constant_call(expression, &mut arguments, code_map)
+            lower_constant_call(expression, &mut arguments, code_map, typing)
         }
-        ast::Expression::TypeAscription(it) => lower_constant(it.inner().unwrap(), code_map),
+        ast::Expression::TypeAscription(it) => {
+            lower_constant(it.inner().unwrap(), code_map, typing)
+        }
         ast::Expression::DecimalNumber(it) => {
             let span = it.syntax().span();
             let file = code_map.find_file(span.low());
@@ -308,8 +314,13 @@ fn lower_constant_call(
     expression: ast::Expression,
     arguments: &mut dyn Iterator<Item = ast::Expression>,
     code_map: &codemap::CodeMap,
+    typing: &ty::Ping,
 ) -> Vec<mir::Constant> {
-    todo!()
+    let function_like = typing.resolved_calls[&expression.unmanaged()];
+    assert!(ast::Struct::cast(function_like.syntax()).is_some());
+    arguments
+        .flat_map(|it| lower_constant(it, code_map, typing))
+        .collect()
 }
 
 fn lower_variable(it: ast::Variable, basic_block: Id<mir::BasicBlock>, c: &mut Context) -> Bundle {
