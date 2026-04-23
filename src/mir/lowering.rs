@@ -470,12 +470,13 @@ fn lower_call(
     c: &mut Context,
 ) -> Bundle {
     let arguments: Vec<_> = arguments
-        .flat_map(|it| lower_expression(it, basic_block, c).values())
+        .map(|it| lower_expression(it, basic_block, c))
         .collect();
 
     let function_like: ast::FunctionLike = c.typing.resolved_calls[&expression.unmanaged()];
     let Some(function) = ast::Function::cast(function_like.syntax()) else {
         assert!(ast::Struct::cast(function_like.syntax()).is_some());
+        let arguments: Vec<_> = arguments.into_iter().flat_map(Bundle::values).collect();
         return arguments.into();
     };
 
@@ -485,6 +486,7 @@ fn lower_call(
 
     if function.body().is_none() {
         let name = function.name().unwrap().span();
+        let arguments = arguments.into_iter().flat_map(Bundle::values).collect();
         let op = c.program.ops.insert(mir::Op::Intrinsic { name, arguments });
         c.program.basic_blocks[basic_block].0.push(op);
         return (c.typing.return_types[&function.unmanaged()] != ty::Base::Unit)
@@ -495,6 +497,7 @@ fn lower_call(
     }
 
     let function = c.functions[&function.unmanaged()];
+    let arguments = arguments.into_iter().flat_map(Bundle::values).collect();
     let call = c.program.ops.insert(mir::Op::Call {
         function,
         arguments,
