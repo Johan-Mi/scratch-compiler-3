@@ -289,6 +289,7 @@ fn lower_constant(
         ast::Expression::TypeAscription(it) => {
             lower_constant(it.inner().unwrap(), code_map, typing)
         }
+        ast::Expression::NamedArgument(it) => lower_constant(it.value().unwrap(), code_map, typing),
         ast::Expression::DecimalNumber(it) => {
             let span = it.syntax().span();
             let file = code_map.find_file(span.low());
@@ -303,7 +304,6 @@ fn lower_constant(
         ast::Expression::KwTrue(_) => [mir::Constant::Bool(true)].into(),
         ast::Expression::Variable(_)
         | ast::Expression::Index(_)
-        | ast::Expression::NamedArgument(_)
         | ast::Expression::Lvalue(_)
         | ast::Expression::ListLiteral(_)
         | ast::Expression::FieldAccess(_) => todo!(),
