@@ -12,11 +12,7 @@ fn delete-all(_ list: []%T)
 
 fn insert(_ list: []%T, _ item: %T, at index: Num)
 
-fn replace(_ list: []%T, index _: Num, with item: %T)
-
 fn replace-last(_ list: []%T, with item: %T)
-
-fn at(_ list: []%T, _ index: Num) %T
 
 fn last(_ list: []%T) %T
 
