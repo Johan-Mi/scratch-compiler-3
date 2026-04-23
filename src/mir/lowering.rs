@@ -486,14 +486,32 @@ fn lower_call(
 
     if function.body().is_none() {
         let name = function.name().unwrap().span();
-        let arguments = arguments.into_iter().flat_map(Bundle::values).collect();
-        let op = c.program.ops.insert(mir::Op::Intrinsic { name, arguments });
-        c.program.basic_blocks[basic_block].0.push(op);
-        return (c.typing.return_types[&function.unmanaged()] != ty::Base::Unit)
-            .then_some(mir::Value::Op(op))
-            .into_iter()
-            .collect::<Vec<_>>()
-            .into();
+        match c.code_map.find_file(name.low()).source_slice(name) {
+            "get" => todo!(),
+            "=" => todo!(),
+            "push" => todo!(),
+            "delete" => todo!(),
+            "pop" => todo!(),
+            "delete-all" => todo!(),
+            "insert" => todo!(),
+            "replace" => todo!(),
+            "replace-last" => todo!(),
+            "at" => todo!(),
+            "last" => todo!(),
+            "index" => todo!(),
+            "length" => todo!(),
+            "contains" => todo!(),
+            _ => {
+                let arguments = arguments.into_iter().flat_map(Bundle::values).collect();
+                let op = c.program.ops.insert(mir::Op::Intrinsic { name, arguments });
+                c.program.basic_blocks[basic_block].0.push(op);
+                return (c.typing.return_types[&function.unmanaged()] != ty::Base::Unit)
+                    .then_some(mir::Value::Op(op))
+                    .into_iter()
+                    .collect::<Vec<_>>()
+                    .into();
+            }
+        }
     }
 
     let function = c.functions[&function.unmanaged()];
