@@ -490,11 +490,9 @@ fn lower_call(
             "get" => todo!(),
             "=" => {
                 let [refs, values] = arguments.try_into().ok().unwrap();
-                c.program.basic_blocks[basic_block].0.extend(
-                    std::iter::zip(refs.refs(), values.values()).map(|(target, value)| {
-                        c.program.ops.insert(mir::Op::Store { target, value })
-                    }),
-                );
+                let ops = std::iter::zip(refs.refs(), values.values())
+                    .map(|(target, value)| c.program.ops.insert(mir::Op::Store { target, value }));
+                c.program.basic_blocks[basic_block].0.extend(ops);
                 Bundle::Values(Vec::new())
             }
             "push" => todo!(),
