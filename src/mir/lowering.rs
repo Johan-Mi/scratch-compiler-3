@@ -271,6 +271,17 @@ fn lower_expression(
 fn lower_constant(expression: ast::Expression, code_map: &codemap::CodeMap) -> Vec<mir::Constant> {
     match expression {
         ast::Expression::Parenthesized(it) => lower_constant(it.inner().unwrap(), code_map),
+        ast::Expression::FunctionCall(it) => {
+            lower_constant_call(expression, &mut it.arguments().iter(), code_map)
+        }
+        ast::Expression::BinaryOperation(it) => {
+            let mut arguments = [it.lhs().unwrap(), it.rhs().unwrap()].into_iter();
+            lower_constant_call(expression, &mut arguments, code_map)
+        }
+        ast::Expression::MethodCall(it) => {
+            let mut arguments = std::iter::once(it.caller()).chain(it.arguments().iter());
+            lower_constant_call(expression, &mut arguments, code_map)
+        }
         ast::Expression::TypeAscription(it) => lower_constant(it.inner().unwrap(), code_map),
         ast::Expression::DecimalNumber(it) => {
             let span = it.syntax().span();
@@ -285,15 +296,20 @@ fn lower_constant(expression: ast::Expression, code_map: &codemap::CodeMap) -> V
         ast::Expression::KwFalse(_) => [mir::Constant::Bool(false)].into(),
         ast::Expression::KwTrue(_) => [mir::Constant::Bool(true)].into(),
         ast::Expression::Variable(_)
-        | ast::Expression::FunctionCall(_)
-        | ast::Expression::BinaryOperation(_)
         | ast::Expression::Index(_)
         | ast::Expression::NamedArgument(_)
         | ast::Expression::Lvalue(_)
         | ast::Expression::ListLiteral(_)
-        | ast::Expression::MethodCall(_)
         | ast::Expression::FieldAccess(_) => todo!(),
     }
+}
+
+fn lower_constant_call(
+    expression: ast::Expression,
+    arguments: &mut dyn Iterator<Item = ast::Expression>,
+    code_map: &codemap::CodeMap,
+) -> Vec<mir::Constant> {
+    todo!()
 }
 
 fn lower_variable(it: ast::Variable, basic_block: Id<mir::BasicBlock>, c: &mut Context) -> Bundle {
