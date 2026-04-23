@@ -473,7 +473,7 @@ fn lower_call(
         .map(|it| lower_expression(it, basic_block, c))
         .collect();
 
-    let function_like: ast::FunctionLike = c.typing.resolved_calls[&expression.unmanaged()];
+    let function_like = c.typing.resolved_calls[&expression.unmanaged()];
     let Some(function) = ast::Function::cast(function_like.syntax()) else {
         assert!(ast::Struct::cast(function_like.syntax()).is_some());
         let arguments: Vec<_> = arguments.into_iter().flat_map(Bundle::values).collect();
