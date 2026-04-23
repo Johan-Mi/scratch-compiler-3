@@ -485,37 +485,7 @@ fn lower_call(
     }
 
     if function.body().is_none() {
-        let name = function.name().unwrap().span();
-        return match c.code_map.find_file(name.low()).source_slice(name) {
-            "get" => todo!(),
-            "=" => {
-                let [refs, values] = arguments.try_into().ok().unwrap();
-                let ops = std::iter::zip(refs.refs(), values.values())
-                    .map(|(target, value)| c.program.ops.insert(mir::Op::Store { target, value }));
-                c.program.basic_blocks[basic_block].0.extend(ops);
-                Bundle::Values(Vec::new())
-            }
-            "push" => todo!(),
-            "delete" => todo!(),
-            "pop" => todo!(),
-            "delete-all" => todo!(),
-            "insert" => todo!(),
-            "replace-last" => todo!(),
-            "last" => todo!(),
-            "index" => todo!(),
-            "length" => todo!(),
-            "contains" => todo!(),
-            _ => {
-                let arguments = arguments.into_iter().flat_map(Bundle::values).collect();
-                let op = c.program.ops.insert(mir::Op::Intrinsic { name, arguments });
-                c.program.basic_blocks[basic_block].0.push(op);
-                (c.typing.return_types[&function.unmanaged()] != ty::Base::Unit)
-                    .then_some(mir::Value::Op(op))
-                    .into_iter()
-                    .collect::<Vec<_>>()
-                    .into()
-            }
-        };
+        return lower_intrinsic_call(function, arguments, basic_block, c);
     }
 
     let function = c.functions[&function.unmanaged()];
@@ -532,6 +502,45 @@ fn lower_call(
         .map(|index| mir::Value::Returned { call, index })
         .collect::<Vec<_>>()
         .into()
+}
+
+fn lower_intrinsic_call(
+    function: ast::Function,
+    arguments: Vec<Bundle>,
+    basic_block: Id<mir::BasicBlock>,
+    c: &mut Context,
+) -> Bundle {
+    let name = function.name().unwrap().span();
+    match c.code_map.find_file(name.low()).source_slice(name) {
+        "get" => todo!(),
+        "=" => {
+            let [refs, values] = arguments.try_into().ok().unwrap();
+            let ops = std::iter::zip(refs.refs(), values.values())
+                .map(|(target, value)| c.program.ops.insert(mir::Op::Store { target, value }));
+            c.program.basic_blocks[basic_block].0.extend(ops);
+            Bundle::Values(Vec::new())
+        }
+        "push" => todo!(),
+        "delete" => todo!(),
+        "pop" => todo!(),
+        "delete-all" => todo!(),
+        "insert" => todo!(),
+        "replace-last" => todo!(),
+        "last" => todo!(),
+        "index" => todo!(),
+        "length" => todo!(),
+        "contains" => todo!(),
+        _ => {
+            let arguments = arguments.into_iter().flat_map(Bundle::values).collect();
+            let op = c.program.ops.insert(mir::Op::Intrinsic { name, arguments });
+            c.program.basic_blocks[basic_block].0.push(op);
+            (c.typing.return_types[&function.unmanaged()] != ty::Base::Unit)
+                .then_some(mir::Value::Op(op))
+                .into_iter()
+                .collect::<Vec<_>>()
+                .into()
+        }
+    }
 }
 
 enum Bundle {
