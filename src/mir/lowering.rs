@@ -20,7 +20,7 @@ pub fn lower<'src>(
     };
 
     let mut program = mir::Program::default();
-    let functions = function_asts()
+    let functions: HashMap<_, _> = function_asts()
         .map(ast::Function::unmanaged)
         .zip(std::iter::repeat_with(|| {
             program.basic_blocks.insert(mir::BasicBlock(Vec::new()))
@@ -41,20 +41,9 @@ pub fn lower<'src>(
         })
         .collect();
 
-    let mut context = Context {
-        program,
-        code_map,
-        resolved_variables,
-        typing,
-        layouts,
-        functions,
-        variables,
-        current_function: None,
-    };
-
     for function in function_asts().filter(|it| it.body().is_some()) {
         let pos = function.syntax().span().low();
-        let basic_block = context.functions[&function.unmanaged()];
+        let basic_block = functions[&function.unmanaged()];
         let file = code_map.find_file(pos);
         let name = file.source_slice(function.name().unwrap().span());
         let function = match name {
@@ -78,14 +67,20 @@ pub fn lower<'src>(
                 ),
             },
         };
-        assert!(
-            context
-                .program
-                .functions
-                .insert(basic_block, function)
-                .is_none()
-        );
+        assert!(program.functions.insert(basic_block, function).is_none());
     }
+
+    let mut context = Context {
+        program,
+        code_map,
+        resolved_variables,
+        typing,
+        layouts,
+        functions,
+        variables,
+        current_function: None,
+    };
+
     for (function, body) in function_asts().filter_map(|it| Some((it, it.body()?))) {
         let basic_block = context.functions[&function.unmanaged()];
         context.current_function = Some(function);
