@@ -12,17 +12,19 @@ pub fn lower<'src>(
     layouts: &ty::layout::S,
 ) -> mir::Program<'src> {
     let function_asts = || {
-        ast.documents().flat_map(ast::Document::functions).chain(
-            ast.documents()
-                .flat_map(ast::Document::sprites)
-                .flat_map(ast::Sprite::functions),
-        )
+        ast.documents()
+            .flat_map(ast::Document::functions)
+            .chain(
+                ast.documents()
+                    .flat_map(ast::Document::sprites)
+                    .flat_map(ast::Sprite::functions),
+            )
+            .filter_map(|it| Some(it).zip(it.body()))
     };
 
     let mut program = mir::Program::default();
     let functions: HashMap<_, _> = function_asts()
-        .filter(|it| it.body().is_none())
-        .map(ast::Function::unmanaged)
+        .map(|(it, _)| it.unmanaged())
         .zip(std::iter::repeat_with(|| {
             program.basic_blocks.insert(mir::BasicBlock(Vec::new()))
         }))
@@ -42,34 +44,36 @@ pub fn lower<'src>(
         })
         .collect();
 
-    for function in function_asts().filter(|it| it.body().is_some()) {
-        let pos = function.syntax().span().low();
-        let basic_block = functions[&function.unmanaged()];
-        let file = code_map.find_file(pos);
-        let name = file.source_slice(function.name().unwrap().span());
-        let function = match name {
-            "when-flag-clicked" => mir::Function::WhenFlagClicked,
-            "when-key-pressed" => mir::Function::WhenKeyPressed {
-                key: function.tag().unwrap().span().low(),
-            },
-            "when-cloned" => mir::Function::WhenCloned,
-            "when-received" => mir::Function::WhenReceived {
-                message: function.tag().unwrap().span().low(),
-            },
-            _ => mir::Function::Normal {
-                name,
-                parameter_count: typing.parameter_types[&function.unmanaged()]
-                    .iter()
-                    .map(|it| ty::layout::size(it.base, layouts))
-                    .sum(),
-                return_value_count: ty::layout::size(
-                    typing.return_types[&function.unmanaged()].base,
-                    layouts,
-                ),
-            },
-        };
-        assert!(program.functions.insert(basic_block, function).is_none());
-    }
+    program.functions = function_asts()
+        .map(|(function, _)| {
+            let pos = function.syntax().span().low();
+            let basic_block = functions[&function.unmanaged()];
+            let file = code_map.find_file(pos);
+            let name = file.source_slice(function.name().unwrap().span());
+            let function = match name {
+                "when-flag-clicked" => mir::Function::WhenFlagClicked,
+                "when-key-pressed" => mir::Function::WhenKeyPressed {
+                    key: function.tag().unwrap().span().low(),
+                },
+                "when-cloned" => mir::Function::WhenCloned,
+                "when-received" => mir::Function::WhenReceived {
+                    message: function.tag().unwrap().span().low(),
+                },
+                _ => mir::Function::Normal {
+                    name,
+                    parameter_count: typing.parameter_types[&function.unmanaged()]
+                        .iter()
+                        .map(|it| ty::layout::size(it.base, layouts))
+                        .sum(),
+                    return_value_count: ty::layout::size(
+                        typing.return_types[&function.unmanaged()].base,
+                        layouts,
+                    ),
+                },
+            };
+            (basic_block, function)
+        })
+        .collect();
 
     let mut context = Context {
         program,
@@ -82,7 +86,7 @@ pub fn lower<'src>(
         current_function: None,
     };
 
-    for (function, body) in function_asts().filter_map(|it| Some((it, it.body()?))) {
+    for (function, body) in function_asts() {
         let basic_block = context.functions[&function.unmanaged()];
         context.current_function = Some(function);
         for statement in body.statements() {
