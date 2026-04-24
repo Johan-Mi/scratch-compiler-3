@@ -21,6 +21,7 @@ pub fn lower<'src>(
 
     let mut program = mir::Program::default();
     let functions: HashMap<_, _> = function_asts()
+        .filter(|it| it.body().is_none())
         .map(ast::Function::unmanaged)
         .zip(std::iter::repeat_with(|| {
             program.basic_blocks.insert(mir::BasicBlock(Vec::new()))
