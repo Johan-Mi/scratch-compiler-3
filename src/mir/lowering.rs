@@ -328,11 +328,8 @@ fn lower_variable(it: ast::Variable, basic_block: Id<mir::BasicBlock>, c: &mut C
     if let Some(variables) = c.variables.get(&definition) {
         let basic_block = &mut c.program.basic_blocks[basic_block].0;
         let start = basic_block.len();
-        let loads = variables
-            .iter()
-            .map(|&variable| mir::Ref::Variable(variable))
-            .map(|source| c.program.ops.insert(mir::Op::Load { source }));
-        basic_block.extend(loads);
+        let variables = variables.iter().copied().map(mir::Ref::Variable);
+        basic_block.extend(variables.map(|source| c.program.ops.insert(mir::Op::Load { source })));
         let ops = basic_block[start..].iter().map(|&it| mir::Value::Op(it));
         ops.collect::<Vec<_>>()
     } else {
