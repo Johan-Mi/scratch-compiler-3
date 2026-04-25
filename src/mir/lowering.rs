@@ -509,7 +509,21 @@ fn lower_intrinsic_call(
 ) -> Bundle {
     let name = function.name().unwrap().span();
     match c.code_map.find_file(name.low()).source_slice(name) {
-        "get" => todo!(),
+        "get" => {
+            let [refs] = arguments.try_into().ok().unwrap();
+            let basic_block = &mut c.program.basic_blocks[basic_block].0;
+            let start = basic_block.len();
+            basic_block.extend(
+                refs.refs()
+                    .into_iter()
+                    .map(|source| c.program.ops.insert(mir::Op::Load { source })),
+            );
+            basic_block[start..]
+                .iter()
+                .map(|&it| mir::Value::Op(it))
+                .collect::<Vec<_>>()
+                .into()
+        }
         "=" => {
             let [refs, values] = arguments.try_into().ok().unwrap();
             let ops = std::iter::zip(refs.refs(), values.values())
