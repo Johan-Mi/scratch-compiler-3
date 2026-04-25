@@ -232,6 +232,11 @@ impl<'src> Compiler<'src, '_> {
                 self.target.put(block::delete_all_of_list(self.lists[list]));
                 None
             }
+            mir::Op::DeleteLast(list) => {
+                self.target
+                    .put(block::delete_of_list(self.lists[list], "last".into()));
+                None
+            }
             mir::Op::Push { list, value } => {
                 let value = self.value(*value, function);
                 self.target.put(block::append(self.lists[list], value));

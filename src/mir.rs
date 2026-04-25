@@ -81,6 +81,7 @@ pub enum Op {
     },
 
     DeleteAll(Id<List>),
+    DeleteLast(Id<List>),
     Push {
         list: Id<List>,
         value: Value,
@@ -123,7 +124,7 @@ impl Op {
                 list: _,
                 value: arg,
             } => Left(std::slice::from_ref(arg).iter()),
-            Self::Load { .. } | Self::Forever(_) | Self::DeleteAll(_) => {
+            Self::Load { .. } | Self::Forever(_) | Self::DeleteAll(_) | Self::DeleteLast(_) => {
                 Left(std::slice::Iter::default())
             }
             Self::Return {
@@ -168,7 +169,7 @@ impl Op {
                 list: _,
                 value: arg,
             } => Left(std::slice::from_mut(arg).iter_mut()),
-            Self::Load { .. } | Self::Forever(_) | Self::DeleteAll(_) => {
+            Self::Load { .. } | Self::Forever(_) | Self::DeleteAll(_) | Self::DeleteLast(_) => {
                 Left(std::slice::IterMut::default())
             }
             Self::Return {

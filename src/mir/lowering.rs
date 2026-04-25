@@ -525,7 +525,15 @@ fn lower_intrinsic_call(
             Bundle::Values(Vec::new())
         }
         "delete" => todo!(),
-        "pop" => todo!(),
+        "pop" => {
+            let [lists] = arguments.try_into().ok().unwrap();
+            let ops = lists
+                .lists()
+                .into_iter()
+                .map(|list| c.program.ops.insert(mir::Op::DeleteLast(list)));
+            c.program.basic_blocks[basic_block].0.extend(ops);
+            Bundle::Values(Vec::new())
+        }
         "delete-all" => {
             let [lists] = arguments.try_into().ok().unwrap();
             let ops = lists
