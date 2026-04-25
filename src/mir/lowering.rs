@@ -517,7 +517,13 @@ fn lower_intrinsic_call(
             c.program.basic_blocks[basic_block].0.extend(ops);
             Bundle::Values(Vec::new())
         }
-        "push" => todo!(),
+        "push" => {
+            let [lists, values] = arguments.try_into().ok().unwrap();
+            let ops = std::iter::zip(lists.lists(), values.values())
+                .map(|(list, value)| c.program.ops.insert(mir::Op::Push { list, value }));
+            c.program.basic_blocks[basic_block].0.extend(ops);
+            Bundle::Values(Vec::new())
+        }
         "delete" => todo!(),
         "pop" => todo!(),
         "delete-all" => todo!(),
