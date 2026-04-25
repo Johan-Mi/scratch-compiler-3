@@ -16,11 +16,15 @@ fn replace-last(_ list: []%T, with item: %T)
 
 fn last(_ list: []%T) %T
 
-fn index(_ list: []%T, of item: %T) Num
+fn index(_ list: []Num, of item: Num) Num
+fn index(_ list: []String, of item: String) Num
+fn index(_ list: []Bool, of item: Bool) Num
 
 fn length(_ list: []%T) Num
 
-fn contains(_ list: []%T, _ item: %T) Bool
+fn contains(_ list: []Num, _ item: Num) Bool
+fn contains(_ list: []String, _ item: String) Bool
+fn contains(_ list: []Bool, _ item: Bool) Bool
 
 fn to-string(_: Num) String
 fn to-string(_: Bool) Bool
