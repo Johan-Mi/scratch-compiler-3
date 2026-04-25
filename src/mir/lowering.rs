@@ -547,8 +547,8 @@ fn lower_intrinsic_call(
         "replace-last" => todo!(),
         "last" => todo!(),
         "index" => todo!(),
-        "length" => todo!(),
-        "contains" => todo!(),
+        "length" if let [Bundle::Lists(_)] = &*arguments => todo!(),
+        "contains" if let [Bundle::Lists(_), Bundle::Values(_)] = &*arguments => todo!(),
         _ => {
             let arguments = arguments.into_iter().flat_map(Bundle::values).collect();
             let op = c.program.ops.insert(mir::Op::Intrinsic { name, arguments });
