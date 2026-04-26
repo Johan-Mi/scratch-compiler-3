@@ -567,7 +567,14 @@ fn lower_intrinsic_call(
             Bundle::Values(Vec::new())
         }
         "insert" => todo!(),
-        "replace-last" => todo!(),
+        "replace-last" => {
+            let [lists, values] = arguments.try_into().ok().unwrap();
+            let lists = lists.lists().into_iter();
+            let ops = std::iter::zip(lists.map(|list| mir::Ref::Last { list }), values.values())
+                .map(|(target, value)| c.program.ops.insert(mir::Op::Store { target, value }));
+            c.program.basic_blocks[basic_block].0.extend(ops);
+            Bundle::Values(Vec::new())
+        }
         "last" => {
             let [lists] = arguments.try_into().ok().unwrap();
             let basic_block = &mut c.program.basic_blocks[basic_block].0;
