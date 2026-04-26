@@ -568,7 +568,23 @@ fn lower_intrinsic_call(
         }
         "insert" => todo!(),
         "replace-last" => todo!(),
-        "last" => todo!(),
+        "last" => {
+            let [lists] = arguments.try_into().ok().unwrap();
+            let basic_block = &mut c.program.basic_blocks[basic_block].0;
+            let start = basic_block.len();
+            basic_block.extend(
+                lists
+                    .lists()
+                    .into_iter()
+                    .map(|list| mir::Ref::Last { list })
+                    .map(|source| c.program.ops.insert(mir::Op::Load { source })),
+            );
+            basic_block[start..]
+                .iter()
+                .map(|&it| mir::Value::Op(it))
+                .collect::<Vec<_>>()
+                .into()
+        }
         "index" => todo!(),
         "length" if let [Bundle::Lists(lists)] = &*arguments => {
             let [list, ..] = **lists else {

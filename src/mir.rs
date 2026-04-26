@@ -225,6 +225,7 @@ impl Constant {
 pub enum Ref {
     Variable(Id<Variable>),
     List { list: Id<List>, index: Value },
+    Last { list: Id<List> },
 }
 
 pub struct Variable {

@@ -158,6 +158,9 @@ impl<'src> Compiler<'src, '_> {
                     let index = self.value(index, function);
                     self.target.item_num_of_list(self.lists[&list], index)
                 }
+                mir::Ref::Last { list } => self
+                    .target
+                    .item_num_of_list(self.lists[&list], "last".into()),
             }),
             mir::Op::Store { target, value } => {
                 let value = self.value(*value, function);
@@ -167,6 +170,9 @@ impl<'src> Compiler<'src, '_> {
                     }
                     mir::Ref::List { list, index } => {
                         block::replace(self.lists[&list], self.value(index, function), value)
+                    }
+                    mir::Ref::Last { list } => {
+                        block::replace(self.lists[&list], "last".into(), value)
                     }
                 };
                 self.target.put(block);
