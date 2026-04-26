@@ -4,7 +4,7 @@ fn =(_ var: *%T, _ value: %T)
 
 fn push(_ list: []%T, _ value: %T)
 
-fn delete(_ list: []%T, index _: Num)
+fn delete(_ list: []%T, index: Num)
 
 fn pop(_ list: []%T)
 
