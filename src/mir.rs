@@ -86,6 +86,7 @@ pub enum Op {
         list: Id<List>,
         value: Value,
     },
+    Length(Id<List>),
 
     Intrinsic {
         name: codemap::Span,
@@ -124,9 +125,11 @@ impl Op {
                 list: _,
                 value: arg,
             } => Left(std::slice::from_ref(arg).iter()),
-            Self::Load { .. } | Self::Forever(_) | Self::DeleteAll(_) | Self::DeleteLast(_) => {
-                Left(std::slice::Iter::default())
-            }
+            Self::Load { .. }
+            | Self::Forever(_)
+            | Self::DeleteAll(_)
+            | Self::DeleteLast(_)
+            | Self::Length(_) => Left(std::slice::Iter::default()),
             Self::Return {
                 function: _,
                 values,
@@ -169,9 +172,11 @@ impl Op {
                 list: _,
                 value: arg,
             } => Left(std::slice::from_mut(arg).iter_mut()),
-            Self::Load { .. } | Self::Forever(_) | Self::DeleteAll(_) | Self::DeleteLast(_) => {
-                Left(std::slice::IterMut::default())
-            }
+            Self::Load { .. }
+            | Self::Forever(_)
+            | Self::DeleteAll(_)
+            | Self::DeleteLast(_)
+            | Self::Length(_) => Left(std::slice::IterMut::default()),
             Self::Return {
                 function: _,
                 values,

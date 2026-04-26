@@ -242,6 +242,7 @@ impl<'src> Compiler<'src, '_> {
                 self.target.put(block::append(self.lists[list], value));
                 None
             }
+            mir::Op::Length(list) => Some(self.target.length_of_list(self.lists[list])),
             mir::Op::Intrinsic { name, arguments } => {
                 let arguments = arguments.iter().map(|&it| self.value(it, function));
                 let arguments = arguments.collect();

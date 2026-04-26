@@ -561,7 +561,13 @@ fn lower_intrinsic_call(
         "replace-last" => todo!(),
         "last" => todo!(),
         "index" => todo!(),
-        "length" if let [Bundle::Lists(_)] = &*arguments => todo!(),
+        "length" if let [Bundle::Lists(lists)] = &*arguments => {
+            let [list, ..] = **lists else {
+                todo!("lower length([]ZST)");
+            };
+            let op = c.program.ops.insert(mir::Op::Length(list));
+            Vec::from([mir::Value::Op(op)]).into()
+        }
         "contains" if let [Bundle::Lists(_), Bundle::Values(_)] = &*arguments => todo!(),
         _ => {
             let arguments = arguments.into_iter().flat_map(Bundle::values).collect();
