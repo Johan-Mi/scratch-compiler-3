@@ -228,6 +228,11 @@ impl<'src> Compiler<'src, '_> {
                     .use_custom_block(self.custom_blocks[function], arguments);
                 None
             }
+            mir::Op::Delete { list, index } => {
+                let (list, index) = (self.lists[list], self.value(*index, function));
+                self.target.put(block::delete_of_list(list, index));
+                None
+            }
             mir::Op::DeleteAll(list) => {
                 self.target.put(block::delete_all_of_list(self.lists[list]));
                 None

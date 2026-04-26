@@ -80,6 +80,10 @@ pub enum Op {
         arguments: Vec<Value>,
     },
 
+    Delete {
+        list: Id<List>,
+        index: Value,
+    },
     DeleteAll(Id<List>),
     DeleteLast(Id<List>),
     Push {
@@ -120,6 +124,10 @@ impl Op {
                 condition: arg,
                 then: _,
                 r#else: _,
+            }
+            | Self::Delete {
+                list: _,
+                index: arg,
             }
             | Self::Push {
                 list: _,
@@ -167,6 +175,10 @@ impl Op {
                 condition: arg,
                 then: _,
                 r#else: _,
+            }
+            | Self::Delete {
+                list: _,
+                index: arg,
             }
             | Self::Push {
                 list: _,
