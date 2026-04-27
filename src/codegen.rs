@@ -152,16 +152,7 @@ impl<'src> Compiler<'src, '_> {
 
     fn op(&mut self, op: &mir::Op, function: Id<mir::BasicBlock>) -> Option<sb3::Operand<'src>> {
         match op {
-            mir::Op::Load { source } => Some(match *source {
-                mir::Ref::Variable(variable) => self.variables[&variable].into(),
-                mir::Ref::List { list, index } => {
-                    let index = self.value(index, function);
-                    self.target.item_num_of_list(self.lists[&list], index)
-                }
-                mir::Ref::Last { list } => self
-                    .target
-                    .item_num_of_list(self.lists[&list], "last".into()),
-            }),
+            mir::Op::Load { source } => Some(self.load(*source, function)),
             mir::Op::Store { target, value } => {
                 let value = self.value(*value, function);
                 let block = match *target {
@@ -260,6 +251,19 @@ impl<'src> Compiler<'src, '_> {
                 let name = self.code_map.find_file(name.low()).source_slice(*name);
                 self.intrinsic(name, arguments)
             }
+        }
+    }
+
+    fn load(&mut self, source: mir::Ref, function: Id<mir::BasicBlock>) -> sb3::Operand<'src> {
+        match source {
+            mir::Ref::Variable(variable) => self.variables[&variable].into(),
+            mir::Ref::List { list, index } => {
+                let index = self.value(index, function);
+                self.target.item_num_of_list(self.lists[&list], index)
+            }
+            mir::Ref::Last { list } => self
+                .target
+                .item_num_of_list(self.lists[&list], "last".into()),
         }
     }
 
