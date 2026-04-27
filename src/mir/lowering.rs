@@ -511,18 +511,7 @@ fn lower_intrinsic_call(
     match c.code_map.find_file(name.low()).source_slice(name) {
         "get" => {
             let [refs] = arguments.try_into().ok().unwrap();
-            let basic_block = &mut c.program.basic_blocks[basic_block].0;
-            let start = basic_block.len();
-            basic_block.extend(
-                refs.refs()
-                    .into_iter()
-                    .map(|source| c.program.ops.insert(mir::Op::Load { source })),
-            );
-            basic_block[start..]
-                .iter()
-                .map(|&it| mir::Value::Op(it))
-                .collect::<Vec<_>>()
-                .into()
+            load(refs.refs().into_iter(), basic_block, c)
         }
         "=" => {
             let [refs, values] = arguments.try_into().ok().unwrap();
@@ -577,20 +566,8 @@ fn lower_intrinsic_call(
         }
         "last" => {
             let [lists] = arguments.try_into().ok().unwrap();
-            let basic_block = &mut c.program.basic_blocks[basic_block].0;
-            let start = basic_block.len();
-            basic_block.extend(
-                lists
-                    .lists()
-                    .into_iter()
-                    .map(|list| mir::Ref::Last { list })
-                    .map(|source| c.program.ops.insert(mir::Op::Load { source })),
-            );
-            basic_block[start..]
-                .iter()
-                .map(|&it| mir::Value::Op(it))
-                .collect::<Vec<_>>()
-                .into()
+            let lists = lists.lists().into_iter();
+            load(lists.map(|list| mir::Ref::Last { list }), basic_block, c)
         }
         "index" => todo!(),
         "length" if let [Bundle::Lists(lists)] = &*arguments => {
@@ -617,6 +594,21 @@ fn lower_intrinsic_call(
                 .into()
         }
     }
+}
+
+fn load(
+    sources: impl Iterator<Item = mir::Ref>,
+    basic_block: Id<mir::BasicBlock>,
+    c: &mut Context,
+) -> Bundle {
+    let basic_block = &mut c.program.basic_blocks[basic_block].0;
+    let start = basic_block.len();
+    basic_block.extend(sources.map(|source| c.program.ops.insert(mir::Op::Load { source })));
+    basic_block[start..]
+        .iter()
+        .map(|&it| mir::Value::Op(it))
+        .collect::<Vec<_>>()
+        .into()
 }
 
 enum Bundle {
