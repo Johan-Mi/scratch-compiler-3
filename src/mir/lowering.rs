@@ -600,7 +600,12 @@ fn lower_intrinsic_call(
             let op = c.program.ops.insert(mir::Op::Length(list));
             Vec::from([mir::Value::Op(op)]).into()
         }
-        "contains" if let [Bundle::Lists(_), Bundle::Values(_)] = &*arguments => todo!(),
+        "contains" if let [Bundle::Lists(lists), Bundle::Values(values)] = &*arguments => {
+            let [list] = (**lists).try_into().ok().unwrap();
+            let [value] = (**values).try_into().ok().unwrap();
+            let op = c.program.ops.insert(mir::Op::Contains { list, value });
+            Vec::from([mir::Value::Op(op)]).into()
+        }
         _ => {
             let arguments = arguments.into_iter().flat_map(Bundle::values).collect();
             let op = c.program.ops.insert(mir::Op::Intrinsic { name, arguments });

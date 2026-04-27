@@ -233,6 +233,10 @@ impl<'src> Compiler<'src, '_> {
                 None
             }
             mir::Op::Length(list) => Some(self.target.length_of_list(self.lists[list])),
+            mir::Op::Contains { list, value } => {
+                let value = self.value(*value, function);
+                Some(self.target.list_contains_item(self.lists[list], value))
+            }
             mir::Op::Intrinsic { name, arguments } => {
                 let arguments = arguments.iter().map(|&it| self.value(it, function));
                 let arguments = arguments.collect();

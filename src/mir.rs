@@ -91,6 +91,10 @@ pub enum Op {
         value: Value,
     },
     Length(Id<List>),
+    Contains {
+        list: Id<List>,
+        value: Value,
+    },
 
     Intrinsic {
         name: codemap::Span,
@@ -130,6 +134,10 @@ impl Op {
                 index: arg,
             }
             | Self::Push {
+                list: _,
+                value: arg,
+            }
+            | Self::Contains {
                 list: _,
                 value: arg,
             } => Left(std::slice::from_ref(arg).iter()),
@@ -181,6 +189,10 @@ impl Op {
                 index: arg,
             }
             | Self::Push {
+                list: _,
+                value: arg,
+            }
+            | Self::Contains {
                 list: _,
                 value: arg,
             } => Left(std::slice::from_mut(arg).iter_mut()),
