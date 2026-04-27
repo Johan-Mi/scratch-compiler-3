@@ -530,28 +530,22 @@ fn lower_intrinsic_call(
         "delete" => {
             let [lists, values] = arguments.try_into().ok().unwrap();
             let index = one(values.values());
-            let ops = lists
-                .lists()
-                .into_iter()
-                .map(|list| c.program.ops.insert(mir::Op::Delete { list, index }));
+            let lists = lists.lists().into_iter();
+            let ops = lists.map(|list| c.program.ops.insert(mir::Op::Delete { list, index }));
             c.program.basic_blocks[basic_block].0.extend(ops);
             Bundle::Values(Vec::new())
         }
         "pop" => {
             let [lists] = arguments.try_into().ok().unwrap();
-            let ops = lists
-                .lists()
-                .into_iter()
-                .map(|list| c.program.ops.insert(mir::Op::DeleteLast(list)));
+            let lists = lists.lists().into_iter();
+            let ops = lists.map(|list| c.program.ops.insert(mir::Op::DeleteLast(list)));
             c.program.basic_blocks[basic_block].0.extend(ops);
             Bundle::Values(Vec::new())
         }
         "delete-all" => {
             let [lists] = arguments.try_into().ok().unwrap();
-            let ops = lists
-                .lists()
-                .into_iter()
-                .map(|list| c.program.ops.insert(mir::Op::DeleteAll(list)));
+            let lists = lists.lists().into_iter();
+            let ops = lists.map(|list| c.program.ops.insert(mir::Op::DeleteAll(list)));
             c.program.basic_blocks[basic_block].0.extend(ops);
             Bundle::Values(Vec::new())
         }
