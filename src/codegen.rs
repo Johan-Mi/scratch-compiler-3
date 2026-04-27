@@ -154,19 +154,7 @@ impl<'src> Compiler<'src, '_> {
         match op {
             mir::Op::Load { source } => Some(self.load(*source, function)),
             mir::Op::Store { target, value } => {
-                let value = self.value(*value, function);
-                let block = match *target {
-                    mir::Ref::Variable(variable) => {
-                        block::set_variable(self.variables[&variable], value)
-                    }
-                    mir::Ref::List { list, index } => {
-                        block::replace(self.lists[&list], self.value(index, function), value)
-                    }
-                    mir::Ref::Last { list } => {
-                        block::replace(self.lists[&list], "last".into(), value)
-                    }
-                };
-                self.target.put(block);
+                self.store(*target, *value, function);
                 None
             }
             mir::Op::Repeat { times, body } => {
@@ -265,6 +253,18 @@ impl<'src> Compiler<'src, '_> {
                 .target
                 .item_num_of_list(self.lists[&list], "last".into()),
         }
+    }
+
+    fn store(&mut self, target: mir::Ref, value: mir::Value, function: Id<mir::BasicBlock>) {
+        let value = self.value(value, function);
+        let block = match target {
+            mir::Ref::Variable(variable) => block::set_variable(self.variables[&variable], value),
+            mir::Ref::List { list, index } => {
+                block::replace(self.lists[&list], self.value(index, function), value)
+            }
+            mir::Ref::Last { list } => block::replace(self.lists[&list], "last".into(), value),
+        };
+        self.target.put(block);
     }
 
     fn value(&mut self, value: mir::Value, function: Id<mir::BasicBlock>) -> sb3::Operand<'src> {
