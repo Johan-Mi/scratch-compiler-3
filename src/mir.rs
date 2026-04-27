@@ -90,6 +90,11 @@ pub enum Op {
         list: Id<List>,
         value: Value,
     },
+    Insert {
+        list: Id<List>,
+        value: Value,
+        index: Value,
+    },
     Length(Id<List>),
     Contains {
         list: Id<List>,
@@ -110,6 +115,11 @@ impl Op {
             Self::Store {
                 target: Ref::List { index, .. },
                 value,
+            }
+            | Self::Insert {
+                list: _,
+                value,
+                index,
             } => Right([index, value].into_iter()),
             Self::Store { value: arg, .. }
             | Self::Load {
@@ -165,6 +175,11 @@ impl Op {
             Self::Store {
                 target: Ref::List { index, .. },
                 value,
+            }
+            | Self::Insert {
+                list: _,
+                value,
+                index,
             } => Right([index, value].into_iter()),
             Self::Store { value: arg, .. }
             | Self::Load {

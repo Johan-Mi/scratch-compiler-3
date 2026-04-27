@@ -232,6 +232,12 @@ impl<'src> Compiler<'src, '_> {
                 self.target.put(block::append(self.lists[list], value));
                 None
             }
+            mir::Op::Insert { list, value, index } => {
+                let (value, index) = (self.value(*value, function), self.value(*index, function));
+                self.target
+                    .put(block::insert_at_list(self.lists[list], value, index));
+                None
+            }
             mir::Op::Length(list) => Some(self.target.length_of_list(self.lists[list])),
             mir::Op::Contains { list, value } => {
                 let value = self.value(*value, function);
