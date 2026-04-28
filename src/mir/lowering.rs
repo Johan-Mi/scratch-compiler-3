@@ -570,7 +570,13 @@ fn lower_intrinsic_call(
             let lists = lists.lists().into_iter();
             load(lists.map(|list| mir::Ref::Last { list }), basic_block, c)
         }
-        "index" => todo!(),
+        "index" => {
+            let [lists, values] = arguments.try_into().ok().unwrap();
+            let [list] = lists.lists().try_into().ok().unwrap();
+            let [value] = values.values().try_into().ok().unwrap();
+            let op = c.program.ops.insert(mir::Op::Index { list, value });
+            Vec::from([mir::Value::Op(op)]).into()
+        }
         "length" if let [Bundle::Lists(lists)] = &*arguments => {
             let [list, ..] = **lists else {
                 todo!("lower length([]ZST)");

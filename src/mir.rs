@@ -96,6 +96,10 @@ pub enum Op {
         index: Value,
     },
     Length(Id<List>),
+    Index {
+        list: Id<List>,
+        value: Value,
+    },
     Contains {
         list: Id<List>,
         value: Value,
@@ -144,6 +148,10 @@ impl Op {
                 index: arg,
             }
             | Self::Push {
+                list: _,
+                value: arg,
+            }
+            | Self::Index {
                 list: _,
                 value: arg,
             }
@@ -204,6 +212,10 @@ impl Op {
                 index: arg,
             }
             | Self::Push {
+                list: _,
+                value: arg,
+            }
+            | Self::Index {
                 list: _,
                 value: arg,
             }
