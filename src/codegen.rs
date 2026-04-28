@@ -153,10 +153,7 @@ impl<'src> Compiler<'src, '_> {
     fn op(&mut self, op: &mir::Op, function: Id<mir::BasicBlock>) -> Option<sb3::Operand<'src>> {
         match op {
             mir::Op::Load { source } => Some(self.load(*source, function)),
-            mir::Op::Store { target, value } => {
-                self.store(*target, *value, function);
-                None
-            }
+            mir::Op::Store { target, value } => (self.store(*target, *value, function), None).1,
             mir::Op::Repeat { times, body } => {
                 let times = self.value(*times, function);
                 let after = self.target.repeat(times);
