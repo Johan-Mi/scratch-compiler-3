@@ -137,10 +137,7 @@ impl<'src> Compiler<'src, '_> {
                     self.target.insert_at(self.points.remove(&body).unwrap());
             }
         }
-        for &op in &self.mir.basic_blocks[body].0 {
-            let res = self.op(&self.mir.ops[op], body);
-            self.ops.extend(Some(op).zip(res));
-        }
+        self.basic_block(body, body);
     }
 
     fn basic_block(&mut self, block: Id<mir::BasicBlock>, function: Id<mir::BasicBlock>) {
