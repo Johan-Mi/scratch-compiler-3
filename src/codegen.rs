@@ -70,21 +70,21 @@ pub fn compile(
         let (custom_blocks, points) = mir
             .functions
             .iter()
-            .filter_map(|(&basic_block, &it)| match it {
-                mir::Function::Normal {
+            .filter_map(|(&basic_block, &it)| {
+                let mir::Function::Normal {
                     name,
                     parameter_count,
                     ..
-                } => {
-                    let parameters = (0..parameter_count).map(|index| sb3::Parameter {
-                        name: format!("{name}.{index}"),
-                        kind: sb3::ParameterKind::StringOrNumber,
-                    });
-                    let (custom_block, point) =
-                        target.add_custom_block(name.to_owned(), parameters);
-                    Some(((basic_block, custom_block), (basic_block, point)))
-                }
-                _ => None,
+                } = it
+                else {
+                    return None;
+                };
+                let parameters = (0..parameter_count).map(|index| sb3::Parameter {
+                    name: format!("{name}.{index}"),
+                    kind: sb3::ParameterKind::StringOrNumber,
+                });
+                let (custom_block, point) = target.add_custom_block(name.to_owned(), parameters);
+                Some(((basic_block, custom_block), (basic_block, point)))
             })
             .collect();
 
