@@ -24,9 +24,9 @@ pub fn s(
             continue;
         };
 
-        if it
-            .parameters()
-            .unwrap()
+        let parameters = it.parameters().unwrap();
+
+        if parameters
             .iter()
             .map(|field| type_expressions[&field.ty().unwrap().unmanaged()])
             .any(|ty| ty.base == Base::Struct(it))
@@ -38,9 +38,7 @@ pub fn s(
             continue;
         }
 
-        let layout = it
-            .parameters()
-            .unwrap()
+        let layout = parameters
             .iter()
             .map(|field| type_expressions[&field.ty().unwrap().unmanaged()])
             .inspect(|ty| assert_eq!(Shape::Flat, ty.shape))
