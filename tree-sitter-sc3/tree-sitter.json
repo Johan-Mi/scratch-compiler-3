@@ -1,0 +1,40 @@
+{
+  "$schema": "https://tree-sitter.github.io/tree-sitter/assets/schemas/config.schema.json",
+  "grammars": [
+    {
+      "name": "sc3",
+      "camelcase": "SC3",
+      "title": "SC3",
+      "scope": "source.sc3",
+      "file-types": [
+        "sc3"
+      ],
+      "injection-regex": "^sc3$",
+      "class-name": "TreeSitterSc3"
+    }
+  ],
+  "metadata": {
+    "version": "0.1.0",
+    "license": "Unlicense",
+    "description": "Scratch Compiler 3",
+    "authors": [
+      {
+        "name": "Johan Milanov",
+        "email": "johanmi@protonmail.com",
+        "url": "https://github.com/Johan-Mi"
+      }
+    ],
+    "links": {
+      "repository": "https://github.com/Johan-Mi/scratch-compiler-3"
+    }
+  },
+  "bindings": {
+    "c": true,
+    "go": true,
+    "node": true,
+    "python": true,
+    "rust": true,
+    "swift": true,
+    "zig": false
+  }
+}
