@@ -73,6 +73,8 @@
 (named_argument
   . (identifier) @label)
 
+(parameter (identifier) @variable.parameter . ":")
+
 (binary_expression
   "." . (identifier) @variable.other.member)
 
