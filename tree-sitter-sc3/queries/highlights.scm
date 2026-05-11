@@ -80,7 +80,7 @@
 
 (
   (identifier) @comment.unused
-  (#match? @comment.unused "_")
+  (#eq? @comment.unused "_")
 )
 
 (type_expression
