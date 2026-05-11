@@ -71,7 +71,7 @@ module.exports = grammar({
       ),
 
     variable_definition: $ =>
-      seq("let", optional($.identifier), "=", $._expression),
+      seq("let", field("variable", optional($.identifier)), "=", $._expression),
 
     if_statement: $ =>
       seq(

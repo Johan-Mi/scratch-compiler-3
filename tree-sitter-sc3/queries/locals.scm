@@ -6,6 +6,7 @@
 
 (parameter (identifier) @local.definition.variable.parameter . ":")
 
-(variable_definition (identifier) @local.definition.variable)
+(variable_definition
+  variable: (identifier) @local.definition.variable)
 
 (identifier) @local.reference
