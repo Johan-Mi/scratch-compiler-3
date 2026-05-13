@@ -19,7 +19,7 @@ pub fn lower<'src>(
                     .flat_map(ast::Document::sprites)
                     .flat_map(ast::Sprite::functions),
             )
-            .filter_map(|it| Some(it).zip(it.body()))
+            .filter_map(|it| Some((it, it.body()?)))
     };
 
     let mut program = mir::Program::default();

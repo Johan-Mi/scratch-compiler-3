@@ -83,7 +83,7 @@ pub fn check<'src>(
         .syntax()
         .pre_order()
         .filter_map(ast::TypeExpression::cast)
-        .filter_map(|it| Some(it.unmanaged()).zip(evaluate(it, ast, code_map, diagnostics)))
+        .filter_map(|it| Some((it.unmanaged(), evaluate(it, ast, code_map, diagnostics)?)))
         .collect();
 
     let mut c = Checker {

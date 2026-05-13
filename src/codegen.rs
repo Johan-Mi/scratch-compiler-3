@@ -55,7 +55,7 @@ pub fn compile(
         let returns = mir
             .functions
             .iter()
-            .filter_map(|(big, it)| Some(big).zip(it.return_value_count()))
+            .filter_map(|(big, it)| Some((big, it.return_value_count()?)))
             .enumerate()
             .map(|(big, (&function, return_value_count))| {
                 let variables = (0..return_value_count).map(|little| {
