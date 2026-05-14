@@ -70,8 +70,7 @@
 (parameter
   . (identifier) @label)
 
-(named_argument
-  . (identifier) @label)
+(label) @label
 
 (parameter (identifier) @variable.parameter . ":")
 

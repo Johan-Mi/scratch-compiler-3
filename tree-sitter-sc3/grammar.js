@@ -119,7 +119,8 @@ module.exports = grammar({
 
     parenthesized_expression: $ => seq("(", $._expression, ")"),
 
-    named_argument: $ => seq($.identifier, token.immediate(":"), $._expression),
+    named_argument: $ =>
+      seq(alias($.identifier, $.label), token.immediate(":"), $._expression),
 
     binary_expression: $ =>
       choice(
