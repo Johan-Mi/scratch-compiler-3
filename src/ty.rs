@@ -140,7 +140,7 @@ pub fn check<'src>(
                 }),
         );
 
-        c.return_ty = returned_by(function.into(), &c);
+        c.return_ty = returned_by(function.into(), c.type_expressions);
         if let Some(return_ty) = c.return_ty {
             assert!(
                 return_types
@@ -486,13 +486,13 @@ fn of_field_access<'src>(
 
 fn returned_by<'src>(
     function_like: ast::FunctionLike<'src>,
-    c: &Checker<'_, 'src>,
+    type_expressions: &HashMap<ast::TypeExpressionUnmanaged, Type<'src>>,
 ) -> Option<Type<'src>> {
     if let Some(it) = ast::Function::cast(function_like.syntax()) {
         let Some(ty) = it.return_ty() else {
             return Some(Base::Unit.into());
         };
-        c.type_expressions.get(&ty.unmanaged()).copied()
+        type_expressions.get(&ty.unmanaged()).copied()
     } else {
         let it = ast::Struct::cast(function_like.syntax()).unwrap();
         Some(Base::Struct(it).into())
@@ -552,7 +552,7 @@ fn of_call<'src>(
             .insert(expression.unmanaged(), function_like)
             .is_none()
     );
-    returned_by(function_like, c)
+    returned_by(function_like, c.type_expressions)
 }
 
 fn resolve_call<'src>(
