@@ -110,7 +110,6 @@ pub fn check<'src>(
         });
 
     let mut parameter_types = HashMap::new();
-    let mut return_types = HashMap::new();
 
     for function in ast.syntax().pre_order().filter_map(ast::Function::cast) {
         assert!(
@@ -140,18 +139,13 @@ pub fn check<'src>(
         );
 
         c.return_ty = returned_by(function.into(), c.type_expressions);
-        if let Some(return_ty) = c.return_ty {
-            assert!(
-                return_types
-                    .insert(function.unmanaged(), return_ty)
-                    .is_none()
+        if let Some(return_ty) = c.return_ty
+            && matches!(return_ty.shape, Shape::List | Shape::Ref)
+        {
+            c.diagnostics.error(
+                format!("type `{}` cannot be used at runtime", return_ty.display(&c)),
+                [primary(function.return_ty().unwrap().syntax().span(), "")],
             );
-            if matches!(return_ty.shape, Shape::List | Shape::Ref) {
-                c.diagnostics.error(
-                    format!("type `{}` cannot be used at runtime", return_ty.display(&c)),
-                    [primary(function.return_ty().unwrap().syntax().span(), "")],
-                );
-            }
         }
 
         if let Some(body) = function.body() {
