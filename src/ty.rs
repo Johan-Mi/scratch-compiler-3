@@ -140,7 +140,7 @@ pub fn check<'src>(
                 }),
         );
 
-        c.return_ty = return_ty(function.into(), &c);
+        c.return_ty = returned_by(function.into(), &c);
         if let Some(return_ty) = c.return_ty {
             assert!(
                 return_types
@@ -484,7 +484,7 @@ fn of_field_access<'src>(
     c.type_expressions.get(&field.ty()?.unmanaged()).copied()
 }
 
-fn return_ty<'src>(
+fn returned_by<'src>(
     function_like: ast::FunctionLike<'src>,
     c: &Checker<'_, 'src>,
 ) -> Option<Type<'src>> {
@@ -552,7 +552,7 @@ fn of_call<'src>(
             .insert(expression.unmanaged(), function_like)
             .is_none()
     );
-    return_ty(function_like, c)
+    returned_by(function_like, c)
 }
 
 fn resolve_call<'src>(
