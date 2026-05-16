@@ -66,7 +66,9 @@ pub fn lower<'src>(
                         .map(|it| ty::layout::size(it.base, layouts))
                         .sum(),
                     return_value_count: ty::layout::size(
-                        typing.return_types[&function.unmanaged()].base,
+                        ty::returned_by(function.into(), &typing.type_expressions)
+                            .unwrap()
+                            .base,
                         layouts,
                     ),
                 },
@@ -594,7 +596,8 @@ fn lower_intrinsic_call(
             let arguments = arguments.into_iter().flat_map(Bundle::values).collect();
             let op = c.program.ops.insert(mir::Op::Intrinsic { name, arguments });
             c.program.basic_blocks[basic_block].0.push(op);
-            (c.typing.return_types[&function.unmanaged()] != ty::Base::Unit)
+            let return_ty = ty::returned_by(function.into(), &c.typing.type_expressions).unwrap();
+            (return_ty != ty::Base::Unit)
                 .then_some(mir::Value::Op(op))
                 .into_iter()
                 .collect::<Vec<_>>()

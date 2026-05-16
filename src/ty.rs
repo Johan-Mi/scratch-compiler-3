@@ -70,7 +70,6 @@ pub struct Ping<'src> {
     pub expression_types: HashMap<ast::ExpressionUnmanaged, Type<'src>>,
     pub resolved_calls: HashMap<ast::ExpressionUnmanaged, ast::FunctionLike<'src>>,
     pub parameter_types: HashMap<ast::FunctionUnmanaged, Vec<Type<'src>>>,
-    pub return_types: HashMap<ast::FunctionUnmanaged, Type<'src>>,
 }
 
 pub fn check<'src>(
@@ -173,7 +172,6 @@ pub fn check<'src>(
         expression_types,
         resolved_calls,
         parameter_types,
-        return_types,
     }
 }
 
@@ -484,7 +482,7 @@ fn of_field_access<'src>(
     c.type_expressions.get(&field.ty()?.unmanaged()).copied()
 }
 
-fn returned_by<'src>(
+pub fn returned_by<'src>(
     function_like: ast::FunctionLike<'src>,
     type_expressions: &HashMap<ast::TypeExpressionUnmanaged, Type<'src>>,
 ) -> Option<Type<'src>> {
