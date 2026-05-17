@@ -69,7 +69,6 @@ pub struct Ping<'src> {
     pub type_expressions: HashMap<ast::TypeExpressionUnmanaged, Type<'src>>,
     pub expression_types: HashMap<ast::ExpressionUnmanaged, Type<'src>>,
     pub resolved_calls: HashMap<ast::ExpressionUnmanaged, ast::FunctionLike<'src>>,
-    pub parameter_types: HashMap<ast::FunctionUnmanaged, Vec<Type<'src>>>,
 }
 
 pub fn check<'src>(
@@ -109,24 +108,7 @@ pub fn check<'src>(
             }
         });
 
-    let mut parameter_types = HashMap::new();
-
     for function in ast.syntax().pre_order().filter_map(ast::Function::cast) {
-        assert!(
-            parameter_types
-                .insert(
-                    function.unmanaged(),
-                    function
-                        .parameters()
-                        .into_iter()
-                        .flat_map(ast::Parameters::iter)
-                        .filter_map(ast::Parameter::ty)
-                        .filter_map(|it| c.type_expressions.get(&it.unmanaged()).copied())
-                        .collect()
-                )
-                .is_none()
-        );
-
         c.variable_types.extend(
             function
                 .parameters()
@@ -165,7 +147,6 @@ pub fn check<'src>(
         type_expressions,
         expression_types,
         resolved_calls,
-        parameter_types,
     }
 }
 
@@ -474,6 +455,17 @@ fn of_field_access<'src>(
         return None;
     };
     c.type_expressions.get(&field.ty()?.unmanaged()).copied()
+}
+
+pub fn parameters_of<'src>(
+    function: ast::Function,
+    type_expressions: &HashMap<ast::TypeExpressionUnmanaged, Type<'src>>,
+) -> impl Iterator<Item = Type<'src>> {
+    function
+        .parameters()
+        .into_iter()
+        .flat_map(ast::Parameters::iter)
+        .map(|it| type_expressions[&it.ty().unwrap().unmanaged()])
 }
 
 pub fn returned_by<'src>(

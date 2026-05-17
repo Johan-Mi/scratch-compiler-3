@@ -61,8 +61,7 @@ pub fn lower<'src>(
                 },
                 _ => mir::Function::Normal {
                     name,
-                    parameter_count: typing.parameter_types[&function.unmanaged()]
-                        .iter()
+                    parameter_count: ty::parameters_of(function, &typing.type_expressions)
                         .map(|it| ty::layout::size(it.base, layouts))
                         .sum(),
                     return_value_count: ty::layout::size(
@@ -342,9 +341,8 @@ fn lower_variable(it: ast::Variable, basic_block: Id<mir::BasicBlock>, c: &mut C
             .iter()
             .position(|it| it.internal_name().unmanaged() == definition)
             .unwrap();
-        let types = &c.typing.parameter_types[&function.unmanaged()];
         let mut range = 0..0;
-        for it in &types[0..=parameter] {
+        for it in ty::parameters_of(function, &c.typing.type_expressions).take(parameter + 1) {
             range = range.end..range.end + ty::layout::size(it.base, c.layouts);
         }
         range
