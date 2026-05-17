@@ -343,11 +343,11 @@ fn lower_variable(it: ast::Variable, basic_block: Id<mir::BasicBlock>, c: &mut C
             .position(|it| it.internal_name().unmanaged() == definition)
             .unwrap();
         let types = &c.typing.parameter_types[&function.unmanaged()];
-        let start: usize = types[0..parameter]
-            .iter()
-            .map(|it| ty::layout::size(it.base, c.layouts))
-            .sum();
-        (start..start + ty::layout::size(types[parameter].base, c.layouts))
+        let mut range = 0..0;
+        for it in &types[0..=parameter] {
+            range = range.end..range.end + ty::layout::size(it.base, c.layouts);
+        }
+        range
             .map(|index| mir::Value::FunctionParameter { index })
             .collect()
     }
