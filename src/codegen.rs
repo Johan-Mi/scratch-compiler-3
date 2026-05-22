@@ -155,17 +155,7 @@ impl<'src> Compiler<'src, '_> {
                 variable,
                 times,
                 body,
-            } => {
-                let times = self.value(*times, function);
-                let after = if let Some(variable) = variable {
-                    self.target.for_(self.variables[variable], times)
-                } else {
-                    self.target.repeat(times)
-                };
-                self.basic_block(*body, function);
-                let _: sb3::InsertionPoint = self.target.insert_at(after);
-                None
-            }
+            } => (self.r#for(*variable, *times, *body, function), None).1,
             mir::Op::While {
                 variable,
                 condition,
@@ -260,6 +250,23 @@ impl<'src> Compiler<'src, '_> {
                 self.intrinsic(name, arguments)
             }
         }
+    }
+
+    fn r#for(
+        &mut self,
+        variable: Option<Id<mir::Variable>>,
+        times: mir::Value,
+        body: Id<mir::BasicBlock>,
+        function: Id<mir::BasicBlock>,
+    ) {
+        let times = self.value(times, function);
+        let after = if let Some(variable) = variable {
+            self.target.for_(self.variables[&variable], times)
+        } else {
+            self.target.repeat(times)
+        };
+        self.basic_block(body, function);
+        let _: sb3::InsertionPoint = self.target.insert_at(after);
     }
 
     fn load(&mut self, source: mir::Ref, function: Id<mir::BasicBlock>) -> sb3::Operand<'src> {
