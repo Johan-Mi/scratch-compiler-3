@@ -151,20 +151,17 @@ impl<'src> Compiler<'src, '_> {
         match op {
             mir::Op::Load { source } => Some(self.load(*source, function)),
             mir::Op::Store { target, value } => (self.store(*target, *value, function), None).1,
-            mir::Op::Repeat { times, body } => {
-                let times = self.value(*times, function);
-                let after = self.target.repeat(times);
-                self.basic_block(*body, function);
-                let _: sb3::InsertionPoint = self.target.insert_at(after);
-                None
-            }
             mir::Op::For {
                 variable,
                 times,
                 body,
             } => {
                 let times = self.value(*times, function);
-                let after = self.target.for_(self.variables[variable], times);
+                let after = if let Some(variable) = variable {
+                    self.target.for_(self.variables[variable], times)
+                } else {
+                    self.target.repeat(times)
+                };
                 self.basic_block(*body, function);
                 let _: sb3::InsertionPoint = self.target.insert_at(after);
                 None

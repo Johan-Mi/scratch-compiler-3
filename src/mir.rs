@@ -55,12 +55,8 @@ pub enum Op {
         value: Value,
     },
 
-    Repeat {
-        times: Value,
-        body: Id<BasicBlock>,
-    },
     For {
-        variable: Id<Variable>,
+        variable: Option<Id<Variable>>,
         times: Value,
         body: Id<BasicBlock>,
     },
@@ -129,10 +125,6 @@ impl Op {
             | Self::Load {
                 source: Ref::List { index: arg, .. },
             }
-            | Self::Repeat {
-                times: arg,
-                body: _,
-            }
             | Self::For {
                 variable: _,
                 times: arg,
@@ -192,10 +184,6 @@ impl Op {
             Self::Store { value: arg, .. }
             | Self::Load {
                 source: Ref::List { index: arg, .. },
-            }
-            | Self::Repeat {
-                times: arg,
-                body: _,
             }
             | Self::For {
                 variable: _,
