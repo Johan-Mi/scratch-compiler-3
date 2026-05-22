@@ -160,17 +160,7 @@ impl<'src> Compiler<'src, '_> {
                 variable,
                 condition,
                 body,
-            } => {
-                let variable = self.variables[variable];
-                self.target
-                    .put(block::set_variable(variable, "true".into()));
-                let after = self.target.while_(variable.into());
-                self.basic_block(*condition, function);
-                let _: sb3::InsertionPoint = self.target.if_(variable.into());
-                self.basic_block(*body, function);
-                let _: sb3::InsertionPoint = self.target.insert_at(after);
-                None
-            }
+            } => (self.r#while(*variable, *condition, *body, function), None).1,
             mir::Op::Forever(body) => {
                 self.target.forever();
                 self.basic_block(*body, function);
@@ -250,6 +240,23 @@ impl<'src> Compiler<'src, '_> {
                 self.intrinsic(name, arguments)
             }
         }
+    }
+
+    fn r#while(
+        &mut self,
+        variable: Id<mir::Variable>,
+        condition: Id<mir::BasicBlock>,
+        body: Id<mir::BasicBlock>,
+        function: Id<mir::BasicBlock>,
+    ) {
+        let variable = self.variables[&variable];
+        self.target
+            .put(block::set_variable(variable, "true".into()));
+        let after = self.target.while_(variable.into());
+        self.basic_block(condition, function);
+        let _: sb3::InsertionPoint = self.target.if_(variable.into());
+        self.basic_block(body, function);
+        let _: sb3::InsertionPoint = self.target.insert_at(after);
     }
 
     fn r#for(
