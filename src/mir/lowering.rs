@@ -172,24 +172,20 @@ fn lower_statement(statement: ast::Statement, basic_block: Id<mir::BasicBlock>, 
             let op = c.program.ops.insert(mir::Op::Forever(body));
             c.program.basic_blocks[basic_block].0.push(op);
         }
-        ast::Statement::While(it) => {
-            let variable = c.program.variables.insert(mir::Variable {
-                value: mir::Constant::PLACEHOLDER,
-            });
-            let condition = c.program.basic_blocks.insert(mir::BasicBlock(Vec::new()));
-            let value = one(lower_expression(it.condition().unwrap(), condition, c).values());
-            let target = mir::Ref::Variable(variable);
-            let store = c.program.ops.insert(mir::Op::Store { target, value });
-            c.program.basic_blocks[condition].0.push(store);
-            let body = lower_block(it.body().unwrap(), c);
-            let op = c.program.ops.insert(mir::Op::While {
-                variable,
-                condition,
-                body,
-            });
-            c.program.basic_blocks[basic_block].0.push(op);
-        }
-        ast::Statement::Until(_) => todo!(),
+        ast::Statement::While(it) => lower_while(
+            it.condition().unwrap(),
+            it.body().unwrap(),
+            false,
+            basic_block,
+            c,
+        ),
+        ast::Statement::Until(it) => lower_while(
+            it.condition().unwrap(),
+            it.body().unwrap(),
+            true,
+            basic_block,
+            c,
+        ),
         ast::Statement::For(it) => {
             let value = mir::Constant::Num(0.0);
             let variable = c.program.variables.insert(mir::Variable { value });
@@ -214,6 +210,37 @@ fn lower_statement(statement: ast::Statement, basic_block: Id<mir::BasicBlock>, 
             assert!(lower_expression(it, basic_block, c).values().is_empty());
         }
     }
+}
+
+fn lower_while(
+    condition: ast::Expression<'_>,
+    body: ast::Block<'_>,
+    not: bool,
+    basic_block: Id<mir::BasicBlock>,
+    c: &mut Context<'_, '_>,
+) {
+    let value = mir::Constant::PLACEHOLDER;
+    let variable = c.program.variables.insert(mir::Variable { value });
+    let condition_block = c.program.basic_blocks.insert(mir::BasicBlock(Vec::new()));
+    let mut value = one(lower_expression(condition, condition_block, c).values());
+    if not {
+        let not = c.program.ops.insert(mir::Op::Intrinsic {
+            name: todo!(),
+            arguments: Vec::from([value]),
+        });
+        c.program.basic_blocks[condition_block].0.push(not);
+        value = mir::Value::Op(not);
+    }
+    let target = mir::Ref::Variable(variable);
+    let store = c.program.ops.insert(mir::Op::Store { target, value });
+    c.program.basic_blocks[condition_block].0.push(store);
+    let body = lower_block(body, c);
+    let op = c.program.ops.insert(mir::Op::While {
+        variable,
+        condition: condition_block,
+        body,
+    });
+    c.program.basic_blocks[basic_block].0.push(op);
 }
 
 fn lower_expression(
