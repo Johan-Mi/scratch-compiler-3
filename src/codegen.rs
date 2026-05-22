@@ -367,18 +367,9 @@ impl<'src> Compiler<'src, '_> {
             "asin" => Some(self.mathop("asin", arguments)),
             "acos" => Some(self.mathop("acos", arguments)),
             "atan" => Some(self.mathop("atan", arguments)),
-            "not" => {
-                let [operand] = arguments.try_into().ok().unwrap();
-                Some(self.target.not(operand))
-            }
-            "and" => {
-                let [lhs, rhs] = arguments.try_into().ok().unwrap();
-                Some(self.target.and(lhs, rhs))
-            }
-            "or" => {
-                let [lhs, rhs] = arguments.try_into().ok().unwrap();
-                Some(self.target.or(lhs, rhs))
-            }
+            "not" => f! { = not(operand) },
+            "and" => f! { = and(lhs, rhs) },
+            "or" => f! { = or(lhs, rhs) },
             "join" => f! { = join(lhs, rhs) },
             "answer" => f! { = answer() },
             "ask" => f! { ask(question) },
