@@ -60,6 +60,11 @@ pub enum Op {
         times: Value,
         body: Id<BasicBlock>,
     },
+    While {
+        variable: Id<Variable>,
+        condition: Id<BasicBlock>,
+        body: Id<BasicBlock>,
+    },
     Forever(Id<BasicBlock>),
     If {
         condition: Value,
@@ -152,6 +157,7 @@ impl Op {
                 value: arg,
             } => Left(std::slice::from_ref(arg).iter()),
             Self::Load { .. }
+            | Self::While { .. }
             | Self::Forever(_)
             | Self::DeleteAll(_)
             | Self::DeleteLast(_)
@@ -212,6 +218,7 @@ impl Op {
                 value: arg,
             } => Left(std::slice::from_mut(arg).iter_mut()),
             Self::Load { .. }
+            | Self::While { .. }
             | Self::Forever(_)
             | Self::DeleteAll(_)
             | Self::DeleteLast(_)

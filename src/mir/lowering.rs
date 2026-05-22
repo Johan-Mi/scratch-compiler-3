@@ -172,7 +172,23 @@ fn lower_statement(statement: ast::Statement, basic_block: Id<mir::BasicBlock>, 
             let op = c.program.ops.insert(mir::Op::Forever(body));
             c.program.basic_blocks[basic_block].0.push(op);
         }
-        ast::Statement::While(_) => todo!(),
+        ast::Statement::While(it) => {
+            let variable = c.program.variables.insert(mir::Variable {
+                value: mir::Constant::PLACEHOLDER,
+            });
+            let condition = c.program.basic_blocks.insert(mir::BasicBlock(Vec::new()));
+            let value = one(lower_expression(it.condition().unwrap(), condition, c).values());
+            let target = mir::Ref::Variable(variable);
+            let store = c.program.ops.insert(mir::Op::Store { target, value });
+            c.program.basic_blocks[condition].0.push(store);
+            let body = lower_block(it.body().unwrap(), c);
+            let op = c.program.ops.insert(mir::Op::While {
+                variable,
+                condition,
+                body,
+            });
+            c.program.basic_blocks[basic_block].0.push(op);
+        }
         ast::Statement::Until(_) => todo!(),
         ast::Statement::For(it) => {
             let value = mir::Constant::Num(0.0);

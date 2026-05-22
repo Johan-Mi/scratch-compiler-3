@@ -166,6 +166,21 @@ impl<'src> Compiler<'src, '_> {
                 let _: sb3::InsertionPoint = self.target.insert_at(after);
                 None
             }
+            mir::Op::While {
+                variable,
+                condition,
+                body,
+            } => {
+                let variable = self.variables[variable];
+                self.target
+                    .put(block::set_variable(variable, "true".into()));
+                let after = self.target.while_(variable.into());
+                self.basic_block(*condition, function);
+                let _: sb3::InsertionPoint = self.target.if_(variable.into());
+                self.basic_block(*body, function);
+                let _: sb3::InsertionPoint = self.target.insert_at(after);
+                None
+            }
             mir::Op::Forever(body) => {
                 self.target.forever();
                 self.basic_block(*body, function);
