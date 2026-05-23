@@ -120,6 +120,12 @@ pub fn check<'src>(
                 }),
         );
 
+        if let Some(kw_inline) = function.kw_inline() {
+            let labels = [primary(kw_inline.span(), "")];
+            c.diagnostics
+                .error("inline functions are not yet implemented", labels);
+        }
+
         c.return_ty = returned_by(function.into(), c.type_expressions);
         if let Some(return_ty) = c.return_ty
             && matches!(return_ty.shape, Shape::List | Shape::Ref)

@@ -521,9 +521,7 @@ fn lower_call(
         return arguments.into();
     };
 
-    if function.kw_inline().is_some() {
-        todo!("lower inline functions to MIR");
-    }
+    assert!(function.kw_inline().is_none()); // Emits a diagnostic during type checking.
 
     if function.body().is_none() {
         return lower_intrinsic_call(function, arguments, basic_block, c);
