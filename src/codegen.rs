@@ -233,6 +233,10 @@ impl<'src> Compiler<'src, '_> {
                 let value = self.value(*value, function);
                 Some(self.target.list_contains_item(self.lists[list], value))
             }
+            mir::Op::Not(value) => {
+                let value = self.value(*value, function);
+                Some(self.target.not(value))
+            }
             mir::Op::Intrinsic { name, arguments } => {
                 let arguments = arguments.iter().map(|&it| self.value(it, function));
                 let arguments = arguments.collect();
@@ -367,7 +371,6 @@ impl<'src> Compiler<'src, '_> {
             "asin" => Some(self.mathop("asin", arguments)),
             "acos" => Some(self.mathop("acos", arguments)),
             "atan" => Some(self.mathop("atan", arguments)),
-            "not" => f! { = not(operand) },
             "and" => f! { = and(lhs, rhs) },
             "or" => f! { = or(lhs, rhs) },
             "join" => f! { = join(lhs, rhs) },

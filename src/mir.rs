@@ -106,6 +106,8 @@ pub enum Op {
         value: Value,
     },
 
+    Not(Value),
+
     Intrinsic {
         name: codemap::Span,
         arguments: Vec<Value>,
@@ -155,7 +157,8 @@ impl Op {
             | Self::Contains {
                 list: _,
                 value: arg,
-            } => Left(std::slice::from_ref(arg).iter()),
+            }
+            | Self::Not(arg) => Left(std::slice::from_ref(arg).iter()),
             Self::Load { .. }
             | Self::While { .. }
             | Self::Forever(_)
@@ -216,7 +219,8 @@ impl Op {
             | Self::Contains {
                 list: _,
                 value: arg,
-            } => Left(std::slice::from_mut(arg).iter_mut()),
+            }
+            | Self::Not(arg) => Left(std::slice::from_mut(arg).iter_mut()),
             Self::Load { .. }
             | Self::While { .. }
             | Self::Forever(_)

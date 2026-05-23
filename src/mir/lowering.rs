@@ -224,10 +224,7 @@ fn lower_while(
     let condition_block = c.program.basic_blocks.insert(mir::BasicBlock(Vec::new()));
     let mut value = one(lower_expression(condition, condition_block, c).values());
     if not {
-        let not = c.program.ops.insert(mir::Op::Intrinsic {
-            name: todo!(),
-            arguments: Vec::from([value]),
-        });
+        let not = c.program.ops.insert(mir::Op::Not(value));
         c.program.basic_blocks[condition_block].0.push(not);
         value = mir::Value::Op(not);
     }
@@ -636,6 +633,11 @@ fn lower_intrinsic_call(
             let [value] = (**values).try_into().ok().unwrap();
             let op = c.program.ops.insert(mir::Op::Contains { list, value });
             Vec::from([mir::Value::Op(op)]).into()
+        }
+        "not" => {
+            let [values] = arguments.try_into().ok().unwrap();
+            let [value] = values.values().try_into().ok().unwrap();
+            Vec::from([mir::Value::Op(c.program.ops.insert(mir::Op::Not(value)))]).into()
         }
         _ => {
             let arguments = arguments.into_iter().flat_map(Bundle::values).collect();
