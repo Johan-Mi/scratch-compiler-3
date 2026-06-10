@@ -730,29 +730,36 @@ impl Parser<'_> {
         self.start_node(K::Sprite);
         let kw_sprite_span = self.peek_span();
         self.bump(); // K::KwSprite
-        if !self.at(K::Lbrace) && !self.eat(K::Identifier) {
-            self.error();
-        }
-        let lbrace_span = if self.at(K::Lbrace) {
+        if !self.eat(K::Identifier) {
             let span = self.peek_span();
-            self.bump();
-            Some(span)
-        } else {
-            self.error();
-            None
-        };
+            self.diagnostics
+                .error("expected idenfitier", [primary(span, "")]);
+            if !self.at(K::Lbrace) {
+                self.builder.finish_node();
+                return;
+            }
+        }
+        let lbrace_span = self.peek_span();
+        if !self.at(K::Lbrace) {
+            self.diagnostics
+                .error("expected `{`", [primary(lbrace_span, "")]);
+            self.builder.finish_node();
+            return;
+        }
         while !self.eat(K::Rbrace) {
             match self.peek() {
                 K::KwFn => self.parse_function(),
                 K::KwCostumes => self.parse_costume_list(),
                 K::KwLet => self.parse_let(),
                 K::Eof | K::KwSprite => {
-                    let labels = std::iter::once(primary(kw_sprite_span, ""))
-                        .chain(lbrace_span.map(|it| primary(it, "unclosed brace")))
-                        .chain(std::iter::once(secondary(self.peek_span(), "expected `}`")))
-                        .collect::<Vec<_>>();
-                    self.diagnostics
-                        .error("unfinished sprite definition", labels);
+                    self.diagnostics.error(
+                        "unfinished sprite definition",
+                        [
+                            primary(kw_sprite_span, ""),
+                            primary(lbrace_span, "unclosed brace"),
+                            secondary(self.peek_span(), "expected `}`"),
+                        ],
+                    );
                     break;
                 }
                 _ => self.error(),
