@@ -545,11 +545,14 @@ impl Parser<'_> {
     fn parse_let(&mut self) {
         self.start_node(K::Let);
         self.bump(); // K::KwLet
-        if !self.at(K::Eq) && !self.eat(K::Identifier) {
-            self.error();
+        if !self.eat(K::Identifier) {
+            let span = self.peek_span();
+            self.diagnostics
+                .error("expected identifier", [primary(span, "")]);
         }
         if !self.eat(K::Eq) {
-            self.error();
+            let span = self.peek_span();
+            self.diagnostics.error("expected `=`", [primary(span, "")]);
         }
         self.parse_expression();
         self.builder.finish_node();
