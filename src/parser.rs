@@ -387,7 +387,9 @@ impl Parser<'_> {
                 self.bump();
                 self.parse_expression();
                 if !self.eat(K::Rparen) {
-                    self.error();
+                    let span = self.peek_span();
+                    self.diagnostics
+                        .error("unclosed parenthesis", [primary(span, "expected `)`")]);
                 }
                 self.builder.finish_node();
             }
