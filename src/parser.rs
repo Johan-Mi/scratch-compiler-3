@@ -322,6 +322,7 @@ impl Parser<'_> {
         }
     }
 
+    #[deprecated]
     fn error(&mut self) {
         self.start_node(K::Error);
         self.parse_anything();
