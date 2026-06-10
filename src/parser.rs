@@ -717,8 +717,12 @@ impl Parser<'_> {
     fn parse_costume_list(&mut self) {
         self.start_node(K::CostumeList);
         self.bump(); // K::KwCostumes
+        let lbrace_span = self.peek_span();
         if !self.eat(K::Lbrace) {
-            self.error();
+            self.diagnostics
+                .error("expected `{`", [primary(lbrace_span, "")]);
+            self.builder.finish_node();
+            return;
         }
         while !self.at(K::Eof) && !self.eat(K::Rbrace) {
             if !self.at(K::String) {
@@ -735,6 +739,13 @@ impl Parser<'_> {
             }
             let _: bool = self.eat(K::Comma);
             self.builder.finish_node();
+        }
+        if self.at(K::Eof) {
+            let labels = [
+                primary(lbrace_span, ""),
+                primary(self.peek_span(), "expected `}`"),
+            ];
+            self.diagnostics.error("unclosed brace", labels);
         }
         self.builder.finish_node();
     }
