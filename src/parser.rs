@@ -682,6 +682,9 @@ impl Parser<'_> {
         if self.at(K::Identifier) || self.peek().is_binary_operator() {
             self.bump();
         } else {
+            let span = self.peek_span();
+            self.diagnostics
+                .error("expected identifier or operator", [primary(span, "")]);
             self.error();
         }
         if !self.eat(K::String) && self.at(K::Lparen) {
