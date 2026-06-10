@@ -705,7 +705,13 @@ impl Parser<'_> {
             let span = self.peek_span();
             self.diagnostics
                 .error("expected identifier or operator", [primary(span, "")]);
-            self.error();
+            if !matches!(
+                self.peek(),
+                K::String | K::Lparen | K::Lbrace | K::Lbracket | K::Star
+            ) {
+                self.builder.finish_node();
+                return;
+            }
         }
         if !self.eat(K::String) && self.at(K::Lparen) {
             self.parse_parameters();
