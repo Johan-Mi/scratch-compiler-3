@@ -789,7 +789,14 @@ impl Parser<'_> {
                     );
                     break;
                 }
-                _ => self.error(),
+                _ => {
+                    let labels = [primary(self.peek_span(), "")];
+                    self.diagnostics
+                        .error("expected `fn`, `costumes` or `let`", labels);
+                    self.start_node(K::Error);
+                    self.parse_anything();
+                    self.builder.finish_node();
+                }
             }
         }
         self.builder.finish_node();
