@@ -684,7 +684,8 @@ impl Parser<'_> {
 
     fn parse_block(&mut self) {
         if !self.at(K::Lbrace) {
-            self.error();
+            let labels = [primary(self.peek_span(), "")];
+            self.diagnostics.error("expected `{`", labels);
             return;
         }
         self.start_node(K::Block);
