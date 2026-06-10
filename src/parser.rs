@@ -456,7 +456,6 @@ impl Parser<'_> {
                         "expected field or function name after `.`",
                         [primary(span, "")],
                     );
-                    self.parse_anything();
                     K::Error
                 }
             } else if self.eat(K::Lbracket) {
