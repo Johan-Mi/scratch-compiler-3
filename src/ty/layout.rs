@@ -24,7 +24,9 @@ pub fn s(
             continue;
         };
 
-        let parameters = it.parameters().unwrap();
+        let Some(parameters) = it.parameters() else {
+            continue;
+        };
 
         if parameters
             .iter()
@@ -85,12 +87,17 @@ fn scc<'src>(
             let stack_pos = self.stack.len();
             self.stack.push(node);
 
-            for successor in node.parameters().unwrap().iter().filter_map(|it| {
-                match self.type_expressions[&it.ty().unwrap().unmanaged()].base {
-                    Base::Struct(it) => Some(it),
-                    _ => None,
-                }
-            }) {
+            for successor in node
+                .parameters()
+                .into_iter()
+                .flat_map(ast::Parameters::iter)
+                .filter_map(
+                    |it| match self.type_expressions[&it.ty().unwrap().unmanaged()].base {
+                        Base::Struct(it) => Some(it),
+                        _ => None,
+                    },
+                )
+            {
                 self.visit(successor);
                 let other = self.low[&successor.unmanaged()];
                 let l = self.low.get_mut(&node.unmanaged()).unwrap();
