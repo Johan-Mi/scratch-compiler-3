@@ -412,7 +412,9 @@ impl Parser<'_> {
                 self.start_node(K::TypeExpression);
                 self.bump();
                 if !self.eat(K::Rbracket) {
-                    self.error();
+                    let span = self.peek_span();
+                    self.diagnostics
+                        .error("unclosed bracket", [primary(span, "expected `]`")]);
                 }
             }
             K::Star => {
