@@ -331,8 +331,14 @@ impl Parser<'_> {
     fn parse_struct(&mut self) {
         self.start_node(K::Struct);
         self.bump(); // K::KwStruct
-        if !self.at(K::Lparen) && !self.eat(K::Identifier) {
-            self.error();
+        if !self.eat(K::Identifier) {
+            let labels = [primary(self.peek_span(), "expected identifier")];
+            let message = if self.at(K::Lparen) {
+                "struct has no name"
+            } else {
+                "unfinished struct"
+            };
+            self.diagnostics.error(message, labels);
         }
         if self.at(K::Lparen) {
             self.parse_parameters();
