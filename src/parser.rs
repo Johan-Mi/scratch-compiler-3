@@ -423,13 +423,16 @@ impl Parser<'_> {
             }
             K::Percent | K::Identifier => self.start_node(K::TypeExpression),
             _ => {
-                self.error();
+                let labels = [primary(self.peek_span(), "")];
+                self.diagnostics
+                    .error("expected type expression (`[]`, `*` or identifier)", labels);
                 return;
             }
         }
         let _: bool = self.eat(K::Percent);
         if !self.eat(K::Identifier) {
-            self.error();
+            let labels = [primary(self.peek_span(), "")];
+            self.diagnostics.error("expected identifier)", labels);
         }
         self.builder.finish_node();
     }
