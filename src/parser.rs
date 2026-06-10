@@ -447,7 +447,11 @@ impl Parser<'_> {
             self.parse_recursive_expression(K::Ampersand);
             self.builder.finish_node_at(checkpoint, K::Lvalue);
         } else if !self.parse_atom() {
-            self.error();
+            let labels = [primary(self.peek_span(), "")];
+            self.diagnostics.error("expected expression", labels);
+            self.start_node(K::Error);
+            self.parse_anything();
+            self.builder.finish_node();
             return;
         }
 
