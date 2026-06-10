@@ -360,7 +360,7 @@ impl Parser<'_> {
         self.builder.finish_node();
     }
 
-    fn parse_atom(&mut self) {
+    fn parse_atom(&mut self) -> bool {
         match self.peek() {
             K::Identifier => {
                 let checkpoint = self.checkpoint();
@@ -393,8 +393,9 @@ impl Parser<'_> {
             | K::KwFalse
             | K::KwTrue => self.bump(),
             K::Lbracket => self.parse_list_literal(),
-            _ => self.error(),
+            _ => return false,
         }
+        true
     }
 
     fn parse_type_expression(&mut self) {
@@ -432,8 +433,9 @@ impl Parser<'_> {
         if self.eat(K::Ampersand) {
             self.parse_recursive_expression(K::Ampersand);
             self.builder.finish_node_at(checkpoint, K::Lvalue);
-        } else {
-            self.parse_atom();
+        } else if !self.parse_atom() {
+            self.error();
+            return;
         }
 
         while let right = self.peek()
