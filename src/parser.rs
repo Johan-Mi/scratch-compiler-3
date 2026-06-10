@@ -740,7 +740,7 @@ impl Parser<'_> {
             }
         }
         let lbrace_span = self.peek_span();
-        if !self.at(K::Lbrace) {
+        if !self.eat(K::Lbrace) {
             self.diagnostics
                 .error("expected `{`", [primary(lbrace_span, "")]);
             self.builder.finish_node();
