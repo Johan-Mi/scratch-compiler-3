@@ -774,7 +774,16 @@ impl Parser<'_> {
             K::KwSprite => self.parse_sprite(),
             K::KwFn => self.parse_function(),
             K::KwLet => self.parse_let(),
-            _ => self.error(),
+            _ => {
+                let span = self.peek_span();
+                self.diagnostics.error(
+                    "expected `struct`, `sprite`, `fn` or `let`",
+                    [primary(span, "")],
+                );
+                self.start_node(K::Error);
+                self.parse_anything();
+                self.builder.finish_node();
+            }
         }
     }
 
