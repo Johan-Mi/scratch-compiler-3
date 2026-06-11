@@ -46,8 +46,16 @@ impl Function<'_> {
     }
 }
 
-#[cfg_attr(debug_assertions, derive(Debug))]
 pub struct BasicBlock(pub Vec<Id<Op>>);
+
+#[cfg(debug_assertions)]
+impl std::fmt::Debug for BasicBlock {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "BasicBlock(")?;
+        self.0.fmt(f)?;
+        write!(f, ")")
+    }
+}
 
 #[cfg_attr(debug_assertions, derive(Debug))]
 pub enum Op {
@@ -254,7 +262,6 @@ pub enum Value {
 }
 
 #[derive(Clone, Copy)]
-#[cfg_attr(debug_assertions, derive(Debug))]
 pub enum Constant {
     Num(f64),
     String(codemap::Pos),
@@ -265,6 +272,17 @@ impl Constant {
     const PLACEHOLDER: Self = Self::Num(0.0);
 }
 
+#[cfg(debug_assertions)]
+impl std::fmt::Debug for Constant {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Num(n) => n.fmt(f),
+            Self::String(s) => s.fmt(f),
+            Self::Bool(b) => b.fmt(f),
+        }
+    }
+}
+
 #[derive(Clone, Copy)]
 #[cfg_attr(debug_assertions, derive(Debug))]
 pub enum Ref {
@@ -273,13 +291,25 @@ pub enum Ref {
     Last { list: Id<List> },
 }
 
-#[cfg_attr(debug_assertions, derive(Debug))]
 pub struct Variable {
     pub value: Constant,
 }
 
+#[cfg(debug_assertions)]
+impl std::fmt::Debug for Variable {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.value.fmt(f)
+    }
+}
+
 #[derive(Default)]
-#[cfg_attr(debug_assertions, derive(Debug))]
 pub struct List {
     pub items: Vec<Constant>,
+}
+
+#[cfg(debug_assertions)]
+impl std::fmt::Debug for List {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.items.fmt(f)
+    }
 }

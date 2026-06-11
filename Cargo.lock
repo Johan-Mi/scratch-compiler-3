@@ -112,8 +112,8 @@ dependencies = [
 
 [[package]]
 name = "map"
-version = "0.2.0"
-source = "git+https://github.com/Johan-Mi/map#2792095092a30b79c1fe50c953fa3f722fcab6c1"
+version = "0.2.1"
+source = "git+https://github.com/Johan-Mi/map#5fe08c79419389b6601f9e2e5485c1ed47ac282a"
 
 [[package]]
 name = "md5"
