@@ -12,7 +12,8 @@ pub struct Type<'src> {
     pub base: Base<'src>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(debug_assertions, derive(Debug))]
 pub enum Shape {
     Flat,
     List,
