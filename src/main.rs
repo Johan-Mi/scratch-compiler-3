@@ -100,6 +100,11 @@ fn real_main(code_map: &mut CodeMap, diagnostics: &mut Diagnostics) -> Result<()
     let mut mir = mir::lower(ast, code_map, &resolved_variables, &typing, &layouts);
     mir::linearity::spill(&mut mir);
 
+    #[cfg(debug_assertions)]
+    if std::env::var_os("DUMP_MIR").is_some() {
+        println!("{mir:#?}");
+    }
+
     codegen::compile(code_map, &string_literals, ast, &mir, "project.sb3").map_err(|err| {
         diagnostics.error("failed to create project file", []);
         diagnostics.note(err.to_string(), []);

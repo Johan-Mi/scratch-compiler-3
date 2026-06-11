@@ -8,6 +8,7 @@ use map::{Id, Map};
 use std::collections::HashMap;
 
 #[derive(Default)]
+#[cfg_attr(debug_assertions, derive(Debug))]
 pub struct Program<'src> {
     pub functions: HashMap<Id<BasicBlock>, Function<'src>>,
     pub basic_blocks: Map<BasicBlock>,
@@ -17,6 +18,7 @@ pub struct Program<'src> {
 }
 
 #[derive(Clone, Copy)]
+#[cfg_attr(debug_assertions, derive(Debug))]
 pub enum Function<'src> {
     WhenFlagClicked,
     WhenKeyPressed {
@@ -44,8 +46,10 @@ impl Function<'_> {
     }
 }
 
+#[cfg_attr(debug_assertions, derive(Debug))]
 pub struct BasicBlock(pub Vec<Id<Op>>);
 
+#[cfg_attr(debug_assertions, derive(Debug))]
 pub enum Op {
     Load {
         source: Ref,
@@ -241,6 +245,7 @@ impl Op {
 }
 
 #[derive(Clone, Copy)]
+#[cfg_attr(debug_assertions, derive(Debug))]
 pub enum Value {
     FunctionParameter { index: usize },
     Op(Id<Op>),
@@ -249,6 +254,7 @@ pub enum Value {
 }
 
 #[derive(Clone, Copy)]
+#[cfg_attr(debug_assertions, derive(Debug))]
 pub enum Constant {
     Num(f64),
     String(codemap::Pos),
@@ -260,17 +266,20 @@ impl Constant {
 }
 
 #[derive(Clone, Copy)]
+#[cfg_attr(debug_assertions, derive(Debug))]
 pub enum Ref {
     Variable(Id<Variable>),
     List { list: Id<List>, index: Value },
     Last { list: Id<List> },
 }
 
+#[cfg_attr(debug_assertions, derive(Debug))]
 pub struct Variable {
     pub value: Constant,
 }
 
 #[derive(Default)]
+#[cfg_attr(debug_assertions, derive(Debug))]
 pub struct List {
     pub items: Vec<Constant>,
 }
