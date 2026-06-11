@@ -429,10 +429,8 @@ fn lower_field_access(
     let ty::Base::Struct(ty) = ty.base else {
         unreachable!();
     };
-    let field_name = c
-        .code_map
-        .find_file(it.field().span().low())
-        .source_slice(it.field().span());
+    let field = it.field().unwrap().span();
+    let field_name = c.code_map.find_file(field.low()).source_slice(field);
     let file = c.code_map.find_file(ty.syntax().span().low());
     let field_index: usize = ty
         .parameters()
@@ -485,10 +483,8 @@ fn lower_lvalue(
             let ty::Base::Struct(ty) = ty.base else {
                 unreachable!();
             };
-            let field_name = c
-                .code_map
-                .find_file(it.field().span().low())
-                .source_slice(it.field().span());
+            let field = it.field().unwrap().span();
+            let field_name = c.code_map.find_file(field.low()).source_slice(field);
             let file = c.code_map.find_file(ty.syntax().span().low());
             let field_index: usize = ty
                 .parameters()

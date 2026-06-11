@@ -433,7 +433,7 @@ fn of_field_access<'src>(
     c: &mut Checker<'_, 'src>,
 ) -> Option<Type<'src>> {
     let aggregate_ty = of(it.aggregate(), None, c)?;
-    let name = it.field().span();
+    let name = it.field()?.span();
     let name = c.code_map.find_file(name.low()).source_slice(name);
     let Type {
         shape: Shape::Flat,

@@ -605,8 +605,8 @@ impl<'src> FieldAccess<'src> {
         child(self.syntax).unwrap()
     }
 
-    pub fn field(self) -> cst::Node<'src, K> {
-        token(self.syntax, K::Identifier).unwrap()
+    pub fn field(self) -> Option<cst::Node<'src, K>> {
+        token(self.syntax, K::Identifier)
     }
 }
 
