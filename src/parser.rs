@@ -517,7 +517,11 @@ impl Parser<'_> {
                 break;
             }
             if !self.at(K::Identifier) {
-                self.error();
+                let labels = [primary(self.peek_span(), "")];
+                self.diagnostics.error("expected identifier", labels);
+                self.start_node(K::Error);
+                self.parse_anything();
+                self.builder.finish_node();
                 continue;
             }
 
@@ -527,7 +531,8 @@ impl Parser<'_> {
                 self.error();
             }
             if !self.eat(K::Colon) {
-                self.error();
+                let labels = [primary(self.peek_span(), "")];
+                self.diagnostics.error("expected `:`", labels);
             }
             if self.at(K::Comma) {
                 let span = self.peek_span();
@@ -741,16 +746,26 @@ impl Parser<'_> {
         }
         while !self.at(K::Eof) && !self.eat(K::Rbrace) {
             if !self.at(K::String) {
-                self.error();
+                let labels = [primary(self.peek_span(), "")];
+                self.diagnostics.error("expected string literal", labels);
+                self.start_node(K::Error);
+                self.parse_anything();
+                self.builder.finish_node();
                 continue;
             }
             self.start_node(K::Costume);
             self.bump();
             if !self.eat(K::Colon) {
-                self.error();
+                let labels = [primary(self.peek_span(), "")];
+                self.diagnostics.error("expected `:`", labels);
+                self.builder.finish_node();
+                continue;
             }
             if !self.eat(K::String) {
-                self.error();
+                let labels = [primary(self.peek_span(), "")];
+                self.diagnostics.error("expected string literal", labels);
+                self.builder.finish_node();
+                continue;
             }
             let _: bool = self.eat(K::Comma);
             self.builder.finish_node();
