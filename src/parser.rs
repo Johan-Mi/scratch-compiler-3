@@ -694,9 +694,17 @@ impl Parser<'_> {
             return;
         }
         self.start_node(K::Block);
+        let lbrace_span = self.peek_span();
         self.bump();
-        while !matches!(self.peek(), K::Eof | K::KwSprite) && !self.eat(K::Rbrace) {
+        while !matches!(self.peek(), K::Eof | K::KwSprite | K::Rbrace) {
             self.parse_statement();
+        }
+        if !self.eat(K::Rbrace) {
+            let labels = [
+                primary(lbrace_span, ""),
+                primary(self.peek_span(), "expected `}`"),
+            ];
+            self.diagnostics.error("unclosed brace", labels);
         }
         self.builder.finish_node();
     }
