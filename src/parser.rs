@@ -467,7 +467,7 @@ impl Parser<'_> {
                         "expected field or function name after `.`",
                         [primary(span, "")],
                     );
-                    K::Error
+                    K::FieldAccess
                 }
             } else if self.eat(K::Lbracket) {
                 self.parse_expression();
