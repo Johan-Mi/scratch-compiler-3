@@ -322,13 +322,6 @@ impl Parser<'_> {
         }
     }
 
-    #[deprecated]
-    fn error(&mut self) {
-        self.start_node(K::Error);
-        self.parse_anything();
-        self.builder.finish_node();
-    }
-
     fn parse_struct(&mut self) {
         self.start_node(K::Struct);
         self.bump(); // K::KwStruct
@@ -528,7 +521,10 @@ impl Parser<'_> {
             self.start_node(K::Parameter);
             self.bump();
             if !self.at(K::Colon) && !self.eat(K::Identifier) {
-                self.error();
+                let labels = [primary(self.peek_span(), "")];
+                self.diagnostics.error("expected identifier or `:`", labels);
+                self.builder.finish_node();
+                continue;
             }
             if !self.eat(K::Colon) {
                 let labels = [primary(self.peek_span(), "")];
@@ -652,7 +648,11 @@ impl Parser<'_> {
                 .error("expected identifier after `for`", [label]);
         } else {
             if !self.eat(K::Identifier) {
-                self.error();
+                let label = primary(self.peek_span(), "");
+                self.diagnostics
+                    .error("expected identifier after `for`", [label]);
+                self.builder.finish_node();
+                return;
             }
             if self.at(K::Lbrace) {
                 let label = primary(self.peek_span(), "");
