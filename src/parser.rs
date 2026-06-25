@@ -546,7 +546,11 @@ impl Parser<'_> {
             } else {
                 self.parse_type_expression();
             }
-            let _: bool = self.eat(K::Comma);
+            if !self.eat(K::Comma) && !self.at(K::Rparen) {
+                let span = self.peek_span();
+                self.diagnostics
+                    .error("expected `,` or `)` after parameter", [primary(span, "")]);
+            }
             self.builder.finish_node();
         }
         self.builder.finish_node();
