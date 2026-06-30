@@ -19,7 +19,6 @@
 [
   "while"
   "until"
-  "repeat"
   "forever"
   "for"
 ] @keyword.control.repeat

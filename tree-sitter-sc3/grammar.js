@@ -64,7 +64,6 @@ module.exports = grammar({
         $.if_statement,
         $.while_loop,
         $.until_loop,
-        $.repeat_loop,
         $.forever_loop,
         $.for_loop,
         $.return_statement,
@@ -83,7 +82,6 @@ module.exports = grammar({
 
     while_loop: $ => seq("while", $._expression, $.block),
     until_loop: $ => seq("until", $._expression, $.block),
-    repeat_loop: $ => seq("repeat", $._expression, $.block),
     forever_loop: $ => seq("forever", $.block),
     for_loop: $ => seq("for", $.identifier, $._expression, $.block),
 
