@@ -101,7 +101,6 @@ pub enum K {
     Let,
     If,
     ElseClause,
-    Repeat,
     Forever,
     While,
     Until,
@@ -176,8 +175,6 @@ pub enum K {
     KwIf,
     #[token("else")]
     KwElse,
-    #[token("repeat")]
-    KwRepeat,
     #[token("forever")]
     KwForever,
     #[token("while")]
@@ -295,7 +292,6 @@ impl Parser<'_> {
             K::KwCostumes => self.parse_costume_list(),
             K::KwLet => self.parse_let(),
             K::KwIf => self.parse_if(),
-            K::KwRepeat => self.parse_repeat(),
             K::KwForever => self.parse_forever(),
             K::KwWhile => self.parse_while(),
             K::KwUntil => self.parse_until(),
@@ -595,20 +591,6 @@ impl Parser<'_> {
         self.builder.finish_node();
     }
 
-    fn parse_repeat(&mut self) {
-        self.start_node(K::Repeat);
-        self.bump(); // K::KwRepeat
-        if self.at(K::Lbrace) {
-            let label = primary(self.peek_span(), "");
-            self.diagnostics
-                .error("expected expression after `repeat`", [label]);
-        } else {
-            self.parse_expression();
-        }
-        self.parse_block();
-        self.builder.finish_node();
-    }
-
     fn parse_forever(&mut self) {
         self.start_node(K::Forever);
         self.bump(); // K::KwForever
@@ -682,7 +664,6 @@ impl Parser<'_> {
         match self.peek() {
             K::KwLet => self.parse_let(),
             K::KwIf => self.parse_if(),
-            K::KwRepeat => self.parse_repeat(),
             K::KwForever => self.parse_forever(),
             K::KwWhile => self.parse_while(),
             K::KwUntil => self.parse_until(),

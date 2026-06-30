@@ -206,14 +206,6 @@ fn check_statement<'src>(statement: ast::Statement<'src>, c: &mut Checker<'_, 's
                 }
             }
         }
-        ast::Statement::Repeat(it) => {
-            if let Some(times) = it.times() {
-                expect(times, Base::Num.into(), c);
-            }
-            if let Some(body) = it.body() {
-                check_block(body, c);
-            }
-        }
         ast::Statement::Forever(it) => {
             if let Some(body) = it.body() {
                 check_block(body, c);

@@ -157,16 +157,6 @@ fn lower_statement(statement: ast::Statement, basic_block: Id<mir::BasicBlock>, 
             });
             c.program.basic_blocks[basic_block].0.push(op);
         }
-        ast::Statement::Repeat(it) => {
-            let times = one(lower_expression(it.times().unwrap(), basic_block, c).values());
-            let body = lower_block(it.body().unwrap(), c);
-            let op = c.program.ops.insert(mir::Op::For {
-                variable: None,
-                times,
-                body,
-            });
-            c.program.basic_blocks[basic_block].0.push(op);
-        }
         ast::Statement::Forever(it) => {
             let body = lower_block(it.body().unwrap(), c);
             let op = c.program.ops.insert(mir::Op::Forever(body));
@@ -194,7 +184,7 @@ fn lower_statement(statement: ast::Statement, basic_block: Id<mir::BasicBlock>, 
             let times = one(lower_expression(it.times().unwrap(), basic_block, c).values());
             let body = lower_block(it.body().unwrap(), c);
             let op = c.program.ops.insert(mir::Op::For {
-                variable: Some(variable),
+                variable,
                 times,
                 body,
             });

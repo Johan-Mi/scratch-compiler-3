@@ -265,17 +265,13 @@ impl<'src> Compiler<'src, '_> {
 
     fn r#for(
         &mut self,
-        variable: Option<Id<mir::Variable>>,
+        variable: Id<mir::Variable>,
         times: mir::Value,
         body: Id<mir::BasicBlock>,
         function: Id<mir::BasicBlock>,
     ) {
         let times = self.value(times, function);
-        let after = if let Some(variable) = variable {
-            self.target.for_(self.variables[&variable], times)
-        } else {
-            self.target.repeat(times)
-        };
+        let after = self.target.for_(self.variables[&variable], times);
         self.basic_block(body, function);
         let _: sb3::InsertionPoint = self.target.insert_at(after);
     }

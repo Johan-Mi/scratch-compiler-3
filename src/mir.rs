@@ -68,7 +68,7 @@ pub enum Op {
     },
 
     For {
-        variable: Option<Id<Variable>>,
+        variable: Id<Variable>,
         times: Value,
         body: Id<BasicBlock>,
     },

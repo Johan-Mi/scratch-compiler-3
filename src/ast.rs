@@ -204,7 +204,6 @@ impl<'src> Block<'src> {
 pub enum Statement<'src> {
     Let(Let<'src>),
     If(If<'src>),
-    Repeat(Repeat<'src>),
     Forever(Forever<'src>),
     While(While<'src>),
     Until(Until<'src>),
@@ -218,7 +217,6 @@ impl<'src> Node<'src> for Statement<'src> {
         match node.kind() {
             K::Let => Node::cast(node).map(Self::Let),
             K::If => Node::cast(node).map(Self::If),
-            K::Repeat => Node::cast(node).map(Self::Repeat),
             K::Forever => Node::cast(node).map(Self::Forever),
             K::While => Node::cast(node).map(Self::While),
             K::Until => Node::cast(node).map(Self::Until),
@@ -232,7 +230,6 @@ impl<'src> Node<'src> for Statement<'src> {
         match self {
             Self::Let(inner) => inner.syntax,
             Self::If(inner) => inner.syntax,
-            Self::Repeat(inner) => inner.syntax,
             Self::Forever(inner) => inner.syntax,
             Self::While(inner) => inner.syntax,
             Self::Until(inner) => inner.syntax,
@@ -280,18 +277,6 @@ impl<'src> ElseClause<'src> {
     }
 
     pub fn if_(self) -> Option<If<'src>> {
-        child(self.syntax)
-    }
-}
-
-node!(Repeat);
-
-impl<'src> Repeat<'src> {
-    pub fn times(self) -> Option<Expression<'src>> {
-        child(self.syntax)
-    }
-
-    pub fn body(self) -> Option<Block<'src>> {
         child(self.syntax)
     }
 }
