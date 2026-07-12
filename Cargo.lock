@@ -171,12 +171,13 @@ dependencies = [
 
 [[package]]
 name = "sb3-builder"
-version = "0.9.0"
-source = "git+https://github.com/Johan-Mi/sb3-builder#c712df0c2f7113d7ee90792290368b19343ff0e5"
+version = "0.11.2"
+source = "git+https://github.com/Johan-Mi/sb3-builder#b6adba1493d2e5418bbcf867db9c59668748a67e"
 dependencies = [
  "flate2",
  "md5",
  "rawzip",
+ "tec",
 ]
 
 [[package]]
@@ -208,6 +209,11 @@ dependencies = [
  "quote",
  "unicode-ident",
 ]
+
+[[package]]
+name = "tec"
+version = "0.1.0"
+source = "git+https://github.com/Johan-Mi/tec#18404831dda1dc25e94679197fcf6db9431d6070"
 
 [[package]]
 name = "unicode-ident"
