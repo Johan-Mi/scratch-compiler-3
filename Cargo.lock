@@ -64,6 +64,7 @@ dependencies = [
 [[package]]
 name = "lexagon"
 version = "0.1.0"
+source = "git+https://github.com/Johan-Mi/lexagon#1ec6bdeb7e7ad181dd9acd90318415b89a6c6e49"
 
 [[package]]
 name = "map"
