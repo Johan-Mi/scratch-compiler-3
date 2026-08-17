@@ -4,6 +4,7 @@ mod codegen;
 mod debug;
 mod diagnostics;
 mod either;
+mod lexer;
 mod mir;
 mod name;
 mod parser;

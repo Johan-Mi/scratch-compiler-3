@@ -1,7 +1,5 @@
 use crate::diagnostics::{Diagnostics, primary, secondary};
 use codemap::Span;
-use logos::Logos as _;
-use logos_derive::Logos;
 use std::collections::HashMap;
 
 pub fn parse(
@@ -12,15 +10,17 @@ pub fn parse(
     builtin: bool,
 ) {
     let source_code = file.source();
-    let tokens = &K::lexer(source_code)
-        .spanned()
-        .map(|(token, range)| {
-            let span = file.span.subspan(range.start as u64, range.end as u64);
-            if token == Ok(K::String) {
-                let literal = parse_string_literal(&source_code[range], span, diagnostics);
+    let origin = source_code.as_ptr().addr();
+    let tokens = &crate::lexer::lex(source_code)
+        .map(|(kind, text)| {
+            let start = text.as_ptr().addr().strict_sub(origin);
+            let end = start.strict_add(text.len());
+            let span = file.span.subspan(start as u64, end as u64);
+            if kind == K::String {
+                let literal = parse_string_literal(text, span, diagnostics);
                 string_literals.extend(Some(span.low()).zip(literal));
             }
-            (token.unwrap_or(K::Error), span)
+            (kind, span)
         })
         .collect::<Vec<_>>();
     let len = file.span.len();
@@ -77,11 +77,10 @@ fn parse_string_literal(text: &str, span: Span, diagnostics: &mut Diagnostics) -
     None
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Logos)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(debug_assertions, derive(Debug))]
 pub enum K {
     Eof,
-    #[regex(r"(\p{Whitespace}|#.*)+")]
     Trivia,
 
     Program,
@@ -116,91 +115,50 @@ pub enum K {
     Return,
     TypeExpression,
 
-    #[token("(")]
     Lparen,
-    #[token(")")]
     Rparen,
-    #[token("{")]
     Lbrace,
-    #[token("}")]
     Rbrace,
-    #[token("[")]
     Lbracket,
-    #[token("]")]
     Rbracket,
-    #[token(":")]
     Colon,
-    #[token(",")]
     Comma,
-    #[token("=")]
     Eq,
-    #[token("+")]
     Plus,
-    #[token("-")]
     Minus,
-    #[token("*")]
     Star,
-    #[token("/")]
     Slash,
-    #[token("%")]
     Percent,
-    #[token("<")]
     Lt,
-    #[token("==")]
     EqEq,
-    #[token(">")]
     Gt,
-    #[token("&")]
     Ampersand,
-    #[token(".")]
     Dot,
 
-    #[token("struct")]
     KwStruct,
-    #[token("sprite")]
     KwSprite,
-    #[token("inline")]
     KwInline,
-    #[token("fn")]
     KwFn,
-    #[token("let")]
     KwLet,
-    #[token("costumes")]
     KwCostumes,
-    #[token("false")]
     KwFalse,
-    #[token("true")]
     KwTrue,
-    #[token("if")]
     KwIf,
-    #[token("else")]
     KwElse,
-    #[token("forever")]
     KwForever,
-    #[token("while")]
     KwWhile,
-    #[token("until")]
     KwUntil,
-    #[token("for")]
     KwFor,
-    #[token("as")]
     KwAs,
-    #[token("return")]
     KwReturn,
 
-    #[regex(r"[\p{XID_Start}_][\p{XID_Continue}-]*")]
     Identifier,
 
-    #[regex(r"[+-]?[0-9]+(\.[0-9]+)?([eE][+-]?[0-9]+)?")]
     DecimalNumber,
-    #[regex(r"[+-]?0[bB][01]+")]
     BinaryNumber,
-    #[regex(r"[+-]?0[oO][0-7]+")]
     OctalNumber,
-    #[regex(r"[+-]?0[xX][0-9a-fA-F]+")]
     HexadecimalNumber,
 
-    #[regex(r#""([^"\n\\]|\\[^\n])*[\\"]?"#)]
     String,
 
     Error,
