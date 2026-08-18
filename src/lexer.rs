@@ -97,7 +97,7 @@ fn lex_one(source: &str) -> Option<(K, &str)> {
             "inline" => K::KwInline,
             "fn" => K::KwFn,
             "let" => K::KwLet,
-            "costumes" => K::KwCostumes,
+            "costume" => K::KwCostume,
             "false" => K::KwFalse,
             "true" => K::KwTrue,
             "if" => K::KwIf,

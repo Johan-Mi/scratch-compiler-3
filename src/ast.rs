@@ -95,7 +95,7 @@ impl<'src> Sprite<'src> {
         token(self.syntax, K::Identifier)
     }
 
-    pub fn costume_lists(self) -> impl Iterator<Item = CostumeList<'src>> {
+    pub fn costumes(self) -> impl Iterator<Item = Costume<'src>> {
         children(self.syntax)
     }
 
@@ -104,14 +104,6 @@ impl<'src> Sprite<'src> {
     }
 
     pub fn functions(self) -> impl Iterator<Item = Function<'src>> {
-        children(self.syntax)
-    }
-}
-
-node!(CostumeList);
-
-impl<'src> CostumeList<'src> {
-    pub fn iter(self) -> impl Iterator<Item = Costume<'src>> {
         children(self.syntax)
     }
 }

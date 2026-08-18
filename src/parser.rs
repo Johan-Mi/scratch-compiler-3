@@ -87,7 +87,6 @@ pub enum K {
     Document,
     Struct,
     Sprite,
-    CostumeList,
     Costume,
     Function,
     Parameters,
@@ -140,7 +139,7 @@ pub enum K {
     KwInline,
     KwFn,
     KwLet,
-    KwCostumes,
+    KwCostume,
     KwFalse,
     KwTrue,
     KwIf,
@@ -247,7 +246,7 @@ impl Parser<'_> {
             K::KwStruct => self.parse_struct(),
             K::KwSprite => self.parse_sprite(),
             K::KwFn => self.parse_function(),
-            K::KwCostumes => self.parse_costume_list(),
+            K::KwCostume => self.parse_costume(),
             K::KwLet => self.parse_let(),
             K::KwIf => self.parse_if(),
             K::KwForever => self.parse_forever(),
@@ -686,48 +685,30 @@ impl Parser<'_> {
         self.builder.finish_node();
     }
 
-    fn parse_costume_list(&mut self) {
-        self.start_node(K::CostumeList);
-        self.bump(); // K::KwCostumes
-        let lbrace_span = self.peek_span();
-        if !self.eat(K::Lbrace) {
-            self.diagnostics
-                .error("expected `{`", [primary(lbrace_span, "")]);
+    fn parse_costume(&mut self) {
+        self.start_node(K::Costume);
+        self.bump(); // K::KwCostume
+        if !self.eat(K::String) {
+            let labels = [primary(self.peek_span(), "")];
+            self.diagnostics.error("expected string literal", labels);
+            self.start_node(K::Error);
+            self.parse_anything();
             self.builder.finish_node();
             return;
         }
-        while !self.at(K::Eof) && !self.eat(K::Rbrace) {
+        if !self.eat(K::Colon) {
+            let labels = [primary(self.peek_span(), "")];
+            self.diagnostics.error("expected `:`", labels);
             if !self.at(K::String) {
-                let labels = [primary(self.peek_span(), "")];
-                self.diagnostics.error("expected string literal", labels);
-                self.start_node(K::Error);
-                self.parse_anything();
                 self.builder.finish_node();
-                continue;
+                return;
             }
-            self.start_node(K::Costume);
-            self.bump();
-            if !self.eat(K::Colon) {
-                let labels = [primary(self.peek_span(), "")];
-                self.diagnostics.error("expected `:`", labels);
-                self.builder.finish_node();
-                continue;
-            }
-            if !self.eat(K::String) {
-                let labels = [primary(self.peek_span(), "")];
-                self.diagnostics.error("expected string literal", labels);
-                self.builder.finish_node();
-                continue;
-            }
-            let _: bool = self.eat(K::Comma);
-            self.builder.finish_node();
         }
-        if self.at(K::Eof) {
-            let labels = [
-                primary(lbrace_span, ""),
-                primary(self.peek_span(), "expected `}`"),
-            ];
-            self.diagnostics.error("unclosed brace", labels);
+        if !self.eat(K::String) {
+            let labels = [primary(self.peek_span(), "")];
+            self.diagnostics.error("expected string literal", labels);
+            self.builder.finish_node();
+            return;
         }
         self.builder.finish_node();
     }
@@ -755,7 +736,7 @@ impl Parser<'_> {
         while !self.eat(K::Rbrace) {
             match self.peek() {
                 K::KwFn => self.parse_function(),
-                K::KwCostumes => self.parse_costume_list(),
+                K::KwCostume => self.parse_costume(),
                 K::KwLet => self.parse_let(),
                 K::Eof | K::KwSprite => {
                     self.diagnostics.error(

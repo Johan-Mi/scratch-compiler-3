@@ -21,15 +21,11 @@ module.exports = grammar({
     sprite_body: $ =>
       seq(
         "{",
-        repeat(
-          choice($.function_definition, $.variable_definition, $.costumes),
-        ),
+        repeat(choice($.function_definition, $.variable_definition, $.costume)),
         "}",
       ),
 
-    costumes: $ => seq("costumes", "{", repeat($.costume), "}"),
-
-    costume: $ => seq($.string_literal, ":", $.string_literal, optional(",")),
+    costume: $ => seq("costume", $.string_literal, ":", $.string_literal),
 
     struct: $ =>
       seq("struct", optional($.identifier), optional($.function_parameters)),

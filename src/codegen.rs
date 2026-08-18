@@ -18,7 +18,7 @@ pub fn compile(
         let file = code_map.find_file(span.low());
         let mut target = project.add_sprite(file.source_slice(span));
 
-        for costume in sprite.costume_lists().flat_map(ast::CostumeList::iter) {
+        for costume in sprite.costumes() {
             let name = &string_literals[&costume.name().span().low()];
             let path = string_literals[&costume.path().unwrap().span().low()].as_ref();
             target.add_costume(sb3::Costume::from_file(name, path)?);
