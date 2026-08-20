@@ -9,7 +9,7 @@
 ] @constant.builtin.boolean
 
 [
-  "costumes"
+  "costume"
   "inline"
 ] @keyword
 [
