@@ -2,7 +2,7 @@ use super::{Base, Shape, Type};
 use crate::ast;
 use crate::diagnostics::{Diagnostics, primary};
 use std::collections::{HashMap, hash_map::Entry};
-use std::ops::Range;
+use std::range::Range;
 
 pub type S = HashMap<ast::StructUnmanaged, Vec<Range<usize>>>;
 
@@ -46,6 +46,7 @@ pub fn s(
             .inspect(|ty| assert_eq!(Shape::Flat, ty.shape))
             .map(|ty| size(ty.base, &layouts))
             .scan(0, |start, size| Some(*start..(*start += size, *start).1))
+            .map(From::from)
             .collect();
         assert!(layouts.insert(it.unmanaged(), layout).is_none());
     }

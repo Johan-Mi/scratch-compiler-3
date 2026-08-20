@@ -2,7 +2,7 @@ use crate::ast::{self, Node};
 use crate::parser::K;
 use crate::{mir, name, ty};
 use map::Id;
-use std::{collections::HashMap, ops::Range};
+use std::collections::HashMap;
 
 pub fn lower<'src>(
     ast: ast::Program<'src>,
@@ -428,7 +428,7 @@ fn lower_field_access(
         .iter()
         .position(|field| file.source_slice(field.internal_name().syntax().span()) == field_name)
         .unwrap();
-    let range = copy_range(&c.layouts[&ty.unmanaged()][field_index]);
+    let range = c.layouts[&ty.unmanaged()][field_index];
     values.drain(range).collect::<Vec<_>>().into()
 }
 
@@ -484,7 +484,7 @@ fn lower_lvalue(
                     file.source_slice(field.internal_name().syntax().span()) == field_name
                 })
                 .unwrap();
-            let range = copy_range(&c.layouts[&ty.unmanaged()][field_index]);
+            let range = c.layouts[&ty.unmanaged()][field_index];
             Bundle::Refs(refs.drain(range).collect())
         }
     }
@@ -689,8 +689,4 @@ impl Bundle {
 
 fn one(values: Vec<mir::Value>) -> mir::Value {
     <[_; 1]>::try_from(values).unwrap_or_else(|_| unreachable!())[0]
-}
-
-const fn copy_range(range: &Range<usize>) -> Range<usize> {
-    range.start..range.end
 }
