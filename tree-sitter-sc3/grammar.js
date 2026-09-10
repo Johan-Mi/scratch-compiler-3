@@ -139,7 +139,21 @@ module.exports = grammar({
         /[+-]?[0-9]+(\.[0-9]+)?([eE][+-]?[0-9]+)?/,
       ),
 
-    string_literal: $ => /"([^"\n\\]|\\[^\n])*[\\"]?/,
+    string_literal: $ =>
+      choice(
+        prec(
+          1,
+          seq('"', repeat(choice($.escape_sequence, $.string_content)), '"'),
+        ),
+        seq(
+          alias('"', $.string_literal),
+          repeat(choice($.escape_sequence, $.string_content)),
+        ),
+      ),
+
+    escape_sequence: $ => token.immediate(/\\.?/),
+
+    string_content: $ => token.immediate(/[^"\n\\]+/),
 
     comment: $ => /#.*/,
   },

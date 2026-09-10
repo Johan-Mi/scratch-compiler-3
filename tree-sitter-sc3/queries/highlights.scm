@@ -1,6 +1,7 @@
 (comment) @comment.line
 
 (string_literal) @string
+(escape_sequence) @constant.character.escape
 (number_literal) @constant.numeric
 
 [
