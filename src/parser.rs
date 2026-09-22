@@ -152,6 +152,7 @@ pub enum K {
     KwReturn,
 
     Identifier,
+    Underscore,
 
     DecimalNumber,
     BinaryNumber,
@@ -279,9 +280,12 @@ impl Parser<'_> {
     fn parse_struct(&mut self) {
         self.start_node(K::Struct);
         self.bump(); // K::KwStruct
+        let name_span = self.peek_span();
         if !self.eat(K::Identifier) {
-            let labels = [primary(self.peek_span(), "expected identifier")];
-            let message = if self.at(K::Lparen) {
+            let labels = [primary(name_span, "expected identifier")];
+            let message = if self.eat(K::Underscore) {
+                "struct name cannot be `_`"
+            } else if self.at(K::Lparen) {
                 "struct has no name"
             } else {
                 "unfinished struct"
@@ -329,6 +333,13 @@ impl Parser<'_> {
                 } else {
                     self.builder.finish_node_at(checkpoint, K::Variable);
                 }
+            }
+            K::Underscore => {
+                self.diagnostics
+                    .error("`_` is not an expression", [primary(self.peek_span(), "")]);
+                self.start_node(K::Error);
+                self.bump();
+                self.builder.finish_node();
             }
             K::Lparen => {
                 self.start_node(K::Parenthesized);
@@ -463,9 +474,9 @@ impl Parser<'_> {
                 );
                 break;
             }
-            if !self.at(K::Identifier) {
+            if !matches!(self.peek(), K::Identifier | K::Underscore) {
                 let labels = [primary(self.peek_span(), "")];
-                self.diagnostics.error("expected identifier", labels);
+                self.diagnostics.error("expected identifier or `_`", labels);
                 self.start_node(K::Error);
                 self.parse_anything();
                 self.builder.finish_node();
@@ -474,9 +485,10 @@ impl Parser<'_> {
 
             self.start_node(K::Parameter);
             self.bump();
-            if !self.at(K::Colon) && !self.eat(K::Identifier) {
+            if !(self.at(K::Colon) || self.eat(K::Identifier) || self.eat(K::Underscore)) {
                 let labels = [primary(self.peek_span(), "")];
-                self.diagnostics.error("expected identifier or `:`", labels);
+                self.diagnostics
+                    .error("expected identifier, `_` or `:`", labels);
                 self.builder.finish_node();
                 continue;
             }
@@ -512,10 +524,10 @@ impl Parser<'_> {
     fn parse_let(&mut self) {
         self.start_node(K::Let);
         self.bump(); // K::KwLet
-        if !self.eat(K::Identifier) {
+        if !(self.eat(K::Identifier) || self.eat(K::Underscore)) {
             let span = self.peek_span();
             self.diagnostics
-                .error("expected identifier", [primary(span, "")]);
+                .error("expected identifier or `_`", [primary(span, "")]);
         }
         if !self.eat(K::Eq) {
             let span = self.peek_span();
@@ -591,10 +603,10 @@ impl Parser<'_> {
             self.diagnostics
                 .error("expected identifier after `for`", [label]);
         } else {
-            if !self.eat(K::Identifier) {
+            if !(self.eat(K::Identifier) || self.eat(K::Underscore)) {
                 let label = primary(self.peek_span(), "");
                 self.diagnostics
-                    .error("expected identifier after `for`", [label]);
+                    .error("expected identifier or `_` after `for`", [label]);
                 self.builder.finish_node();
                 return;
             }
@@ -658,6 +670,11 @@ impl Parser<'_> {
         let _: bool = self.eat(K::KwInline);
         if self.at(K::Identifier) || self.peek().is_binary_operator() {
             self.bump();
+        } else if self.at(K::Underscore) {
+            let labels = [primary(self.peek_span(), "expected identifier")];
+            self.diagnostics
+                .error("function name cannot be `_`", labels);
+            self.bump();
         } else {
             let span = self.peek_span();
             self.diagnostics
@@ -716,8 +733,15 @@ impl Parser<'_> {
         self.bump(); // K::KwSprite
         if !self.eat(K::Identifier) {
             let span = self.peek_span();
-            self.diagnostics
-                .error("expected idenfitier", [primary(span, "")]);
+            if self.eat(K::Underscore) {
+                self.diagnostics.error(
+                    "sprite name cannot be `_`",
+                    [primary(span, "expected idenfitier")],
+                );
+            } else {
+                self.diagnostics
+                    .error("expected idenfitier", [primary(span, "")]);
+            }
             if !self.at(K::Lbrace) {
                 self.builder.finish_node();
                 return;

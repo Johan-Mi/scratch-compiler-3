@@ -36,9 +36,9 @@ fn resolve_document(
         .filter_map(ast::Function::cast)
         .filter_map(|it| Some((it.body()?.syntax().span(), it.parameters()?)))
         .flat_map(|(scope, parameters)| {
-            parameters.iter().map(move |it| {
-                let identifier = it.internal_name();
-                Definition { identifier, scope }
+            parameters.iter().filter_map(move |it| {
+                let identifier = it.internal_name()?;
+                Some(Definition { identifier, scope })
             })
         });
     let fors = document.pre_order().filter_map(|node| {

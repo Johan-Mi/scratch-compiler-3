@@ -165,18 +165,21 @@ impl<'src> Parameters<'src> {
 node!(Parameter);
 
 impl<'src> Parameter<'src> {
-    pub fn external_name(self) -> cst::Node<'src, K> {
-        token(self.syntax, K::Identifier).unwrap()
+    pub fn external_name(self) -> Option<cst::Node<'src, K>> {
+        self.syntax
+            .children()
+            .take_while(|it| it.kind() != K::Underscore)
+            .find(|it| it.kind() == K::Identifier)
     }
 
-    pub fn internal_name(self) -> VariableDefinition<'src> {
+    pub fn internal_name(self) -> Option<VariableDefinition<'src>> {
         let syntax = self
             .syntax
             .children()
-            .filter(|it| it.kind() == K::Identifier)
+            .filter(|it| matches!(it.kind(), K::Identifier | K::Underscore))
             .last()
-            .unwrap();
-        VariableDefinition { syntax }
+            .filter(|it| it.kind() == K::Identifier)?;
+        Some(VariableDefinition { syntax })
     }
 
     pub fn ty(self) -> Option<TypeExpression<'src>> {

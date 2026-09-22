@@ -117,7 +117,7 @@ pub fn check<'src>(
                 .flat_map(ast::Parameters::iter)
                 .filter_map(|parameter| {
                     let ty = *c.type_expressions.get(&parameter.ty()?.unmanaged())?;
-                    Some((parameter.internal_name().unmanaged(), ty))
+                    Some((parameter.internal_name()?.unmanaged(), ty))
                 }),
         );
 
@@ -441,8 +441,10 @@ fn of_field_access<'src>(
     };
     let file = c.code_map.find_file(r#struct.syntax().span().low());
     let Some(field) = r#struct.parameters().and_then(|it| {
-        it.iter()
-            .find(|it| file.source_slice(it.internal_name().syntax().span()) == name)
+        it.iter().find(|it| {
+            it.internal_name()
+                .is_some_and(|it| file.source_slice(it.syntax().span()) == name)
+        })
     }) else {
         c.diagnostics.error(
             format!(
@@ -634,7 +636,7 @@ fn can_call(
     it.parameters()
         .into_iter()
         .flat_map(ast::Parameters::iter)
-        .map(|it| Some(file.source_slice(it.external_name().span())).filter(|&it| it != "_"))
+        .map(|it| Some(file.source_slice(it.external_name()?.span())))
         .eq(labels.iter().copied())
         && it
             .parameters()

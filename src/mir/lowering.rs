@@ -373,7 +373,10 @@ fn lower_variable(it: ast::Variable, basic_block: Id<mir::BasicBlock>, c: &mut C
             .parameters()
             .unwrap()
             .iter()
-            .position(|it| it.internal_name().unmanaged() == definition)
+            .position(|it| {
+                it.internal_name()
+                    .is_some_and(|it| it.unmanaged() == definition)
+            })
             .unwrap();
         let mut range = 0..0;
         for it in ty::parameters_of(function, &c.typing.type_expressions).take(parameter + 1) {
@@ -426,7 +429,11 @@ fn lower_field_access(
         .parameters()
         .unwrap()
         .iter()
-        .position(|field| file.source_slice(field.internal_name().syntax().span()) == field_name)
+        .position(|field| {
+            field
+                .internal_name()
+                .is_some_and(|it| file.source_slice(it.syntax().span()) == field_name)
+        })
         .unwrap();
     let range = c.layouts[&ty.unmanaged()][field_index];
     values.drain(range).collect::<Vec<_>>().into()
@@ -480,8 +487,9 @@ fn lower_lvalue(
                 .parameters()
                 .unwrap()
                 .iter()
-                .position(|field| {
-                    file.source_slice(field.internal_name().syntax().span()) == field_name
+                .position(|it| {
+                    it.internal_name()
+                        .is_some_and(|it| file.source_slice(it.syntax().span()) == field_name)
                 })
                 .unwrap();
             let range = c.layouts[&ty.unmanaged()][field_index];

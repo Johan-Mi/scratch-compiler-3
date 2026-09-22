@@ -129,7 +129,7 @@ module.exports = grammar({
     index: $ =>
       prec(6, seq($._expression, token.immediate("["), $._expression, "]")),
 
-    identifier: $ => /[\p{XID_Start}_][\p{XID_Continue}-]*/,
+    identifier: $ => /\p{XID_Start}[\p{XID_Continue}-]*|_/,
 
     number_literal: $ =>
       choice(

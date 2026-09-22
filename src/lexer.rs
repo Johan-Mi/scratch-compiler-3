@@ -66,6 +66,7 @@ fn lex_one(source: &str) -> Option<(K, &str)> {
         (">", K::Gt),
         ("&", K::Ampersand),
         (".", K::Dot),
+        ("_", K::Underscore),
     ] {
         if let Some(rest) = s.lex(source) {
             return Some((kind, rest));
@@ -86,7 +87,7 @@ fn lex_one(source: &str) -> Option<(K, &str)> {
     }
 
     if let Some(rest) = (
-        Or(Pred(unicode_ident::is_xid_start), "_"),
+        Pred(unicode_ident::is_xid_start),
         Repeat0(Or(Pred(unicode_ident::is_xid_continue), "-")),
     )
         .lex(source)
