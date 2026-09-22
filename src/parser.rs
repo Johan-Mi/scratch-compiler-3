@@ -662,10 +662,7 @@ impl Parser<'_> {
             let span = self.peek_span();
             self.diagnostics
                 .error("expected identifier or operator", [primary(span, "")]);
-            if !matches!(
-                self.peek(),
-                K::String | K::Lparen | K::Lbrace | K::Lbracket | K::Star
-            ) {
+            if !matches!(self.peek(), K::String | K::Lparen | K::Lbrace | K::Lbracket) {
                 self.builder.finish_node();
                 return;
             }
