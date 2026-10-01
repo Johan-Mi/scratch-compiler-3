@@ -349,11 +349,11 @@ fn of_actually<'src>(
         }
         ast::Expression::ListLiteral(it) => of_list_literal(it, ascribed, c),
         ast::Expression::TypeAscription(it) => {
-            let ascribed_ty = c.type_expressions.get(&it.ty()?.unmanaged()).copied();
+            let ascribed_here = c.type_expressions.get(&it.ty()?.unmanaged()).copied();
             let inner = it.inner()?;
-            if let Some(actual) = of(inner, ascribed_ty, c)
-                && let Some(ascribed) = ascribed_ty
-                && actual != ascribed
+            if let Some(actual) = of(inner, ascribed_here, c)
+                && let Some(ascribed_here) = ascribed_here
+                && actual != ascribed_here
             {
                 let span = inner.syntax().span();
                 c.diagnostics.error(
@@ -364,7 +364,7 @@ fn of_actually<'src>(
                     )],
                 );
             }
-            ascribed_ty
+            ascribed_here
         }
         ast::Expression::MethodCall(it) => of_call(
             expression,
@@ -384,7 +384,7 @@ fn of_list_literal<'src>(
     let span = it.syntax().span();
     let mut items = it.iter();
     let Some(first) = items.next() else {
-        return ascribed.filter(|it| it.shape == Shape::List).or_else(|| {
+        return ascribed.filter(|ty| ty.shape == Shape::List).or_else(|| {
             c.diagnostics
                 .error("cannot infer type of empty list", [primary(span, "")]);
             None
@@ -440,10 +440,11 @@ fn of_field_access<'src>(
         return None;
     };
     let file = c.code_map.find_file(r#struct.syntax().span().low());
-    let Some(field) = r#struct.parameters().and_then(|it| {
-        it.iter().find(|it| {
-            it.internal_name()
-                .is_some_and(|it| file.source_slice(it.syntax().span()) == name)
+    let Some(field) = r#struct.parameters().and_then(|parameters| {
+        parameters.iter().find(|parameter| {
+            parameter.internal_name().is_some_and(|parameter_name| {
+                file.source_slice(parameter_name.syntax().span()) == name
+            })
         })
     }) else {
         c.diagnostics.error(

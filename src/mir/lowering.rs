@@ -145,8 +145,8 @@ fn lower_statement(statement: ast::Statement, basic_block: Id<mir::BasicBlock>, 
                 if let Some(else_if) = else_clause.if_() {
                     lower_statement(ast::Statement::If(else_if), r#else, c);
                 } else {
-                    for statement in else_clause.block().unwrap().statements() {
-                        lower_statement(statement, r#else, c);
+                    for inner_statement in else_clause.block().unwrap().statements() {
+                        lower_statement(inner_statement, r#else, c);
                     }
                 }
             }
@@ -165,14 +165,14 @@ fn lower_statement(statement: ast::Statement, basic_block: Id<mir::BasicBlock>, 
         ast::Statement::While(it) => lower_while(
             it.condition().unwrap(),
             it.body().unwrap(),
-            false,
+            LoopKind::While,
             basic_block,
             c,
         ),
         ast::Statement::Until(it) => lower_while(
             it.condition().unwrap(),
             it.body().unwrap(),
-            true,
+            LoopKind::Until,
             basic_block,
             c,
         ),
@@ -192,8 +192,7 @@ fn lower_statement(statement: ast::Statement, basic_block: Id<mir::BasicBlock>, 
         }
         ast::Statement::Return(it) => {
             let values = lower_expression(it.expression().unwrap(), basic_block, c).values();
-            let function = c.functions[&c.current_function.unwrap().unmanaged()];
-            let op = c.program.ops.insert(mir::Op::Return { function, values });
+            let op = c.program.ops.insert(mir::Op::Return { values });
             c.program.basic_blocks[basic_block].0.push(op);
         }
         ast::Statement::Expression(it) => {
@@ -202,21 +201,31 @@ fn lower_statement(statement: ast::Statement, basic_block: Id<mir::BasicBlock>, 
     }
 }
 
+#[derive(Clone, Copy)]
+enum LoopKind {
+    While,
+    Until,
+}
+
 fn lower_while(
     condition: ast::Expression<'_>,
     body: ast::Block<'_>,
-    not: bool,
+    kind: LoopKind,
     basic_block: Id<mir::BasicBlock>,
     c: &mut Context<'_, '_>,
 ) {
-    let value = mir::Constant::PLACEHOLDER;
-    let variable = c.program.variables.insert(mir::Variable { value });
+    let variable = c.program.variables.insert(mir::Variable {
+        value: mir::Constant::PLACEHOLDER,
+    });
     let condition_block = c.program.basic_blocks.insert(mir::BasicBlock(Vec::new()));
     let mut value = one(lower_expression(condition, condition_block, c).values());
-    if not {
-        let not = c.program.ops.insert(mir::Op::Not(value));
-        c.program.basic_blocks[condition_block].0.push(not);
-        value = mir::Value::Op(not);
+    match kind {
+        LoopKind::While => {}
+        LoopKind::Until => {
+            let not = c.program.ops.insert(mir::Op::Not(value));
+            c.program.basic_blocks[condition_block].0.push(not);
+            value = mir::Value::Op(not);
+        }
     }
     let target = mir::Ref::Variable(variable);
     let store = c.program.ops.insert(mir::Op::Store { target, value });
@@ -254,7 +263,7 @@ fn lower_expression(
                 let source = mir::Ref::List { list, index };
                 c.program.ops.insert(mir::Op::Load { source })
             }));
-            let ops = basic_block[start..].iter().map(|&it| mir::Value::Op(it));
+            let ops = basic_block[start..].iter().map(|&op| mir::Value::Op(op));
             ops.collect::<Vec<_>>().into()
         }
         ast::Expression::NamedArgument(it) => lower_expression(it.value().unwrap(), basic_block, c),
@@ -280,7 +289,7 @@ fn lower_expression(
             c.program.basic_blocks[basic_block].0.extend(
                 lists
                     .iter()
-                    .map(|&it| c.program.ops.insert(mir::Op::DeleteAll(it))),
+                    .map(|&list| c.program.ops.insert(mir::Op::DeleteAll(list))),
             );
             for item in it.iter() {
                 let values = lower_expression(item, basic_block, c).values();
@@ -365,7 +374,7 @@ fn lower_variable(it: ast::Variable, basic_block: Id<mir::BasicBlock>, c: &mut C
         let start = basic_block.len();
         let variables = variables.iter().copied().map(mir::Ref::Variable);
         basic_block.extend(variables.map(|source| c.program.ops.insert(mir::Op::Load { source })));
-        let ops = basic_block[start..].iter().map(|&it| mir::Value::Op(it));
+        let ops = basic_block[start..].iter().map(|&op| mir::Value::Op(op));
         ops.collect::<Vec<_>>()
     } else {
         let function = c.current_function.unwrap();
@@ -373,14 +382,15 @@ fn lower_variable(it: ast::Variable, basic_block: Id<mir::BasicBlock>, c: &mut C
             .parameters()
             .unwrap()
             .iter()
-            .position(|it| {
-                it.internal_name()
-                    .is_some_and(|it| it.unmanaged() == definition)
+            .position(|parameter| {
+                parameter
+                    .internal_name()
+                    .is_some_and(|name| name.unmanaged() == definition)
             })
             .unwrap();
         let mut range = 0..0;
-        for it in ty::parameters_of(function, &c.typing.type_expressions).take(parameter + 1) {
-            range = range.end..range.end + ty::layout::size(it.base, c.layouts);
+        for ty in ty::parameters_of(function, &c.typing.type_expressions).take(parameter + 1) {
+            range = range.end..range.end + ty::layout::size(ty.base, c.layouts);
         }
         range
             .map(|index| mir::Value::FunctionParameter { index })
@@ -412,18 +422,20 @@ fn float(
 }
 
 fn lower_field_access(
-    it: ast::FieldAccess,
+    access: ast::FieldAccess,
     basic_block: Id<mir::BasicBlock>,
     c: &mut Context,
 ) -> Bundle {
-    let mut values = lower_expression(it.aggregate(), basic_block, c).values();
-    let ty = c.typing.expression_types[&it.aggregate().unmanaged()];
+    let mut values = lower_expression(access.aggregate(), basic_block, c).values();
+    let ty = c.typing.expression_types[&access.aggregate().unmanaged()];
     assert_eq!(ty::Shape::Flat, ty.shape);
     let ty::Base::Struct(ty) = ty.base else {
         unreachable!();
     };
-    let field = it.field().unwrap().span();
-    let field_name = c.code_map.find_file(field.low()).source_slice(field);
+    let field_name = {
+        let span = access.field().unwrap().span();
+        c.code_map.find_file(span.low()).source_slice(span)
+    };
     let file = c.code_map.find_file(ty.syntax().span().low());
     let field_index: usize = ty
         .parameters()
@@ -473,23 +485,26 @@ fn lower_lvalue(
             let refs = lists.iter().map(|&list| mir::Ref::List { list, index });
             Bundle::Refs(refs.collect())
         }
-        ast::Expression::FieldAccess(it) => {
-            let mut refs = lower_lvalue(it.aggregate(), basic_block, c).refs();
-            let ty = c.typing.expression_types[&it.aggregate().unmanaged()];
+        ast::Expression::FieldAccess(access) => {
+            let mut refs = lower_lvalue(access.aggregate(), basic_block, c).refs();
+            let ty = c.typing.expression_types[&access.aggregate().unmanaged()];
             assert_eq!(ty::Shape::Flat, ty.shape);
             let ty::Base::Struct(ty) = ty.base else {
                 unreachable!();
             };
-            let field = it.field().unwrap().span();
-            let field_name = c.code_map.find_file(field.low()).source_slice(field);
+            let name = {
+                let span = access.field().unwrap().span();
+                c.code_map.find_file(span.low()).source_slice(span)
+            };
             let file = c.code_map.find_file(ty.syntax().span().low());
             let field_index: usize = ty
                 .parameters()
                 .unwrap()
                 .iter()
-                .position(|it| {
-                    it.internal_name()
-                        .is_some_and(|it| file.source_slice(it.syntax().span()) == field_name)
+                .position(|field| {
+                    field
+                        .internal_name()
+                        .is_some_and(|it| file.source_slice(it.syntax().span()) == name)
                 })
                 .unwrap();
             let range = c.layouts[&ty.unmanaged()][field_index];

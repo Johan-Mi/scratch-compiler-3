@@ -13,15 +13,16 @@ pub fn compile(
     let mut project = sb3::Project::default();
     let output_file = File::create(output_path)?;
     for sprite in ast.documents().flat_map(ast::Document::sprites) {
-        let name = sprite.name().unwrap();
-        let span = name.span();
-        let file = code_map.find_file(span.low());
-        let mut target = project.add_sprite(file.source_slice(span));
+        let mut target = {
+            let span = sprite.name().unwrap().span();
+            let file = code_map.find_file(span.low());
+            project.add_sprite(file.source_slice(span))
+        };
 
         for costume in sprite.costumes() {
-            let name = &string_literals[&costume.name().span().low()];
+            let costume_name = &string_literals[&costume.name().span().low()];
             let path = string_literals[&costume.path().unwrap().span().low()].as_ref();
-            target.add_costume(sb3::Costume::from_file(name, path)?);
+            target.add_costume(sb3::Costume::from_file(costume_name, path)?);
         }
 
         let constant = |it: mir::Constant| match it {
@@ -58,12 +59,12 @@ pub fn compile(
             .filter_map(|(big, it)| Some((big, it.return_value_count()?)))
             .enumerate()
             .map(|(big, (&function, return_value_count))| {
-                let variables = (0..return_value_count).map(|little| {
+                let return_variables = (0..return_value_count).map(|little| {
                     let name = format!("r{big}.{little}");
                     let value = sb3::Constant::Number(0.0);
                     target.add_variable(sb3::Variable { name, value })
                 });
-                (function, variables.collect())
+                (function, return_variables.collect())
             })
             .collect();
 
@@ -308,10 +309,13 @@ impl<'src> Compiler<'src, '_> {
                 .custom_block_parameter(self.custom_blocks[&function], index),
             mir::Value::Op(op) => self.ops.remove(&op).unwrap(),
             mir::Value::Returned { call, index } => {
-                let mir::Op::Call { function, .. } = self.mir.ops[call] else {
+                let mir::Op::Call {
+                    function: callee, ..
+                } = self.mir.ops[call]
+                else {
                     unreachable!();
                 };
-                self.returns[&function][index].into()
+                self.returns[&callee][index].into()
             }
             mir::Value::Constant(mir::Constant::Num(n)) => n.into(),
             mir::Value::Constant(mir::Constant::String(s)) => (&*self.string_literals[&s]).into(),
