@@ -188,15 +188,15 @@ impl<'src> Compiler<'src, '_> {
                 None
             }
             mir::Op::Call {
-                function,
+                function: callee,
                 arguments,
             } => {
                 let arguments = arguments
                     .iter()
-                    .map(|&it| self.value(it, *function))
+                    .map(|&it| self.value(it, function))
                     .collect();
                 self.target
-                    .use_custom_block(self.custom_blocks[function], arguments);
+                    .use_custom_block(self.custom_blocks[callee], arguments);
                 None
             }
             mir::Op::Delete { list, index } => {
