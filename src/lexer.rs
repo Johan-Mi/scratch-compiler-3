@@ -30,13 +30,15 @@ fn lex_one(source: &str) -> Option<(K, &str)> {
         return Some((K::Trivia, rest));
     }
 
+    let sign = || Maybe(Or("+", "-"));
+
     for (prefix_1, prefix_2, base, kind) in [
         ("0b", "0B", 2, K::BinaryNumber),
         ("0o", "0O", 8, K::OctalNumber),
         ("0x", "0X", 16, K::HexadecimalNumber),
     ] {
         if let Some(rest) = (
-            Maybe(Or("+", "-")),
+            sign(),
             Or(prefix_1, prefix_2),
             Repeat1(Pred(|c: char| c.is_digit(base))),
         )
@@ -44,6 +46,18 @@ fn lex_one(source: &str) -> Option<(K, &str)> {
         {
             return Some((kind, rest));
         }
+    }
+
+    let digits = || Repeat1(Pred(|c: char| c.is_ascii_digit()));
+    if let Some(rest) = (
+        sign(),
+        digits(),
+        Maybe((".", digits())),
+        Maybe((Or("e", "E"), sign(), digits())),
+    )
+        .lex(source)
+    {
+        return Some((K::DecimalNumber, rest));
     }
 
     for (s, kind) in [
