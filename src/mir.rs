@@ -84,7 +84,6 @@ pub enum Op {
         r#else: Id<BasicBlock>,
     },
     Return {
-        function: Id<BasicBlock>,
         values: Vec<Value>,
     },
 
@@ -177,10 +176,7 @@ impl Op {
             | Self::DeleteAll(_)
             | Self::DeleteLast(_)
             | Self::Length(_) => Left(std::slice::Iter::default()),
-            Self::Return {
-                function: _,
-                values,
-            } => Left(values.iter()),
+            Self::Return { values } => Left(values.iter()),
             Self::Call {
                 function: _,
                 arguments,
@@ -239,10 +235,7 @@ impl Op {
             | Self::DeleteAll(_)
             | Self::DeleteLast(_)
             | Self::Length(_) => Left(std::slice::IterMut::default()),
-            Self::Return {
-                function: _,
-                values,
-            } => Left(values.iter_mut()),
+            Self::Return { values } => Left(values.iter_mut()),
             Self::Call {
                 function: _,
                 arguments,

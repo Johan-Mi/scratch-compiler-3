@@ -179,9 +179,9 @@ impl<'src> Compiler<'src, '_> {
                 let _: sb3::InsertionPoint = self.target.insert_at(after);
                 None
             }
-            mir::Op::Return { function, values } => {
-                for (&variable, &value) in self.returns[function].iter().zip(values) {
-                    let value = self.value(value, *function);
+            mir::Op::Return { values } => {
+                for (&variable, &value) in self.returns[&function].iter().zip(values) {
+                    let value = self.value(value, function);
                     self.target.put(block::set_variable(variable, value));
                 }
                 self.target.put(block::stop_this_script());
