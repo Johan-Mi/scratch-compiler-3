@@ -16,7 +16,12 @@ pub fn compile(
         let mut target = {
             let span = sprite.name().unwrap().span();
             let file = code_map.find_file(span.low());
-            project.add_sprite(file.source_slice(span))
+            let name = file.source_slice(span);
+            if name == "Stage" {
+                project.stage()
+            } else {
+                project.add_sprite(name)
+            }
         };
 
         for costume in sprite.costumes() {
