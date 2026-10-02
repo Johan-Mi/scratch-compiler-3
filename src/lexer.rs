@@ -24,9 +24,8 @@ pub fn lex(mut source: &str) -> impl Iterator<Item = (K, &str)> {
 fn lex_one(source: &str) -> Option<(K, &str)> {
     use lexagon::{Lexer, Maybe, Or, Pred, Repeat0, Repeat1};
 
-    if let Some(rest) =
-        Repeat1(Or(Pred(char::is_whitespace), ("#", Pred(|c| c != '\n')))).lex(source)
-    {
+    let comment = ("#", Repeat0(Pred(|c| c != '\n')));
+    if let Some(rest) = Repeat1(Or(Pred(char::is_whitespace), comment)).lex(source) {
         return Some((K::Trivia, rest));
     }
 
