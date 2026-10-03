@@ -5,6 +5,27 @@ export default grammar({
 
   word: $ => $.identifier,
 
+  reserved: {
+    global: $ => [
+      "struct",
+      "sprite",
+      "inline",
+      "fn",
+      "let",
+      "costume",
+      "false",
+      "true",
+      "if",
+      "else",
+      "forever",
+      "while",
+      "until",
+      "for",
+      "as",
+      "return",
+    ],
+  },
+
   rules: {
     source_file: $ =>
       repeat(
