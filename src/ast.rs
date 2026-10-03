@@ -493,12 +493,12 @@ impl<'src> BinaryOperation<'src> {
 node!(Index);
 
 impl<'src> Index<'src> {
-    fn lbrace(self) -> cst::Node<'src, K> {
-        token(self.syntax, K::Lbrace).unwrap()
+    fn lbracket(self) -> cst::Node<'src, K> {
+        token(self.syntax, K::Lbracket).unwrap()
     }
 
     pub fn lhs(self) -> Option<Expression<'src>> {
-        let operator = self.lbrace().unmanaged();
+        let operator = self.lbracket().unmanaged();
         self.syntax
             .children()
             .take_while(|child| child.unmanaged() < operator)
@@ -506,7 +506,7 @@ impl<'src> Index<'src> {
     }
 
     pub fn rhs(self) -> Option<Expression<'src>> {
-        let operator = self.lbrace().unmanaged();
+        let operator = self.lbracket().unmanaged();
         self.syntax
             .children()
             .skip_while(|child| child.unmanaged() <= operator)
