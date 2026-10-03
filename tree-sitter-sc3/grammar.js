@@ -1,4 +1,4 @@
-module.exports = grammar({
+export default grammar({
   name: "sc3",
 
   extras: $ => [/[ \t\n]+/, $.comment],
