@@ -341,9 +341,9 @@ fn lower_constant(
             [mir::Constant::Num(number)].into()
         }
         ast::Expression::String(it) => [mir::Constant::String(it.syntax().span().low())].into(),
-        ast::Expression::BinaryNumber(it) => float(2, b'b', it.syntax(), code_map),
-        ast::Expression::OctalNumber(it) => float(8, b'o', it.syntax(), code_map),
-        ast::Expression::HexadecimalNumber(it) => float(16, b'x', it.syntax(), code_map),
+        ast::Expression::BinaryNumber(it) => float(2, it.syntax(), code_map),
+        ast::Expression::OctalNumber(it) => float(8, it.syntax(), code_map),
+        ast::Expression::HexadecimalNumber(it) => float(16, it.syntax(), code_map),
         ast::Expression::KwFalse(_) => [mir::Constant::Bool(false)].into(),
         ast::Expression::KwTrue(_) => [mir::Constant::Bool(true)].into(),
         ast::Expression::Variable(_)
@@ -399,20 +399,11 @@ fn lower_variable(it: ast::Variable, basic_block: Id<mir::BasicBlock>, c: &mut C
     .into()
 }
 
-fn float(
-    radix: u32,
-    letter: u8,
-    node: cst::Node<K>,
-    code_map: &codemap::CodeMap,
-) -> Vec<mir::Constant> {
+fn float(radix: u32, node: cst::Node<K>, code_map: &codemap::CodeMap) -> Vec<mir::Constant> {
     let span = node.span();
-    let file = code_map.find_file(span.low());
-    let text = file.source_slice(span);
-    let (sign, text) = match text.as_bytes() {
-        [b'+', b'0', l, ..] if l.eq_ignore_ascii_case(&letter) => (1.0, &text[3..]),
-        [b'-', b'0', l, ..] if l.eq_ignore_ascii_case(&letter) => (-1.0, &text[3..]),
-        _ => (1.0, &text[2..]),
-    };
+    let text = code_map.find_file(span.low()).source_slice(span);
+    let sign = if text.starts_with('-') { -1.0 } else { 1.0 };
+    let text = &text.strip_prefix(['+', '-']).unwrap_or(text)[2..];
     #[expect(
         clippy::cast_precision_loss,
         reason = "These are float literals. `u64` is only used as an implementation detail."
