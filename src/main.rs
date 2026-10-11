@@ -1,5 +1,6 @@
 mod ast;
 mod codegen;
+mod constant;
 #[cfg(debug_assertions)]
 mod debug;
 mod diagnostics;
@@ -98,7 +99,15 @@ fn real_main(code_map: &mut CodeMap, diagnostics: &mut Diagnostics) -> Result<()
         return Err(());
     }
 
-    let mut mir = mir::lower(ast, code_map, &resolved_variables, &typing, &layouts);
+    let constants = constant::s(ast, code_map, &typing);
+    let mut mir = mir::lower(
+        ast,
+        code_map,
+        &resolved_variables,
+        &typing,
+        &layouts,
+        constants,
+    );
     mir::linearity::spill(&mut mir);
 
     #[cfg(debug_assertions)]
