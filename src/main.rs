@@ -99,14 +99,19 @@ fn real_main(code_map: &mut CodeMap, diagnostics: &mut Diagnostics) -> Result<()
         return Err(());
     }
 
-    let constants = constant::s(ast, code_map, &typing);
+    let constants = constant::s(ast, code_map, &typing, diagnostics);
+
+    if diagnostics.have_errors() {
+        return Err(());
+    }
+
     let mut mir = mir::lower(
         ast,
         code_map,
         &resolved_variables,
         &typing,
         &layouts,
-        constants,
+        &constants,
     );
     mir::linearity::spill(&mut mir);
 

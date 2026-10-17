@@ -9,7 +9,7 @@ pub fn lower<'src>(
     resolved_variables: &name::S,
     typing: &ty::Ping<'src>,
     layouts: &ty::layout::S,
-    constants: impl Iterator<Item = (ast::VariableDefinitionUnmanaged, Vec<mir::Constant>)>,
+    constants: &[(ast::VariableDefinitionUnmanaged, Vec<mir::Constant>)],
 ) -> mir::Program<'src> {
     let function_asts = || {
         ast.documents()
@@ -31,11 +31,12 @@ pub fn lower<'src>(
         .collect();
 
     let variables = constants
+        .iter()
         .map(|(source_variable, values)| {
             let mir_variables = values
-                .into_iter()
-                .map(|value| program.variables.insert(mir::Variable { value }));
-            (source_variable, mir_variables.collect())
+                .iter()
+                .map(|&value| program.variables.insert(mir::Variable { value }));
+            (*source_variable, mir_variables.collect())
         })
         .collect();
 
@@ -268,11 +269,14 @@ fn lower_expression(
         | ast::Expression::HexadecimalNumber(_)
         | ast::Expression::String(_)
         | ast::Expression::KwFalse(_)
-        | ast::Expression::KwTrue(_) => constant::eval_expression(expression, c.code_map, c.typing)
-            .into_iter()
-            .map(mir::Value::Constant)
-            .collect::<Vec<_>>()
-            .into(),
+        | ast::Expression::KwTrue(_) => {
+            constant::eval_expression(expression, c.code_map, c.typing, None)
+                .unwrap()
+                .into_iter()
+                .map(mir::Value::Constant)
+                .collect::<Vec<_>>()
+                .into()
+        }
         ast::Expression::Lvalue(it) => lower_lvalue(it.inner().unwrap(), basic_block, c),
         ast::Expression::ListLiteral(it) => {
             let base = c.typing.expression_types[&expression.unmanaged()].base;

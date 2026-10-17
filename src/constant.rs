@@ -1,46 +1,65 @@
 use crate::ast::{self, Node};
-use crate::{mir, parser::K, ty};
+use crate::{Diagnostics, diagnostics::primary, mir, parser::K, ty};
 
 pub fn s(
     ast: ast::Program,
     code_map: &codemap::CodeMap,
     typing: &ty::Ping,
-) -> impl Iterator<Item = (ast::VariableDefinitionUnmanaged, Vec<mir::Constant>)> {
+    diagnostics: &mut Diagnostics,
+) -> Vec<(ast::VariableDefinitionUnmanaged, Vec<mir::Constant>)> {
     ast.documents()
         .flat_map(|it| it.lets().chain(it.sprites().flat_map(ast::Sprite::lets)))
-        .map(|it| {
-            (
+        .filter_map(|it| {
+            Some((
                 it.variable().unwrap().unmanaged(),
-                eval_expression(it.value().unwrap(), code_map, typing),
-            )
+                eval_expression(it.value().unwrap(), code_map, typing, Some(diagnostics)).ok()?,
+            ))
         })
+        .collect()
 }
 
 pub fn eval_expression(
     expression: ast::Expression,
     code_map: &codemap::CodeMap,
     typing: &ty::Ping,
-) -> Vec<mir::Constant> {
-    match expression {
+    diagnostics: Option<&mut Diagnostics>,
+) -> Result<Vec<mir::Constant>, ()> {
+    Ok(match expression {
         ast::Expression::Parenthesized(it) => {
-            eval_expression(it.inner().unwrap(), code_map, typing)
+            eval_expression(it.inner().unwrap(), code_map, typing, diagnostics)?
         }
-        ast::Expression::FunctionCall(it) => {
-            eval_call(expression, &mut it.arguments().iter(), code_map, typing)
-        }
+        ast::Expression::FunctionCall(it) => eval_call(
+            expression,
+            &mut it.arguments().iter(),
+            code_map,
+            typing,
+            diagnostics.unwrap(),
+        )?,
         ast::Expression::BinaryOperation(it) => {
             let mut arguments = [it.lhs().unwrap(), it.rhs().unwrap()].into_iter();
-            eval_call(expression, &mut arguments, code_map, typing)
+            eval_call(
+                expression,
+                &mut arguments,
+                code_map,
+                typing,
+                diagnostics.unwrap(),
+            )?
         }
         ast::Expression::MethodCall(it) => {
             let mut arguments = std::iter::once(it.caller()).chain(it.arguments().iter());
-            eval_call(expression, &mut arguments, code_map, typing)
+            eval_call(
+                expression,
+                &mut arguments,
+                code_map,
+                typing,
+                diagnostics.unwrap(),
+            )?
         }
         ast::Expression::TypeAscription(it) => {
-            eval_expression(it.inner().unwrap(), code_map, typing)
+            eval_expression(it.inner().unwrap(), code_map, typing, diagnostics)?
         }
         ast::Expression::NamedArgument(it) => {
-            eval_expression(it.value().unwrap(), code_map, typing)
+            eval_expression(it.value().unwrap(), code_map, typing, diagnostics)?
         }
         ast::Expression::DecimalNumber(it) => {
             let span = it.syntax().span();
@@ -58,8 +77,14 @@ pub fn eval_expression(
         | ast::Expression::Index(_)
         | ast::Expression::Lvalue(_)
         | ast::Expression::ListLiteral(_)
-        | ast::Expression::FieldAccess(_) => todo!(),
-    }
+        | ast::Expression::FieldAccess(_) => {
+            diagnostics.unwrap().error(
+                "expression cannot be evaluated at compile time",
+                [primary(expression.syntax().span(), "")],
+            );
+            return Err(());
+        }
+    })
 }
 
 fn eval_call(
@@ -67,12 +92,22 @@ fn eval_call(
     arguments: &mut dyn Iterator<Item = ast::Expression>,
     code_map: &codemap::CodeMap,
     typing: &ty::Ping,
-) -> Vec<mir::Constant> {
+    diagnostics: &mut Diagnostics,
+) -> Result<Vec<mir::Constant>, ()> {
     let function_like = typing.resolved_calls[&expression.unmanaged()];
     assert!(ast::Struct::cast(function_like.syntax()).is_some());
-    arguments
-        .flat_map(|it| eval_expression(it, code_map, typing))
-        .collect()
+
+    let mut res = Ok(Vec::new());
+    for it in arguments {
+        if let Ok(constants) = eval_expression(it, code_map, typing, Some(diagnostics))
+            && let Ok(res) = &mut res
+        {
+            res.extend(constants);
+        } else {
+            res = Err(());
+        }
+    }
+    res
 }
 
 fn float(radix: u32, node: cst::Node<K>, code_map: &codemap::CodeMap) -> Vec<mir::Constant> {
