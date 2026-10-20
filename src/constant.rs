@@ -95,7 +95,13 @@ fn eval_call(
     diagnostics: &mut Diagnostics,
 ) -> Result<Vec<mir::Constant>, ()> {
     let function_like = typing.resolved_calls[&expression.unmanaged()];
-    assert!(ast::Struct::cast(function_like.syntax()).is_some());
+    if ast::Struct::cast(function_like.syntax()).is_none() {
+        diagnostics.error(
+            "non-constructor function cannot be called at compile time",
+            [primary(expression.syntax().span(), "")],
+        );
+        return Err(());
+    }
 
     let mut res = Ok(Vec::new());
     for it in arguments {
