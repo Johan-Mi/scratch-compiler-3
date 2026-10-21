@@ -73,13 +73,37 @@ pub fn eval_expression(
         ast::Expression::HexadecimalNumber(it) => float(16, it.syntax(), code_map),
         ast::Expression::KwFalse(_) => [mir::Constant::Bool(false)].into(),
         ast::Expression::KwTrue(_) => [mir::Constant::Bool(true)].into(),
-        ast::Expression::Variable(_)
-        | ast::Expression::Index(_)
-        | ast::Expression::Lvalue(_)
-        | ast::Expression::ListLiteral(_)
-        | ast::Expression::FieldAccess(_) => {
+        ast::Expression::Variable(_) => {
             diagnostics.unwrap().error(
-                "expression cannot be evaluated at compile time",
+                "reading variables is not yet supported at compile time",
+                [primary(expression.syntax().span(), "")],
+            );
+            return Err(());
+        }
+        ast::Expression::Index(_) => {
+            diagnostics.unwrap().error(
+                "indexing is not yet supported at compile time",
+                [primary(expression.syntax().span(), "")],
+            );
+            return Err(());
+        }
+        ast::Expression::Lvalue(_) => {
+            diagnostics.unwrap().error(
+                "references are not yet supported at compile time",
+                [primary(expression.syntax().span(), "")],
+            );
+            return Err(());
+        }
+        ast::Expression::ListLiteral(_) => {
+            diagnostics.unwrap().error(
+                "list literals are not yet supported at compile time",
+                [primary(expression.syntax().span(), "")],
+            );
+            return Err(());
+        }
+        ast::Expression::FieldAccess(_) => {
+            diagnostics.unwrap().error(
+                "field access is not yet supported at compile time",
                 [primary(expression.syntax().span(), "")],
             );
             return Err(());
