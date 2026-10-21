@@ -18,7 +18,7 @@ pub fn s(
         .collect()
 }
 
-pub fn eval_expression(
+fn eval_expression(
     expression: ast::Expression,
     code_map: &codemap::CodeMap,
     typing: &ty::Ping,
@@ -67,12 +67,12 @@ pub fn eval_expression(
             let number = file.source_slice(span).parse().unwrap();
             [mir::Constant::Num(number)].into()
         }
-        ast::Expression::String(it) => [mir::Constant::String(it.syntax().span().low())].into(),
-        ast::Expression::BinaryNumber(it) => float(2, it.syntax(), code_map),
-        ast::Expression::OctalNumber(it) => float(8, it.syntax(), code_map),
-        ast::Expression::HexadecimalNumber(it) => float(16, it.syntax(), code_map),
-        ast::Expression::KwFalse(_) => [mir::Constant::Bool(false)].into(),
-        ast::Expression::KwTrue(_) => [mir::Constant::Bool(true)].into(),
+        ast::Expression::String(_)
+        | ast::Expression::BinaryNumber(_)
+        | ast::Expression::OctalNumber(_)
+        | ast::Expression::HexadecimalNumber(_)
+        | ast::Expression::KwFalse(_)
+        | ast::Expression::KwTrue(_) => eval_expression_simple(expression, code_map),
         ast::Expression::Variable(_) => {
             diagnostics.unwrap().error(
                 "reading variables is not yet supported at compile time",
@@ -109,6 +109,37 @@ pub fn eval_expression(
             return Err(());
         }
     })
+}
+
+pub fn eval_expression_simple(
+    expression: ast::Expression,
+    code_map: &codemap::CodeMap,
+) -> Vec<mir::Constant> {
+    match expression {
+        ast::Expression::Parenthesized(_)
+        | ast::Expression::FunctionCall(_)
+        | ast::Expression::BinaryOperation(_)
+        | ast::Expression::MethodCall(_)
+        | ast::Expression::TypeAscription(_)
+        | ast::Expression::NamedArgument(_)
+        | ast::Expression::Variable(_)
+        | ast::Expression::Index(_)
+        | ast::Expression::Lvalue(_)
+        | ast::Expression::ListLiteral(_)
+        | ast::Expression::FieldAccess(_) => unreachable!(),
+        ast::Expression::DecimalNumber(it) => {
+            let span = it.syntax().span();
+            let file = code_map.find_file(span.low());
+            let number = file.source_slice(span).parse().unwrap();
+            [mir::Constant::Num(number)].into()
+        }
+        ast::Expression::String(it) => [mir::Constant::String(it.syntax().span().low())].into(),
+        ast::Expression::BinaryNumber(it) => float(2, it.syntax(), code_map),
+        ast::Expression::OctalNumber(it) => float(8, it.syntax(), code_map),
+        ast::Expression::HexadecimalNumber(it) => float(16, it.syntax(), code_map),
+        ast::Expression::KwFalse(_) => [mir::Constant::Bool(false)].into(),
+        ast::Expression::KwTrue(_) => [mir::Constant::Bool(true)].into(),
+    }
 }
 
 fn eval_call(

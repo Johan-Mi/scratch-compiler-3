@@ -269,14 +269,11 @@ fn lower_expression(
         | ast::Expression::HexadecimalNumber(_)
         | ast::Expression::String(_)
         | ast::Expression::KwFalse(_)
-        | ast::Expression::KwTrue(_) => {
-            constant::eval_expression(expression, c.code_map, c.typing, None)
-                .unwrap()
-                .into_iter()
-                .map(mir::Value::Constant)
-                .collect::<Vec<_>>()
-                .into()
-        }
+        | ast::Expression::KwTrue(_) => constant::eval_expression_simple(expression, c.code_map)
+            .into_iter()
+            .map(mir::Value::Constant)
+            .collect::<Vec<_>>()
+            .into(),
         ast::Expression::Lvalue(it) => lower_lvalue(it.inner().unwrap(), basic_block, c),
         ast::Expression::ListLiteral(it) => {
             let base = c.typing.expression_types[&expression.unmanaged()].base;
