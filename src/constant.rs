@@ -12,7 +12,7 @@ pub fn s(
         .filter_map(|it| {
             Some((
                 it.variable().unwrap().unmanaged(),
-                eval_expression(it.value().unwrap(), code_map, typing, Some(diagnostics)).ok()?,
+                eval_expression(it.value().unwrap(), code_map, typing, diagnostics).ok()?,
             ))
         })
         .collect()
@@ -22,7 +22,7 @@ fn eval_expression(
     expression: ast::Expression,
     code_map: &codemap::CodeMap,
     typing: &ty::Ping,
-    diagnostics: Option<&mut Diagnostics>,
+    diagnostics: &mut Diagnostics,
 ) -> Result<Vec<mir::Constant>, ()> {
     Ok(match expression {
         ast::Expression::Parenthesized(it) => {
@@ -33,27 +33,15 @@ fn eval_expression(
             &mut it.arguments().iter(),
             code_map,
             typing,
-            diagnostics.unwrap(),
+            diagnostics,
         )?,
         ast::Expression::BinaryOperation(it) => {
             let mut arguments = [it.lhs().unwrap(), it.rhs().unwrap()].into_iter();
-            eval_call(
-                expression,
-                &mut arguments,
-                code_map,
-                typing,
-                diagnostics.unwrap(),
-            )?
+            eval_call(expression, &mut arguments, code_map, typing, diagnostics)?
         }
         ast::Expression::MethodCall(it) => {
             let mut arguments = std::iter::once(it.caller()).chain(it.arguments().iter());
-            eval_call(
-                expression,
-                &mut arguments,
-                code_map,
-                typing,
-                diagnostics.unwrap(),
-            )?
+            eval_call(expression, &mut arguments, code_map, typing, diagnostics)?
         }
         ast::Expression::TypeAscription(it) => {
             eval_expression(it.inner().unwrap(), code_map, typing, diagnostics)?
@@ -74,35 +62,35 @@ fn eval_expression(
         | ast::Expression::KwFalse(_)
         | ast::Expression::KwTrue(_) => eval_expression_simple(expression, code_map),
         ast::Expression::Variable(_) => {
-            diagnostics.unwrap().error(
+            diagnostics.error(
                 "reading variables is not yet supported at compile time",
                 [primary(expression.syntax().span(), "")],
             );
             return Err(());
         }
         ast::Expression::Index(_) => {
-            diagnostics.unwrap().error(
+            diagnostics.error(
                 "indexing is not yet supported at compile time",
                 [primary(expression.syntax().span(), "")],
             );
             return Err(());
         }
         ast::Expression::Lvalue(_) => {
-            diagnostics.unwrap().error(
+            diagnostics.error(
                 "references are not yet supported at compile time",
                 [primary(expression.syntax().span(), "")],
             );
             return Err(());
         }
         ast::Expression::ListLiteral(_) => {
-            diagnostics.unwrap().error(
+            diagnostics.error(
                 "list literals are not yet supported at compile time",
                 [primary(expression.syntax().span(), "")],
             );
             return Err(());
         }
         ast::Expression::FieldAccess(_) => {
-            diagnostics.unwrap().error(
+            diagnostics.error(
                 "field access is not yet supported at compile time",
                 [primary(expression.syntax().span(), "")],
             );
@@ -160,7 +148,7 @@ fn eval_call(
 
     let mut res = Ok(Vec::new());
     for it in arguments {
-        if let Ok(constants) = eval_expression(it, code_map, typing, Some(diagnostics))
+        if let Ok(constants) = eval_expression(it, code_map, typing, diagnostics)
             && let Ok(res) = &mut res
         {
             res.extend(constants);
