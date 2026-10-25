@@ -1,13 +1,18 @@
 use crate::ast::{self, Node};
 use crate::{Diagnostics, diagnostics::primary, mir, parser::K, ty};
 
+pub struct S {
+    pub global_variables: Vec<(ast::VariableDefinitionUnmanaged, Vec<mir::Constant>)>,
+}
+
 pub fn s(
     ast: ast::Program,
     code_map: &codemap::CodeMap,
     typing: &ty::Ping,
     diagnostics: &mut Diagnostics,
-) -> Vec<(ast::VariableDefinitionUnmanaged, Vec<mir::Constant>)> {
-    ast.documents()
+) -> S {
+    let global_variables = ast
+        .documents()
         .flat_map(|it| it.lets().chain(it.sprites().flat_map(ast::Sprite::lets)))
         .filter_map(|it| {
             Some((
@@ -15,7 +20,8 @@ pub fn s(
                 eval_expression(it.value().unwrap(), code_map, typing, diagnostics).ok()?,
             ))
         })
-        .collect()
+        .collect();
+    S { global_variables }
 }
 
 fn eval_expression(

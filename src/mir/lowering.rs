@@ -9,7 +9,7 @@ pub fn lower<'src>(
     resolved_variables: &name::S,
     typing: &ty::Ping<'src>,
     layouts: &ty::layout::S,
-    constants: &[(ast::VariableDefinitionUnmanaged, Vec<mir::Constant>)],
+    constants: &constant::S,
 ) -> mir::Program<'src> {
     let function_asts = || {
         ast.documents()
@@ -31,6 +31,7 @@ pub fn lower<'src>(
         .collect();
 
     let variables = constants
+        .global_variables
         .iter()
         .map(|(source_variable, values)| {
             let mir_variables = values
