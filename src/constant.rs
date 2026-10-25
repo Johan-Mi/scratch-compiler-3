@@ -3,6 +3,7 @@ use crate::{Diagnostics, diagnostics::primary, mir, parser::K, ty};
 
 pub struct S {
     pub global_variables: Vec<(ast::VariableDefinitionUnmanaged, Vec<mir::Constant>)>,
+    pub global_lists: Vec<(ast::ListLiteralUnmanaged, Vec<Vec<mir::Constant>>)>,
 }
 
 pub fn s(
@@ -21,7 +22,13 @@ pub fn s(
             ))
         })
         .collect();
-    S { global_variables }
+
+    let global_lists = todo!();
+
+    S {
+        global_variables,
+        global_lists,
+    }
 }
 
 fn eval_expression(

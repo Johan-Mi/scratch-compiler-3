@@ -543,6 +543,7 @@ impl<'src> Lvalue<'src> {
 }
 
 node!(ListLiteral);
+node_unmanaged!(ListLiteral -> ListLiteralUnmanaged);
 
 impl<'src> ListLiteral<'src> {
     pub fn iter(self) -> impl Iterator<Item = Expression<'src>> {
