@@ -12,13 +12,19 @@ pub fn s(
     typing: &ty::Ping,
     diagnostics: &mut Diagnostics,
 ) -> S {
+    let mut e = Evaluator {
+        code_map,
+        typing,
+        diagnostics,
+    };
+
     let global_variables = ast
         .documents()
         .flat_map(|it| it.lets().chain(it.sprites().flat_map(ast::Sprite::lets)))
         .filter_map(|it| {
             Some((
                 it.variable().unwrap().unmanaged(),
-                eval_expression(it.value().unwrap(), code_map, typing, diagnostics).ok()?,
+                eval_expression(&mut e, it.value().unwrap()).ok()?,
             ))
         })
         .collect();
@@ -31,40 +37,32 @@ pub fn s(
     }
 }
 
+struct Evaluator<'a> {
+    code_map: &'a codemap::CodeMap,
+    typing: &'a ty::Ping<'a>,
+    diagnostics: &'a mut Diagnostics,
+}
+
 fn eval_expression(
+    e: &mut Evaluator,
     expression: ast::Expression,
-    code_map: &codemap::CodeMap,
-    typing: &ty::Ping,
-    diagnostics: &mut Diagnostics,
 ) -> Result<Vec<mir::Constant>, ()> {
     Ok(match expression {
-        ast::Expression::Parenthesized(it) => {
-            eval_expression(it.inner().unwrap(), code_map, typing, diagnostics)?
-        }
-        ast::Expression::FunctionCall(it) => eval_call(
-            expression,
-            &mut it.arguments().iter(),
-            code_map,
-            typing,
-            diagnostics,
-        )?,
+        ast::Expression::Parenthesized(it) => eval_expression(e, it.inner().unwrap())?,
+        ast::Expression::FunctionCall(it) => eval_call(e, expression, &mut it.arguments().iter())?,
         ast::Expression::BinaryOperation(it) => {
             let mut arguments = [it.lhs().unwrap(), it.rhs().unwrap()].into_iter();
-            eval_call(expression, &mut arguments, code_map, typing, diagnostics)?
+            eval_call(e, expression, &mut arguments)?
         }
         ast::Expression::MethodCall(it) => {
             let mut arguments = std::iter::once(it.caller()).chain(it.arguments().iter());
-            eval_call(expression, &mut arguments, code_map, typing, diagnostics)?
+            eval_call(e, expression, &mut arguments)?
         }
-        ast::Expression::TypeAscription(it) => {
-            eval_expression(it.inner().unwrap(), code_map, typing, diagnostics)?
-        }
-        ast::Expression::NamedArgument(it) => {
-            eval_expression(it.value().unwrap(), code_map, typing, diagnostics)?
-        }
+        ast::Expression::TypeAscription(it) => eval_expression(e, it.inner().unwrap())?,
+        ast::Expression::NamedArgument(it) => eval_expression(e, it.value().unwrap())?,
         ast::Expression::DecimalNumber(it) => {
             let span = it.syntax().span();
-            let file = code_map.find_file(span.low());
+            let file = e.code_map.find_file(span.low());
             let number = file.source_slice(span).parse().unwrap();
             [mir::Constant::Num(number)].into()
         }
@@ -73,37 +71,37 @@ fn eval_expression(
         | ast::Expression::OctalNumber(_)
         | ast::Expression::HexadecimalNumber(_)
         | ast::Expression::KwFalse(_)
-        | ast::Expression::KwTrue(_) => eval_expression_simple(expression, code_map),
+        | ast::Expression::KwTrue(_) => eval_expression_simple(expression, e.code_map),
         ast::Expression::Variable(_) => {
-            diagnostics.error(
+            e.diagnostics.error(
                 "reading variables is not yet supported at compile time",
                 [primary(expression.syntax().span(), "")],
             );
             return Err(());
         }
         ast::Expression::Index(_) => {
-            diagnostics.error(
+            e.diagnostics.error(
                 "indexing is not yet supported at compile time",
                 [primary(expression.syntax().span(), "")],
             );
             return Err(());
         }
         ast::Expression::Lvalue(_) => {
-            diagnostics.error(
+            e.diagnostics.error(
                 "references are not yet supported at compile time",
                 [primary(expression.syntax().span(), "")],
             );
             return Err(());
         }
         ast::Expression::ListLiteral(_) => {
-            diagnostics.error(
+            e.diagnostics.error(
                 "list literals are not yet supported at compile time",
                 [primary(expression.syntax().span(), "")],
             );
             return Err(());
         }
         ast::Expression::FieldAccess(_) => {
-            diagnostics.error(
+            e.diagnostics.error(
                 "field access is not yet supported at compile time",
                 [primary(expression.syntax().span(), "")],
             );
@@ -144,15 +142,13 @@ pub fn eval_expression_simple(
 }
 
 fn eval_call(
+    e: &mut Evaluator,
     expression: ast::Expression,
     arguments: &mut dyn Iterator<Item = ast::Expression>,
-    code_map: &codemap::CodeMap,
-    typing: &ty::Ping,
-    diagnostics: &mut Diagnostics,
 ) -> Result<Vec<mir::Constant>, ()> {
-    let function_like = typing.resolved_calls[&expression.unmanaged()];
+    let function_like = e.typing.resolved_calls[&expression.unmanaged()];
     if ast::Struct::cast(function_like.syntax()).is_none() {
-        diagnostics.error(
+        e.diagnostics.error(
             "non-constructor function cannot be called at compile time",
             [primary(expression.syntax().span(), "")],
         );
@@ -161,7 +157,7 @@ fn eval_call(
 
     let mut res = Ok(Vec::new());
     for it in arguments {
-        if let Ok(constants) = eval_expression(it, code_map, typing, diagnostics)
+        if let Ok(constants) = eval_expression(e, it)
             && let Ok(res) = &mut res
         {
             res.extend(constants);
