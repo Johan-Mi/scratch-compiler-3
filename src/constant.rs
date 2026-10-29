@@ -3,7 +3,7 @@ use crate::{Diagnostics, diagnostics::primary, mir, parser::K, ty};
 
 pub struct S {
     pub global_variables: Vec<(ast::VariableDefinitionUnmanaged, Vec<mir::Constant>)>,
-    pub global_lists: Vec<(ast::ListLiteralUnmanaged, Vec<Vec<mir::Constant>>)>,
+    pub global_lists: Vec<GlobalList>,
 }
 
 pub fn s(
@@ -16,6 +16,7 @@ pub fn s(
         code_map,
         typing,
         diagnostics,
+        global_lists: Vec::new(),
     };
 
     let global_variables = ast
@@ -29,18 +30,22 @@ pub fn s(
         })
         .collect();
 
-    let global_lists = todo!();
-
     S {
         global_variables,
-        global_lists,
+        global_lists: e.global_lists,
     }
+}
+
+pub struct GlobalList {
+    source: ast::ListLiteralUnmanaged,
+    items: Vec<mir::Constant>,
 }
 
 struct Evaluator<'a> {
     code_map: &'a codemap::CodeMap,
     typing: &'a ty::Ping<'a>,
     diagnostics: &'a mut Diagnostics,
+    global_lists: Vec<GlobalList>,
 }
 
 fn eval_expression(
@@ -93,12 +98,23 @@ fn eval_expression(
             );
             return Err(());
         }
-        ast::Expression::ListLiteral(_) => {
-            e.diagnostics.error(
-                "list literals are not yet supported at compile time",
-                [primary(expression.syntax().span(), "")],
-            );
-            return Err(());
+        ast::Expression::ListLiteral(it) => {
+            let mut res = Ok(Vec::new());
+            for item in it.iter() {
+                if let Ok(constants) = eval_expression(e, item)
+                    && let Ok(res) = &mut res
+                {
+                    res.extend(constants);
+                } else {
+                    res = Err(());
+                }
+            }
+            e.global_lists.push(GlobalList {
+                source: it.unmanaged(),
+                items: res?,
+            });
+
+            todo!("support returning lists from this function")
         }
         ast::Expression::FieldAccess(_) => {
             e.diagnostics.error(
