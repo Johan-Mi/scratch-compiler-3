@@ -252,7 +252,7 @@ fn lower_expression(
             lower_call(expression, &mut arguments, basic_block, c)
         }
         ast::Expression::Index(it) => {
-            let lists = lower_lvalue(it.lhs().unwrap(), basic_block, c).lists();
+            let lists = lower_expression(it.lhs().unwrap(), basic_block, c).lists();
             let index = one(lower_expression(it.rhs().unwrap(), basic_block, c).values());
             let basic_block = &mut c.program.basic_blocks[basic_block].0;
             let start = basic_block.len();
@@ -400,7 +400,7 @@ fn lower_lvalue(
                 .collect(),
         ),
         ast::Expression::Index(it) => {
-            let lists = lower_lvalue(it.lhs().unwrap(), basic_block, c).lists();
+            let lists = lower_expression(it.lhs().unwrap(), basic_block, c).lists();
             let index = one(lower_expression(it.rhs().unwrap(), basic_block, c).values());
             let refs = lists.iter().map(|&list| mir::Ref::List { list, index });
             Bundle::Refs(refs.collect())
