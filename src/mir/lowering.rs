@@ -275,7 +275,9 @@ fn lower_expression(
             .map(mir::Value::Constant)
             .collect::<Vec<_>>()
             .into(),
-        ast::Expression::Lvalue(it) => lower_lvalue(it.inner().unwrap(), basic_block, c),
+        ast::Expression::Lvalue(it) => {
+            Bundle::Refs(lower_lvalue(it.inner().unwrap(), basic_block, c))
+        }
         ast::Expression::ListLiteral(it) => {
             let base = c.typing.expression_types[&expression.unmanaged()].base;
             let size = ty::layout::size(base, c.layouts);
@@ -375,7 +377,7 @@ fn lower_lvalue(
     expression: ast::Expression,
     basic_block: Id<mir::BasicBlock>,
     c: &mut Context,
-) -> Bundle {
+) -> Vec<mir::Ref> {
     match expression {
         ast::Expression::Parenthesized(_)
         | ast::Expression::FunctionCall(_)
@@ -393,20 +395,18 @@ fn lower_lvalue(
         | ast::Expression::TypeAscription(_)
         | ast::Expression::MethodCall(_) => unreachable!(),
 
-        ast::Expression::Variable(it) => Bundle::Refs(
-            c.variables[&c.resolved_variables[&it.unmanaged()]]
-                .iter()
-                .map(|&it| mir::Ref::Variable(it))
-                .collect(),
-        ),
+        ast::Expression::Variable(it) => c.variables[&c.resolved_variables[&it.unmanaged()]]
+            .iter()
+            .map(|&it| mir::Ref::Variable(it))
+            .collect(),
         ast::Expression::Index(it) => {
             let lists = lower_expression(it.lhs().unwrap(), basic_block, c).lists();
             let index = one(lower_expression(it.rhs().unwrap(), basic_block, c).values());
             let refs = lists.iter().map(|&list| mir::Ref::List { list, index });
-            Bundle::Refs(refs.collect())
+            refs.collect()
         }
         ast::Expression::FieldAccess(access) => {
-            let mut refs = lower_lvalue(access.aggregate(), basic_block, c).refs();
+            let mut refs = lower_lvalue(access.aggregate(), basic_block, c);
             let ty = c.typing.expression_types[&access.aggregate().unmanaged()];
             assert_eq!(ty::Shape::Flat, ty.shape);
             let ty::Base::Struct(ty) = ty.base else {
@@ -428,7 +428,7 @@ fn lower_lvalue(
                 })
                 .unwrap();
             let range = c.layouts[&ty.unmanaged()][field_index];
-            Bundle::Refs(refs.drain(range).collect())
+            refs.drain(range).collect()
         }
     }
 }
