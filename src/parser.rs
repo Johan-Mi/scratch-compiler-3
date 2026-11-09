@@ -279,7 +279,7 @@ impl Parser<'_> {
 
     fn parse_struct(&mut self) {
         self.start_node(K::Struct);
-        self.bump(); // K::KwStruct
+        assert!(self.eat(K::KwStruct));
         let name_span = self.peek_span();
         if !self.eat(K::Identifier) {
             let labels = [primary(name_span, "expected identifier")];
@@ -300,7 +300,7 @@ impl Parser<'_> {
 
     fn parse_arguments(&mut self) {
         self.start_node(K::Arguments);
-        self.bump(); // K::Lparen
+        assert!(self.eat(K::Lparen));
         while !self.at(K::Eof) && !self.eat(K::Rparen) {
             self.parse_expression();
             let _: bool = self.eat(K::Comma);
@@ -310,7 +310,7 @@ impl Parser<'_> {
 
     fn parse_list_literal(&mut self) {
         self.start_node(K::ListLiteral);
-        self.bump(); // K::Lbracket
+        assert!(self.eat(K::Lbracket));
         while !self.at(K::Eof) && !self.eat(K::Rbracket) {
             self.parse_expression();
             let _: bool = self.eat(K::Comma);
@@ -457,7 +457,7 @@ impl Parser<'_> {
 
     fn parse_parameters(&mut self) {
         self.start_node(K::Parameters);
-        self.bump(); // K::Lparen
+        assert!(self.eat(K::Lparen));
         while !self.at(K::Eof) && !self.eat(K::Rparen) {
             if self.at(K::Comma) {
                 let span = self.peek_span();
@@ -523,7 +523,7 @@ impl Parser<'_> {
 
     fn parse_let(&mut self) {
         self.start_node(K::Let);
-        self.bump(); // K::KwLet
+        assert!(self.eat(K::KwLet));
         if !(self.eat(K::Identifier) || self.eat(K::Underscore)) {
             let span = self.peek_span();
             self.diagnostics
@@ -539,7 +539,7 @@ impl Parser<'_> {
 
     fn parse_if(&mut self) {
         self.start_node(K::If);
-        self.bump(); // K::KwIf
+        assert!(self.eat(K::KwIf));
         if self.at(K::Lbrace) {
             let label = primary(self.peek_span(), "");
             self.diagnostics
@@ -562,14 +562,14 @@ impl Parser<'_> {
 
     fn parse_forever(&mut self) {
         self.start_node(K::Forever);
-        self.bump(); // K::KwForever
+        assert!(self.eat(K::KwForever));
         self.parse_block();
         self.builder.finish_node();
     }
 
     fn parse_while(&mut self) {
         self.start_node(K::While);
-        self.bump(); // K::KwWhile
+        assert!(self.eat(K::KwWhile));
         if self.at(K::Lbrace) {
             let label = primary(self.peek_span(), "");
             self.diagnostics
@@ -583,7 +583,7 @@ impl Parser<'_> {
 
     fn parse_until(&mut self) {
         self.start_node(K::Until);
-        self.bump(); // K::KwUntil
+        assert!(self.eat(K::KwUntil));
         if self.at(K::Lbrace) {
             let label = primary(self.peek_span(), "");
             self.diagnostics
@@ -597,7 +597,7 @@ impl Parser<'_> {
 
     fn parse_for(&mut self) {
         self.start_node(K::For);
-        self.bump(); // K::KwFor
+        assert!(self.eat(K::KwFor));
         if self.at(K::Lbrace) {
             let label = primary(self.peek_span(), "");
             self.diagnostics
@@ -624,7 +624,7 @@ impl Parser<'_> {
 
     fn parse_return(&mut self) {
         self.start_node(K::Return);
-        self.bump(); // K::KwReturn
+        assert!(self.eat(K::KwReturn));
         self.parse_expression();
         self.builder.finish_node();
     }
@@ -666,7 +666,7 @@ impl Parser<'_> {
 
     fn parse_function(&mut self) {
         self.start_node(K::Function);
-        self.bump(); // K::KwFn
+        assert!(self.eat(K::KwFn));
         let _: bool = self.eat(K::KwInline);
         if self.at(K::Identifier) || self.peek().is_binary_operator() {
             self.bump();
@@ -701,7 +701,7 @@ impl Parser<'_> {
 
     fn parse_costume(&mut self) {
         self.start_node(K::Costume);
-        self.bump(); // K::KwCostume
+        assert!(self.eat(K::KwCostume));
         if !self.eat(K::String) {
             let labels = [primary(self.peek_span(), "")];
             self.diagnostics.error("expected string literal", labels);
@@ -730,7 +730,7 @@ impl Parser<'_> {
     fn parse_sprite(&mut self) {
         self.start_node(K::Sprite);
         let kw_sprite_span = self.peek_span();
-        self.bump(); // K::KwSprite
+        assert!(self.eat(K::KwSprite));
         if !self.eat(K::Identifier) {
             let span = self.peek_span();
             if self.eat(K::Underscore) {
