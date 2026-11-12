@@ -467,7 +467,10 @@ fn lower_call(
     (0..c.program.functions[&function]
         .return_value_count()
         .unwrap_or_default())
-        .map(|index| mir::Value::Returned { call, index })
+        .map(|index| mir::Value::Returned {
+            callee: function,
+            index,
+        })
         .collect::<Vec<_>>()
         .into()
 }

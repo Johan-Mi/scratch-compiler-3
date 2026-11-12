@@ -313,15 +313,7 @@ impl<'src> Compiler<'src, '_> {
                 .target
                 .custom_block_parameter(self.custom_blocks[&function], index),
             mir::Value::Op(op) => self.ops.remove(&op).unwrap(),
-            mir::Value::Returned { call, index } => {
-                let mir::Op::Call {
-                    function: callee, ..
-                } = self.mir.ops[call]
-                else {
-                    unreachable!();
-                };
-                self.returns[&callee][index].into()
-            }
+            mir::Value::Returned { callee, index } => self.returns[&callee][index].into(),
             mir::Value::Constant(mir::Constant::Num(n)) => n.into(),
             mir::Value::Constant(mir::Constant::String(s)) => (&*self.string_literals[&s]).into(),
             mir::Value::Constant(mir::Constant::Bool(b)) => if b { "true" } else { "false" }.into(),

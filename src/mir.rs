@@ -248,9 +248,14 @@ impl Op {
 #[derive(Clone, Copy)]
 #[cfg_attr(debug_assertions, derive(Debug))]
 pub enum Value {
-    FunctionParameter { index: usize },
+    FunctionParameter {
+        index: usize,
+    },
     Op(Id<Op>),
-    Returned { call: Id<Op>, index: usize },
+    Returned {
+        callee: Id<BasicBlock>,
+        index: usize,
+    },
     Constant(Constant),
 }
 
