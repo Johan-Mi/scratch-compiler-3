@@ -416,7 +416,7 @@ impl<'src> Compiler<'src, '_> {
             "wait" => f! { wait(seconds) },
             "x-pos" => f! { = x_position() },
             "y-pos" => f! { = y_position() },
-            _ => panic!("invalid intrinsic: {name:?}"),
+            _ => unreachable!("invalid intrinsic: {name:?}"),
         }
     }
 
