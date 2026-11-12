@@ -118,12 +118,10 @@ fn lower_statement(statement: ast::Statement, basic_block: Id<mir::BasicBlock>, 
     match statement {
         ast::Statement::Let(it) => {
             let values = lower_expression(it.value().unwrap(), basic_block, c).values();
-            let variables = std::iter::repeat_with(|| {
+            let variables = Vec::from_fn(values.len(), |_| {
                 let value = mir::Constant::PLACEHOLDER;
                 c.program.variables.insert(mir::Variable { value })
-            })
-            .take(values.len())
-            .collect();
+            });
             let stores = std::iter::zip(&variables, values).map(|(&variable, value)| {
                 c.program.ops.insert(mir::Op::Store {
                     target: mir::Ref::Variable(variable),
@@ -282,9 +280,7 @@ fn lower_expression(
             let base = c.typing.expression_types[&expression.unmanaged()].base;
             let size = ty::layout::size(base, c.layouts);
 
-            let lists = std::iter::repeat_with(|| c.program.lists.insert(mir::List::default()))
-                .take(size)
-                .collect::<Vec<_>>();
+            let lists = Vec::from_fn(size, |_| c.program.lists.insert(mir::List::default()));
             c.program.basic_blocks[basic_block].0.extend(
                 lists
                     .iter()
@@ -464,15 +460,14 @@ fn lower_call(
     });
     c.program.basic_blocks[basic_block].0.push(call);
 
-    (0..c.program.functions[&function]
+    let return_value_count = c.program.functions[&function]
         .return_value_count()
-        .unwrap_or_default())
-        .map(|index| mir::Value::Returned {
-            callee: function,
-            index,
-        })
-        .collect::<Vec<_>>()
-        .into()
+        .unwrap_or_default();
+    Vec::from_fn(return_value_count, |index| mir::Value::Returned {
+        callee: function,
+        index,
+    })
+    .into()
 }
 
 fn lower_intrinsic_call(

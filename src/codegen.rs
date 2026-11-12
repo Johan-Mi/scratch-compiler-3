@@ -64,12 +64,12 @@ pub fn compile(
             .filter_map(|(big, it)| Some((big, it.return_value_count()?)))
             .enumerate()
             .map(|(big, (&function, return_value_count))| {
-                let return_variables = (0..return_value_count).map(|little| {
+                let return_variables = Vec::from_fn(return_value_count, |little| {
                     let name = format!("r{big}.{little}");
                     let value = sb3::Constant::Number(0.0);
                     target.add_variable(sb3::Variable { name, value })
                 });
-                (function, return_variables.collect())
+                (function, return_variables)
             })
             .collect();
 
