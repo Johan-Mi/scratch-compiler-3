@@ -37,7 +37,7 @@ pub fn s(
 }
 
 pub struct GlobalList {
-    source: ast::ListLiteralUnmanaged,
+    source: ast::ListConstructorUnmanaged,
     items: Vec<mir::Constant>,
 }
 
@@ -98,7 +98,7 @@ fn eval_expression(
             );
             return Err(());
         }
-        ast::Expression::ListLiteral(it) => {
+        ast::Expression::ListConstructor(it) => {
             let mut res = Ok(Vec::new());
             for item in it.iter() {
                 if let Ok(constants) = eval_expression(e, item)
@@ -140,7 +140,7 @@ pub fn eval_expression_simple(
         | ast::Expression::Variable(_)
         | ast::Expression::Index(_)
         | ast::Expression::Lvalue(_)
-        | ast::Expression::ListLiteral(_)
+        | ast::Expression::ListConstructor(_)
         | ast::Expression::FieldAccess(_) => unreachable!(),
         ast::Expression::DecimalNumber(it) => {
             let span = it.syntax().span();

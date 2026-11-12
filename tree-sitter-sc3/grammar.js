@@ -111,7 +111,7 @@ export default grammar({
       choice(
         $.string_literal,
         $.number_literal,
-        $.list_literal,
+        $.list_constructor,
         "false",
         "true",
         $.function_call,
@@ -123,7 +123,8 @@ export default grammar({
         $.identifier,
       ),
 
-    list_literal: $ => seq("[", repeat(seq($._expression, optional(","))), "]"),
+    list_constructor: $ =>
+      seq("[", repeat(seq($._expression, optional(","))), "]"),
 
     function_call: $ => seq($.identifier, $.arguments),
 

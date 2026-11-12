@@ -278,7 +278,7 @@ fn lower_expression(
         ast::Expression::Lvalue(it) => {
             Bundle::Refs(lower_lvalue(it.inner().unwrap(), basic_block, c))
         }
-        ast::Expression::ListLiteral(it) => {
+        ast::Expression::ListConstructor(it) => {
             let base = c.typing.expression_types[&expression.unmanaged()].base;
             let size = ty::layout::size(base, c.layouts);
 
@@ -391,7 +391,7 @@ fn lower_lvalue(
         | ast::Expression::KwFalse(_)
         | ast::Expression::KwTrue(_)
         | ast::Expression::Lvalue(_)
-        | ast::Expression::ListLiteral(_)
+        | ast::Expression::ListConstructor(_)
         | ast::Expression::TypeAscription(_)
         | ast::Expression::MethodCall(_) => unreachable!(),
 

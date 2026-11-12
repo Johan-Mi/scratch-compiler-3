@@ -358,7 +358,7 @@ pub enum Expression<'src> {
     KwFalse(KwFalse<'src>),
     KwTrue(KwTrue<'src>),
     Lvalue(Lvalue<'src>),
-    ListLiteral(ListLiteral<'src>),
+    ListConstructor(ListConstructor<'src>),
     TypeAscription(TypeAscription<'src>),
     MethodCall(MethodCall<'src>),
     FieldAccess(FieldAccess<'src>),
@@ -383,7 +383,7 @@ impl<'src> Node<'src> for Expression<'src> {
             K::KwFalse => Node::cast(node).map(Self::KwFalse),
             K::KwTrue => Node::cast(node).map(Self::KwTrue),
             K::Lvalue => Node::cast(node).map(Self::Lvalue),
-            K::ListLiteral => Node::cast(node).map(Self::ListLiteral),
+            K::ListConstructor => Node::cast(node).map(Self::ListConstructor),
             K::TypeAscription => Node::cast(node).map(Self::TypeAscription),
             K::MethodCall => Node::cast(node).map(Self::MethodCall),
             K::FieldAccess => Node::cast(node).map(Self::FieldAccess),
@@ -407,7 +407,7 @@ impl<'src> Node<'src> for Expression<'src> {
             Self::KwFalse(inner) => inner.syntax,
             Self::KwTrue(inner) => inner.syntax,
             Self::Lvalue(inner) => inner.syntax,
-            Self::ListLiteral(inner) => inner.syntax,
+            Self::ListConstructor(inner) => inner.syntax,
             Self::TypeAscription(inner) => inner.syntax,
             Self::MethodCall(inner) => inner.syntax,
             Self::FieldAccess(inner) => inner.syntax,
@@ -542,10 +542,10 @@ impl<'src> Lvalue<'src> {
     }
 }
 
-node!(ListLiteral);
-node_unmanaged!(ListLiteral -> ListLiteralUnmanaged);
+node!(ListConstructor);
+node_unmanaged!(ListConstructor -> ListConstructorUnmanaged);
 
-impl<'src> ListLiteral<'src> {
+impl<'src> ListConstructor<'src> {
     pub fn iter(self) -> impl Iterator<Item = Expression<'src>> {
         children(self.syntax)
     }

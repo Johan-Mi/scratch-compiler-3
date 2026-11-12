@@ -107,7 +107,7 @@ pub enum K {
     BinaryOperation,
     Index,
     Lvalue,
-    ListLiteral,
+    ListConstructor,
     TypeAscription,
     MethodCall,
     FieldAccess,
@@ -308,8 +308,8 @@ impl Parser<'_> {
         self.builder.finish_node();
     }
 
-    fn parse_list_literal(&mut self) {
-        self.start_node(K::ListLiteral);
+    fn parse_list_constructor(&mut self) {
+        self.start_node(K::ListConstructor);
         assert!(self.eat(K::Lbracket));
         while !self.at(K::Eof) && !self.eat(K::Rbracket) {
             self.parse_expression();
@@ -359,7 +359,7 @@ impl Parser<'_> {
             | K::String
             | K::KwFalse
             | K::KwTrue => self.bump(),
-            K::Lbracket => self.parse_list_literal(),
+            K::Lbracket => self.parse_list_constructor(),
             _ => return false,
         }
         true

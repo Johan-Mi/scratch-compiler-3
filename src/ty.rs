@@ -347,7 +347,7 @@ fn of_actually<'src>(
                 }
             }
         }
-        ast::Expression::ListLiteral(it) => of_list_literal(it, ascribed, c),
+        ast::Expression::ListConstructor(it) => of_list_constructor(it, ascribed, c),
         ast::Expression::TypeAscription(it) => {
             let ascribed_here = c.type_expressions.get(&it.ty()?.unmanaged()).copied();
             let inner = it.inner()?;
@@ -376,8 +376,8 @@ fn of_actually<'src>(
     }
 }
 
-fn of_list_literal<'src>(
-    it: ast::ListLiteral<'src>,
+fn of_list_constructor<'src>(
+    it: ast::ListConstructor<'src>,
     ascribed: Option<Type<'src>>,
     c: &mut Checker<'_, 'src>,
 ) -> Option<Type<'src>> {
