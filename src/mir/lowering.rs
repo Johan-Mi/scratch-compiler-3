@@ -446,7 +446,10 @@ fn lower_call(
         return arguments.into();
     };
 
-    assert!(function.kw_inline().is_none()); // Emits a diagnostic during type checking.
+    assert!(
+        function.kw_inline().is_none(),
+        "inline functions emit diagnostics during type checking"
+    );
 
     if function.body().is_none() {
         return lower_intrinsic_call(function, arguments, basic_block, c);
